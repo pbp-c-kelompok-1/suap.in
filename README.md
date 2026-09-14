@@ -81,8 +81,8 @@ Generasi daily challenge otomatis (3 challenge/hari berdasarkan kebiasaan user),
 
 ## 🚀 Deployment
 
-- PWS: Coming soon — Checkpoint 2
-- Figma Design: Coming soon
+- PWS: (https://syahid-arkan-suapin.pws.cs.ui.ac.id)
+- Figma Design: (https://www.figma.com/design/mszscHVDXDGjBYLDDYCKmH/Suap.in-Lo-Fi?node-id=0-1&p=f&t=GTGm14cmdJaEurVJ-0)
 
 ## 🗂️ Struktur Proyek
 
