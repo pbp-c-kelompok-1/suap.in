@@ -49,26 +49,49 @@ Kombinasi 4 psychological hook ini dan 1 fitur Machine Learning yang belum perna
 ### 1. Auth + Profil + Avatar (`authentication`)
 PIC: Syahid Arkan Fashihurrohman
 Register, login, halaman profil publik, avatar system dengan evolution path (Benih → Tunas → Pohon Kecil → Pohon Besar → Hutan), kondisi avatar berubah real-time berdasarkan streak dan carbon score.
+- Landing Page — halaman utama guest, value proposition dan CTA daftar/masuk
+- Register Page — form pendaftaran akun baru
+- Login Page — form masuk akun
+- Profil Publik — halaman profil user dengan avatar, stats, dan badges
+- Avatar Page — tampilan kondisi avatar dan evolution path (Benih → Hutan)
 
 ### 2. FoodScan AI + Machine Learning (`scanner`)
 PIC: Syahid Arkan Fashihurrohman
 Upload foto makanan, 4-layer AI detection (EfficientNet → Groq Llama 3.2 Vision → Gemini 1.5 Flash → manual input), kalkulasi emisi CO₂ per item, daily log, daily carbon budget tracker dengan progress bar real-time.
+- Scan Page — kamera atau upload foto makanan untuk dideteksi AI
+- Hasil Scan Page — breakdown item terdeteksi, emisi CO₂ per item, XP didapat, saran alternatif
+- Daily Log Page — riwayat semua scan hari ini
+- Carbon Budget Page — progress bar karbon harian real-time
 
 ### 3. Gamifikasi + XP + Level
 PIC: Muhammad Ziad Ayyash
 Streak system dengan freeze mechanic, XP accumulation, sistem level 50 tier (Pemula Sadar → Pejuang Hijau → Guardian Bumi → Legenda Lestari), badge.
+- Dashboard — home utama setelah login, ringkasan streak, budget, dan challenge
+- Streak Page — status streak aktif, streak freeze, dan milestone counter
+- Level & XP Page — progress XP, tier level saat ini, dan target tier berikutnya
+- Badges Page — koleksi lencana yang sudah dan belum di-unlock
 
 ### 4. Leaderboard + Campus War (`social`)
 PIC: Muhammad Iqbal
 Friend system, leaderboard mingguan 3 level (teman/kampus/nasional), Campus War (kompetisi carbon footprint agregat antar universitas bulanan).
+- Leaderboard Page — ranking mingguan dengan tab teman, kampus, dan nasional
+- Campus War Page — kompetisi carbon footprint agregat antar universitas bulanan
+- Friends Page — daftar teman dan fitur tambah teman
 
 ### 5. Challenge + Weekly Report (`challenge`)
 PIC: Annisa Saskya Aulia
 Generasi daily challenge otomatis (3 challenge/hari berdasarkan kebiasaan user), weekly carbon report (recap CO₂, perbandingan minggu lalu, proyeksi tahunan, ranking), sistem notifikasi, carbon budget integration.
+- Daily Challenge Page — 3 challenge harian otomatis berdasarkan kebiasaan user
+- Weekly Report Page — recap total CO₂, perbandingan minggu lalu, proyeksi tahunan, ranking
+- Notifikasi Page — pusat notifikasi streak, challenge, dan leaderboard
 
 ### 6. Social + Story (`gamification`)
 PIC: Nasywa Namira Suhendro
 story progression (unlock komik digital per level range), milestone rewards, friend system, 1v1 Friend Challenge, share stats ke Instagram Story.
+- Story Page — episode komik digital yang unlock per range level
+- Milestone Rewards Page — hadiah dan pencapaian per milestone streak/level
+- 1v1 Challenge Page — tantangan langsung antar dua user
+- Share Stats Page — preview card weekly stats untuk dibagikan ke Instagram Story
 
 ## 🌐 Public API
 
