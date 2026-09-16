@@ -54,17 +54,21 @@ Register, login, halaman profil publik, avatar system dengan evolution path (Ben
 PIC: Syahid Arkan Fashihurrohman
 Upload foto makanan, 4-layer AI detection (EfficientNet → Groq Llama 3.2 Vision → Gemini 1.5 Flash → manual input), kalkulasi emisi CO₂ per item, daily log, daily carbon budget tracker dengan progress bar real-time.
 
-### 3. Gamifikasi + XP + Level + Story (`gamification`)
+### 3. Gamifikasi + XP + Level
 PIC: Muhammad Ziad Ayyash
-Streak system dengan freeze mechanic, XP accumulation, sistem level 50 tier (Pemula Sadar → Pejuang Hijau → Guardian Bumi → Legenda Lestari), badge, story progression (unlock komik digital per level range), milestone rewards.
+Streak system dengan freeze mechanic, XP accumulation, sistem level 50 tier (Pemula Sadar → Pejuang Hijau → Guardian Bumi → Legenda Lestari), badge.
 
-### 4. Social + Leaderboard + Campus War (`social`)
+### 4. Leaderboard + Campus War (`social`)
 PIC: Muhammad Iqbal
-Friend system, leaderboard mingguan 3 level (teman/kampus/nasional), 1v1 Friend Challenge, Campus War (kompetisi carbon footprint agregat antar universitas bulanan), share stats ke Instagram Story.
+Friend system, leaderboard mingguan 3 level (teman/kampus/nasional), Campus War (kompetisi carbon footprint agregat antar universitas bulanan).
 
 ### 5. Challenge + Weekly Report (`challenge`)
 PIC: Annisa Saskya Aulia
 Generasi daily challenge otomatis (3 challenge/hari berdasarkan kebiasaan user), weekly carbon report (recap CO₂, perbandingan minggu lalu, proyeksi tahunan, ranking), sistem notifikasi, carbon budget integration.
+
+### 6. Social + Story (`gamification`)
+PIC: Nasywa Namira Suhendro
+story progression (unlock komik digital per level range), milestone rewards, friend system, 1v1 Friend Challenge, share stats ke Instagram Story.
 
 ## 🌐 Public API
 
