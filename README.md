@@ -93,12 +93,108 @@ story progression (unlock komik digital per level range), milestone rewards, fri
 - 1v1 Challenge Page — tantangan langsung antar dua user
 - Share Stats Page — preview card weekly stats untuk dibagikan ke Instagram Story
 
+## 🔧 CRUD per Modul
+
+### authentication (PIC: Syahid Arkan Fashihurrohman)
+
+**User & Profile**
+- Create: Register akun baru
+- Read: Lihat profil sendiri/publik
+- Update: Edit bio, foto profil
+- Delete: Hapus akun
+
+**Avatar**
+- Create: Inisialisasi avatar saat register
+- Read: Lihat kondisi & evolution path avatar
+- Update: Update kondisi avatar otomatis berbasis streak dan carbon score
+
+### scanner (PIC: Syahid Arkan Fashihurrohman)
+
+**FoodLog**
+- Create: Buat entry dari hasil scan foto
+- Read: Lihat riwayat daily log dan detail hasil scan
+- Update: Koreksi manual item yang salah terdeteksi
+- Delete: Hapus entry log yang salah atau duplikat
+
+**CarbonBudget**
+- Create: Inisialisasi budget harian
+- Read: Lihat progress carbon budget real-time
+- Update: Update sisa budget tiap scan baru
+
+### gamification (PIC: Muhammad Ziad Ayyash)
+
+**Streak**
+- Create: Inisialisasi streak saat scan pertama
+- Read: Lihat status streak dan milestone counter
+- Update: Increment/reset streak, klaim streak freeze
+
+**XP & Level**
+- Create: Buat XP transaction tiap scan
+- Read: Lihat progress XP dan tier level
+- Update: Tambah XP, unlock tier baru
+
+**Badge**
+- Create: Unlock badge otomatis saat milestone tercapai
+- Read: Lihat koleksi badge (locked/unlocked)
+
+### social (PIC: Muhammad Iqbal)
+
+**Friendship**
+- Create: Kirim friend request
+- Read: Lihat daftar teman
+- Update: Terima/tolak friend request
+- Delete: Unfriend/hapus pertemanan
+
+**Leaderboard**
+- Create: Submit skor mingguan otomatis
+- Read: Lihat ranking teman/kampus/nasional
+
+**CampusWar**
+- Read: Lihat status kompetisi antar kampus
+- Update: Update skor agregat kampus otomatis
+
+### challenge (PIC: Annisa Saskya Aulia)
+
+**DailyChallenge**
+- Create: Generate 3 challenge harian otomatis
+- Read: Lihat daftar challenge harian
+- Update: Tandai challenge selesai
+
+**WeeklyReport**
+- Create: Buat laporan mingguan otomatis
+- Read: Lihat recap CO₂ dan proyeksi tahunan
+
+**Notification**
+- Create: Buat notifikasi baru dari sistem
+- Read: Lihat pusat notifikasi
+- Update: Tandai sudah dibaca
+- Delete: Hapus notifikasi lama
+
+### story (PIC: Nasywa Namira Suhendro)
+
+**Story/Comic**
+- Create: Unlock episode baru saat naik level otomatis
+- Read: Lihat daftar dan isi episode yang ter-unlock
+
+**MilestoneReward**
+- Create: Buat reward saat milestone tercapai otomatis
+- Read: Lihat daftar reward
+- Update: Klaim reward
+
+**FriendChallenge (1v1)**
+- Create: Buat tantangan 1v1 ke teman
+- Read: Lihat status dan hasil tantangan
+- Update: Update progress tantangan
+- Delete: Batalkan tantangan yang belum diterima
+
+
 ## 🌐 Public API
 
 - Groq Llama 3.2 Vision — Food detection Layer 2, identifikasi item makanan dari foto. [Docs](https://console.groq.com/docs/vision)
 - Google Gemini 1.5 Flash — Food detection Layer 3, fallback jika Groq rate limit. [Docs](https://ai.google.dev/gemini-api/docs)
 - Open-Meteo — Data cuaca lokal untuk konteks makanan seasonal dan rekomendasi. [Docs](https://open-meteo.com/en/docs)
 - Open Food Facts — Database produk makanan kemasan, lookup nama brand dari foto bungkus. [Docs](https://world.openfoodfacts.org/data)
+- **Open Food Facts API** — Sumber 50 initial data produk makanan kemasan (nama produk, kategori, berat). Data diambil via `https://world.openfoodfacts.org/cgi/search.pl?action=process&tagtype_0=categories&tag_contains_0=contains&tag_0=indonesian-food&json=1` dan diseed ke database saat pertama deploy. [Docs](https://world.openfoodfacts.org/data)
 
 ## 👤 Peran Pengguna
 
