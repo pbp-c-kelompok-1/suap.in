@@ -1,4 +1,3 @@
-# Python
 __pycache__/
 *.py[cod]
 *.pyo
@@ -8,7 +7,6 @@ __pycache__/
 dist/
 build/
 
-# Django
 *.log
 local_settings.py
 db.sqlite3
@@ -16,24 +14,16 @@ db.sqlite3-journal
 media/
 staticfiles/
 
-# Environment
 .env
 .env.local
 .env.*.local
 
-# Virtual environment
 venv/
 env/
 .venv/
 
-# VSCode
 .vscode/
 
-# Claude Code
-.claude/
-
-# macOS
 .DS_Store
 
-# Node (if used)
 node_modules/

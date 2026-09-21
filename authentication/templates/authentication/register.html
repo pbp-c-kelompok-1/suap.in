@@ -1,0 +1,29 @@
+{% extends 'auth_base.html' %}
+
+{% block title %}Register — Suap.in{% endblock %}
+
+{% block auth_content %}
+<h1 class="auth-title mb-8">Hello! Register<br>to get started</h1>
+
+<form method="post" class="flex flex-col gap-5" novalidate>
+  {% csrf_token %}
+  {% include 'partials/form_alert.html' %}
+
+  {% include 'partials/field.html' with field=form.username hint='Huruf, angka, dan @ . + - _ saja, tanpa spasi.' %}
+  {% include 'partials/field.html' with field=form.email %}
+  {% include 'partials/field.html' with field=form.password1 toggle=True hint='Minimal 8 karakter. Hindari kata sandi umum (mis. 12345678, password) dan jangan hanya angka.' %}
+  {% include 'partials/field.html' with field=form.password2 toggle=True %}
+
+  <span class="ring ring-squircle ring-block mt-2">
+    <button type="submit" class="btn-accent btn-lg">Register</button>
+  </span>
+</form>
+
+<div class="divider-label my-8">Or Register with</div>
+{% include 'partials/social_login.html' %}
+
+<p class="text-center mt-10 text-sm font-medium">
+  Already have an account?
+  <a href="{% url 'authentication:login' %}" class="text-accent font-bold">Login Now</a>
+</p>
+{% endblock %}

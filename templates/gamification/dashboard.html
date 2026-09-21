@@ -1,13 +1,89 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard — Suap.in{% endblock %}
+{% block title %}Beranda — Suap.in{% endblock %}
 
 {% block content %}
-<div class="text-center py-16">
-    <h1 class="text-4xl font-bold text-green-700 mb-4">🌿 Suap.in</h1>
-    <p class="text-gray-500 text-lg mb-8">Foto makananmu, lacak jejakmu.</p>
-    <a href="/scanner/" class="bg-green-600 text-white px-8 py-3 rounded-xl text-lg font-semibold">
-        Mulai Scan
-    </a>
+{% if user.is_authenticated %}
+<h1 class="page-title">Halo, {{ user.username }}!</h1>
+<p class="page-sub">Yuk catat makananmu hari ini dan jaga jejak karbonmu.</p>
+
+<div class="grid grid-cols-1 gap-6 mt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
+  <section class="card">
+    <div class="flex items-start justify-between gap-3 mb-4">
+      <div>
+        <p class="stat-label">Budget karbon hari ini</p>
+        <p class="stat-value">{{ used_grams|floatformat:"0g" }}g <span class="text-secondary" style="font-size: 0.875rem; font-weight: 600;">/ {{ limit_grams|floatformat:"0g" }}g</span></p>
+      </div>
+      <span class="badge badge-{{ status_color }}">{{ status_label }}</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill-{{ status_color }}" style="width: {{ progress_percent }}%;"></div>
+    </div>
+    <p class="text-secondary text-sm mt-3" style="font-weight: 500;">
+      {% if over_grams %}Melebihi budget {{ over_grams|floatformat:"0g" }}g{% else %}Sisa {{ remaining_grams|floatformat:"0g" }}g{% endif %}
+      {% if used_grams > 0 %}· {{ analogy }}{% endif %}
+    </p>
+    <span class="ring ring-squircle ring-block mt-6">
+      <a href="{% url 'scanner:scan' %}" class="btn-accent btn-lg">{% include 'partials/icon.html' with name='camera' %} Scan Makanan</a>
+    </span>
+  </section>
+
+  <section class="card">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-bold" style="font-size: 1.125rem;">Scan terakhir</h2>
+      <a href="{% url 'scanner:daily_log' %}" class="text-accent text-sm font-semibold">Lihat riwayat</a>
+    </div>
+    <div class="flex flex-col gap-3">
+      {% for log in recent_logs %}
+      <div class="card-sm flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <p class="font-semibold text-sm truncate">{{ log.display_name }}</p>
+          <p class="text-muted text-xs" style="font-weight: 500;">{{ log.scanned_at|date:"d M, H:i" }}</p>
+        </div>
+        <p class="font-bold text-sm whitespace-nowrap">{{ log.co2_grams|floatformat:"0g" }}g</p>
+      </div>
+      {% empty %}
+      <div class="empty-slot">Belum ada scan. Mulai dengan foto makanan pertamamu.</div>
+      {% endfor %}
+    </div>
+  </section>
 </div>
+
+{% else %}
+<section class="card" style="padding: 40px 28px;">
+  <span class="badge mb-5">Untuk mahasiswa yang peduli bumi</span>
+  <h1 class="page-title" style="font-size: 2.5rem; line-height: 1.1;">Foto makananmu,<br><span class="text-accent">jaga bumiku.</span></h1>
+  <p class="page-sub" style="max-width: 520px; line-height: 1.65;">
+    Suap.in menghitung jejak karbon dari setiap suapan lewat satu foto. Kumpulkan streak, naik level, dan bersaing sehat dengan teman sekampus.
+  </p>
+  <div class="flex flex-wrap items-center gap-5 mt-8">
+    <span class="ring ring-squircle"><a href="{% url 'authentication:register' %}" class="btn-accent btn-lg">Daftar gratis</a></span>
+    <span class="ring ring-squircle"><a href="{% url 'authentication:login' %}" class="btn-neu btn-lg">Masuk</a></span>
+  </div>
+</section>
+
+<section class="grid grid-cols-1 gap-5 mt-6 md:grid-cols-3">
+  <div class="card-sm flex items-center gap-4">
+    <span class="meal-icon">{% include 'partials/icon.html' with name='scan' cls='ico-lg' %}</span>
+    <div>
+      <p class="font-bold">AI Food Scanner</p>
+      <p class="text-secondary text-sm">Semua item terdeteksi dari satu foto.</p>
+    </div>
+  </div>
+  <div class="card-sm flex items-center gap-4">
+    <span class="meal-icon">{% include 'partials/icon.html' with name='fire' cls='ico-lg' %}</span>
+    <div>
+      <p class="font-bold">Streak &amp; Level</p>
+      <p class="text-secondary text-sm">Konsisten setiap hari, naik level.</p>
+    </div>
+  </div>
+  <div class="card-sm flex items-center gap-4">
+    <span class="meal-icon">{% include 'partials/icon.html' with name='board' cls='ico-lg' %}</span>
+    <div>
+      <p class="font-bold">Leaderboard Kampus</p>
+      <p class="text-secondary text-sm">Adu emisi terendah antar universitas.</p>
+    </div>
+  </div>
+</section>
+{% endif %}
 {% endblock %}

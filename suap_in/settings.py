@@ -16,6 +16,14 @@ ALLOWED_HOSTS = [
     '.pws.cs.ui.ac.id',
 ]
 
+CSRF_TRUSTED_ORIGINS = ['https://*.pws.cs.ui.ac.id'] + [
+    origin.strip()
+    for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
+    if origin.strip()
+]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -23,7 +31,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # Local apps
     'authentication',
     'scanner',
     'gamification',
@@ -61,9 +68,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'suap_in.wsgi.application'
 
-# Use PostgreSQL when DB_HOST is provided (local dev via .env, or once PWS
-# assigns real schema credentials). Otherwise fall back to SQLite so the app
-# can still boot (e.g. Checkpoint 1 on PWS, which has no DB env vars yet).
 if os.environ.get('DB_HOST'):
     DATABASES = {
         'default': {
@@ -110,3 +114,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/auth/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Suap.in <noreply@suap.in>')

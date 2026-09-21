@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block title %}Hasil Scan — Suap.in{% endblock %}
+
+{% block content %}
+<div class="flex items-center gap-4 mb-6">
+  <span class="ring ring-squircle">
+    <a href="{% url 'scanner:scan' %}" class="btn-neu btn-icon-sm" aria-label="Kembali ke scan">{% include 'partials/icon.html' with name='chevron-left' %}</a>
+  </span>
+  <div>
+    <h1 class="page-title">Hasil Scan</h1>
+    <div class="flex items-center gap-2 mt-2">
+      <span class="badge badge-{{ status_color }}">{{ status_label }}</span>
+      {% if result.meal_type %}<span class="text-secondary text-sm font-medium">{{ result.meal_type|capfirst }}</span>{% endif %}
+    </div>
+  </div>
+</div>
+
+<form method="post" action="{% url 'scanner:save_log' %}" id="result-form" class="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+  {% csrf_token %}
+
+  <section>
+    <div class="photo-frame">
+      {% if photo_b64 %}
+      <div class="photo-stage">
+        <img src="{{ photo_b64 }}" alt="Foto makanan">
+        {% for match in matched_items %}
+          {% if match.box_style %}
+          <div class="detect-box" style="left: {{ match.box_style.left }}%; top: {{ match.box_style.top }}%; width: {{ match.box_style.width }}%; height: {{ match.box_style.height }}%; border-color: {{ match.box_color }};">
+            <span class="detect-label" style="background: {{ match.box_color }}; {% if match.label_above %}top: -1.6rem;{% else %}top: 0.2rem; left: 0.2rem;{% endif %}">{{ match.name }}</span>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="vf-placeholder" style="min-height: 240px; justify-content: center;">
+        {% include 'partials/icon.html' with name='camera' cls='ico-xl' %}
+        <span>Foto tidak tersedia</span>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-5">
+    <div class="card" style="position: relative; padding-top: 44px;">
+      <span class="xp-pill" style="position: absolute; top: -20px; left: -12px; transform: rotate(-12deg);">+{{ xp_earned }} XP</span>
+      <table class="data-table">
+        <thead>
+          <tr><th>Item</th><th>CO₂</th></tr>
+        </thead>
+        <tbody id="item-rows">
+          {% for match in matched_items %}
+          <tr data-row>
+            <td>
+              <span data-view data-name>{{ match.name }}</span>
+              <input data-edit hidden type="text" name="item_name" value="{{ match.name }}" maxlength="200" class="input-neu" style="padding: 10px 14px; border-radius: 14px; font-size: 0.875rem;">
+              {% if match.detected.serving_description %}<span data-view class="block text-xs text-muted" style="font-weight: 500;">{{ match.detected.serving_description }}</span>{% endif %}
+            </td>
+            <td class="whitespace-nowrap">
+              <span data-view data-co2-text>{{ match.co2 }}g</span>
+              <div data-edit hidden class="flex items-center justify-end gap-2">
+                <input type="number" name="item_co2" value="{{ match.co2 }}" min="0" step="any" class="input-neu" style="width: 104px; padding: 10px 14px; border-radius: 14px; font-size: 0.875rem;">
+                <button type="button" class="row-remove" data-remove aria-label="Hapus item">{% include 'partials/icon.html' with name='trash' %}</button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="2" class="text-center text-muted">Tidak ada item terdeteksi</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div class="stat-tile">
+        <p class="stat-label">Total CO₂</p>
+        <p class="stat-value" id="total-co2">{{ total_co2 }}g</p>
+      </div>
+      <div class="stat-tile" id="analogy-tile">
+        <p class="stat-label">Setara</p>
+        <p class="text-sm font-semibold mt-2" style="line-height: 1.4;">{{ analogy }}</p>
+      </div>
+    </div>
+
+    {% if alternative %}
+    <div class="card-inset">
+      <p class="font-bold text-sm">Alternatif rendah karbon:</p>
+      <p class="text-secondary text-sm mt-1" style="font-weight: 500; line-height: 1.55;">{{ alternative }}</p>
+    </div>
+    {% endif %}
+
+    {% if notes %}
+    <p class="text-muted text-xs px-2" style="font-weight: 500; line-height: 1.5;">{{ notes }}</p>
+    {% endif %}
+
+    <div class="flex flex-col items-center gap-4 mt-2">
+      <span class="ring ring-squircle ring-block">
+        <button type="submit" class="btn-accent btn-lg" id="save-btn">{% include 'partials/icon.html' with name='check' %} Simpan</button>
+      </span>
+      <button type="button" id="edit-toggle" class="text-secondary text-sm font-semibold" style="background: none; border: none; cursor: pointer;">Koreksi hasil deteksi</button>
+    </div>
+  </section>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var body = document.getElementById('item-rows');
+  var totalEl = document.getElementById('total-co2');
+  var analogyTile = document.getElementById('analogy-tile');
+  var saveBtn = document.getElementById('save-btn');
+  var toggle = document.getElementById('edit-toggle');
+  var editing = false;
+
+  function rows() { return body.querySelectorAll('[data-row]'); }
+
+  function syncRow(row) {
+    var name = row.querySelector('input[name="item_name"]').value;
+    var co2 = parseFloat(row.querySelector('input[name="item_co2"]').value) || 0;
+    row.querySelector('[data-name]').textContent = name;
+    row.querySelector('[data-co2-text]').textContent = Math.round(co2) + 'g';
+  }
+
+  function recalc() {
+    var total = 0;
+    rows().forEach(function (row) {
+      total += parseFloat(row.querySelector('input[name="item_co2"]').value) || 0;
+    });
+    totalEl.textContent = Math.round(total) + 'g';
+    saveBtn.disabled = rows().length === 0;
+  }
+
+  toggle.addEventListener('click', function () {
+    editing = !editing;
+    document.querySelectorAll('[data-view]').forEach(function (el) { el.hidden = editing; });
+    document.querySelectorAll('[data-edit]').forEach(function (el) { el.hidden = !editing; });
+    toggle.textContent = editing ? 'Selesai koreksi' : 'Koreksi hasil deteksi';
+  });
+
+  body.addEventListener('input', function (event) {
+    var row = event.target.closest('[data-row]');
+    if (!row) return;
+    syncRow(row);
+    recalc();
+    analogyTile.hidden = true;
+  });
+
+  body.addEventListener('click', function (event) {
+    var button = event.target.closest('[data-remove]');
+    if (!button) return;
+    button.closest('[data-row]').remove();
+    recalc();
+    analogyTile.hidden = true;
+  });
+})();
+</script>
+{% endblock %}

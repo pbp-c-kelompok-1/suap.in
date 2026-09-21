@@ -3,11 +3,10 @@ from django.contrib.auth.models import User
 
 
 class FoodItem(models.Model):
-    """Master database of food items and their carbon footprint values."""
     name = models.CharField(max_length=200)
     name_en = models.CharField(max_length=200, blank=True)
     category = models.CharField(max_length=100)
-    co2_per_serving_grams = models.FloatField(help_text="CO2 in grams per standard serving")
+    co2_per_serving_grams = models.FloatField()
     serving_size_description = models.CharField(max_length=100, default="1 porsi sedang")
     source = models.CharField(max_length=200, default="FAO / OurWorldInData")
     is_indonesian = models.BooleanField(default=True)
@@ -20,7 +19,6 @@ class FoodItem(models.Model):
 
 
 class FoodLog(models.Model):
-    """Log of food scanned by user."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='food_logs')
     food_item = models.ForeignKey(FoodItem, on_delete=models.SET_NULL, null=True, blank=True)
     custom_name = models.CharField(max_length=200, blank=True)
@@ -38,7 +36,6 @@ class FoodLog(models.Model):
 
 
 class CarbonBudget(models.Model):
-    """Daily carbon budget per user."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='carbon_budgets')
     date = models.DateField()
     budget_grams = models.FloatField(default=2000.0)

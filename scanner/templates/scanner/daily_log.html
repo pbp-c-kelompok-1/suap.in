@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Riwayat — Suap.in{% endblock %}
+
+{% block content %}
+<div class="flex items-start justify-between gap-4">
+  <div>
+    <h1 class="page-title">Riwayat</h1>
+    <p class="page-sub" style="font-weight: 700;">Hari ini • Total: {{ total_co2|floatformat:"0g" }}g CO₂</p>
+  </div>
+  <span class="ring ring-squircle">
+    <a href="{% url 'scanner:scan' %}" class="btn-accent btn-icon-sm" aria-label="Scan makanan baru">{% include 'partials/icon.html' with name='camera' %}</a>
+  </span>
+</div>
+
+<div class="grid grid-cols-1 gap-6 mt-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+  <section class="card flex flex-col gap-4" style="padding: 18px;">
+    {% for meal in meals %}
+      {% if meal.entries %}
+      <details class="card-sm meal">
+        <summary class="flex items-center gap-4">
+          <span class="meal-icon">{% include 'partials/icon.html' with name=meal.icon cls='ico-lg' %}</span>
+          <div class="min-w-0 flex-1">
+            <p class="font-bold">{{ meal.label }}</p>
+            <p class="text-secondary text-sm truncate" style="font-weight: 500;">{{ meal.summary }}</p>
+          </div>
+          <p class="font-bold whitespace-nowrap">{{ meal.total|floatformat:"0g" }}g</p>
+          <span class="meal-chevron">{% include 'partials/icon.html' with name='chevron-down' %}</span>
+        </summary>
+        <ul class="flex flex-col gap-3 mt-4 pt-4" style="border-top: 2px solid rgba(200, 211, 240, 0.45);">
+          {% for log in meal.entries %}
+          <li class="flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <p class="font-semibold text-sm truncate">{{ log.display_name }}</p>
+              <p class="text-muted text-xs" style="font-weight: 500;">{{ log.scanned_at|time:"H:i" }}</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <p class="font-semibold text-sm whitespace-nowrap">{{ log.co2_grams|floatformat:"0g" }}g</p>
+              <form method="post" action="{% url 'scanner:delete_log' log.id %}" onsubmit="return confirm('Hapus entry ini?')">
+                {% csrf_token %}
+                <button type="submit" class="row-remove" aria-label="Hapus {{ log.display_name }}">{% include 'partials/icon.html' with name='trash' %}</button>
+              </form>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      </details>
+      {% else %}
+      <div class="empty-slot">Belum ada data {{ meal.label }}</div>
+      {% endif %}
+    {% endfor %}
+  </section>
+
+  <aside class="flex flex-col gap-6">
+    <section class="card">
+      <div class="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <p class="stat-label">Budget karbon harian</p>
+          <p class="stat-value">{{ budget.used_grams|floatformat:"0g" }}g <span class="text-secondary" style="font-size: 0.875rem; font-weight: 600;">/ {{ budget.budget_grams|floatformat:"0g" }}g</span></p>
+        </div>
+        <span class="badge badge-{{ status_color }}">{{ status_label }}</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill-{{ status_color }}" style="width: {{ progress_percent }}%;"></div>
+      </div>
+      <p class="text-secondary text-sm mt-3" style="font-weight: 500;">
+        {% if over_grams %}Melebihi budget {{ over_grams|floatformat:"0g" }}g{% else %}Sisa {{ remaining_grams|floatformat:"0g" }}g{% endif %}
+        {% if total_co2 > 0 %}· {{ analogy }}{% endif %}
+      </p>
+    </section>
+
+    <span class="ring ring-squircle ring-block">
+      <a href="{% url 'challenge:report' %}" class="btn-neu btn-lg">Lihat ringkasan mingguan {% include 'partials/icon.html' with name='arrow-right' %}</a>
+    </span>
+  </aside>
+</div>
+{% endblock %}
