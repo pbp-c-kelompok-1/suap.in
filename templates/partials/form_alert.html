@@ -1,0 +1,5 @@
+{% if form.non_field_errors %}
+<div class="form-alert" role="alert">{% include 'partials/icon.html' with name='close' %}<span>{% for error in form.non_field_errors %}{{ error }}{% if not forloop.last %} {% endif %}{% endfor %}</span></div>
+{% elif form.errors %}
+<div class="form-alert" role="alert">{% include 'partials/icon.html' with name='close' %}<span>Belum berhasil. Periksa isian yang bertanda merah di bawah.</span></div>
+{% endif %}

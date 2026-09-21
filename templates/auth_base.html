@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block body %}
+<div class="auth-wrap">
+  <section class="auth-hero">
+    <span class="hero-orb" style="width: 220px; height: 220px; top: -70px; right: -50px;"></span>
+    <span class="hero-orb" style="width: 120px; height: 120px; bottom: 90px; left: -40px;"></span>
+    <span class="hero-orb" style="width: 64px; height: 64px; bottom: 210px; right: 90px;"></span>
+
+    <a href="{% url 'gamification:dashboard' %}" class="brand relative">
+      <span class="brand-mark">{% include 'partials/icon.html' with name='leaf' %}</span>
+      Suap.in
+    </a>
+
+    <div class="relative">
+      <h2 style="font-size: 2.75rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.03em;">
+        Foto makananmu,<br><span class="text-accent">jaga bumiku.</span>
+      </h2>
+      <p class="text-secondary mt-4" style="max-width: 420px; font-weight: 500; line-height: 1.6;">
+        Lacak jejak karbon dari setiap suapan, kumpulkan streak, dan bersaing sehat bersama teman sekampus.
+      </p>
+    </div>
+
+    <div class="relative flex flex-col gap-4" style="max-width: 420px;">
+      <div class="card-sm flex items-center gap-4">
+        <span class="meal-icon">{% include 'partials/icon.html' with name='scan' cls='ico-lg' %}</span>
+        <div>
+          <p class="font-bold">AI Food Scanner</p>
+          <p class="text-secondary text-sm">Semua item terdeteksi dari satu foto.</p>
+        </div>
+      </div>
+      <div class="card-sm flex items-center gap-4">
+        <span class="meal-icon">{% include 'partials/icon.html' with name='fire' cls='ico-lg' %}</span>
+        <div>
+          <p class="font-bold">Streak &amp; Level</p>
+          <p class="text-secondary text-sm">Konsisten setiap hari, naik level.</p>
+        </div>
+      </div>
+      <div class="card-sm flex items-center gap-4">
+        <span class="meal-icon">{% include 'partials/icon.html' with name='board' cls='ico-lg' %}</span>
+        <div>
+          <p class="font-bold">Leaderboard Kampus</p>
+          <p class="text-secondary text-sm">Adu emisi terendah antar universitas.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="auth-panel">
+    <div class="flex items-center justify-between mb-10">
+      <span class="ring ring-squircle">
+        <a href="{% url 'gamification:dashboard' %}" class="btn-neu btn-icon-sm" aria-label="Kembali">{% include 'partials/icon.html' with name='chevron-left' %}</a>
+      </span>
+      <span class="brand-mark hide-desktop">{% include 'partials/icon.html' with name='leaf' %}</span>
+    </div>
+
+    {% if messages %}
+    <div class="toast-stack">
+      {% for message in messages %}
+      <div class="toast {{ message.tags }}"><span class="toast-dot"></span>{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block auth_content %}{% endblock %}
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.querySelectorAll('[data-toggle-password]').forEach(function (button) {
+  var input = document.getElementById(button.dataset.togglePassword);
+  var eye = button.querySelector('[data-eye]');
+  var eyeOff = button.querySelector('[data-eye-off]');
+  button.addEventListener('click', function () {
+    var show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    eye.hidden = show;
+    eyeOff.hidden = !show;
+  });
+});
+</script>
+{% endblock %}

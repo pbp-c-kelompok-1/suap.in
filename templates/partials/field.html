@@ -1,0 +1,13 @@
+<div>
+  <div class="field{% if field.errors %} has-error{% endif %}">
+    {{ field }}
+    {% if toggle %}
+    <button type="button" class="field-action" data-toggle-password="{{ field.id_for_label }}" aria-label="Tampilkan atau sembunyikan password">
+      <span data-eye>{% include 'partials/icon.html' with name='eye' %}</span>
+      <span data-eye-off hidden>{% include 'partials/icon.html' with name='eye-off' %}</span>
+    </button>
+    {% endif %}
+  </div>
+  {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+  {% if hint and not field.errors %}<p class="field-hint">{{ hint }}</p>{% endif %}
+</div>
