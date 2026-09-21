@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+
+{% block title %}Scan Makanan — Suap.in{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Scan Your Meal</h1>
+<p class="page-sub">Arahkan kamera ke makananmu. AI akan mendeteksi semua item dan menghitung emisinya.</p>
+
+<form method="post" enctype="multipart/form-data" id="scan-form" class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+  {% csrf_token %}
+  {{ form.photo }}
+
+  <div class="flex flex-col gap-5">
+    <div class="viewfinder">
+      <video id="camera-video" autoplay playsinline muted hidden></video>
+      <img id="preview-img" class="vf-media" alt="Foto makanan" hidden>
+      <span class="vf-corner vf-tl"></span>
+      <span class="vf-corner vf-tr"></span>
+      <span class="vf-corner vf-bl"></span>
+      <span class="vf-corner vf-br"></span>
+      <div class="vf-placeholder" id="vf-placeholder">
+        {% include 'partials/icon.html' with name='camera' cls='ico-xl' %}
+        <span id="vf-message">Menyalakan kamera...</span>
+      </div>
+    </div>
+
+    <div class="control-dock" id="dock-capture">
+      <button type="button" class="btn-neu btn-icon" id="gallery-btn" aria-label="Pilih dari galeri">{% include 'partials/icon.html' with name='image' cls='ico-lg' %}</button>
+      <span class="ring ring-circle">
+        <button type="button" class="btn-accent btn-icon-lg" id="shutter-btn" aria-label="Ambil foto" disabled>{% include 'partials/icon.html' with name='camera' cls='ico-lg' %}</button>
+      </span>
+      <button type="button" class="btn-neu btn-icon" id="flash-btn" aria-label="Lampu kilat" disabled>
+        <span data-flash-on hidden>{% include 'partials/icon.html' with name='flash' cls='ico-lg' %}</span>
+        <span data-flash-off>{% include 'partials/icon.html' with name='flash-off' cls='ico-lg' %}</span>
+      </button>
+    </div>
+
+    <div class="control-dock" id="dock-review" style="gap: 16px;" hidden>
+      <button type="button" class="btn-neu" id="retake-btn">Ambil ulang</button>
+      <span class="ring ring-squircle" style="flex: 1;">
+        <button type="submit" class="btn-accent btn-lg btn-block" id="analyze-btn">{% include 'partials/icon.html' with name='sparkle' %} Analisis Makanan</button>
+      </span>
+    </div>
+  </div>
+
+  <aside class="flex flex-col gap-5">
+    <div class="card">
+      <p class="font-bold mb-4" style="font-size: 1.0625rem;">Tips foto yang akurat</p>
+      <ul class="flex flex-col gap-4 text-sm text-secondary" style="font-weight: 500; line-height: 1.5;">
+        <li class="flex gap-3"><span class="text-accent">{% include 'partials/icon.html' with name='check' %}</span>Pastikan semua item di piring masuk dalam bingkai.</li>
+        <li class="flex gap-3"><span class="text-accent">{% include 'partials/icon.html' with name='check' %}</span>Gunakan cahaya yang cukup, hindari bayangan tangan.</li>
+        <li class="flex gap-3"><span class="text-accent">{% include 'partials/icon.html' with name='check' %}</span>Ambil dari atas agar tiap lauk terlihat jelas.</li>
+      </ul>
+    </div>
+    <span class="ring ring-squircle ring-block">
+      <a href="{% url 'scanner:daily_log' %}" class="btn-neu">{% include 'partials/icon.html' with name='log' %} Lihat riwayat hari ini</a>
+    </span>
+  </aside>
+</form>
+
+<div class="loading-overlay" id="loading-overlay" role="status" aria-live="polite">
+  <div class="scan-loader">
+    <span class="scan-loader-core">{% include 'partials/icon.html' with name='scan' cls='ico-lg' %}</span>
+  </div>
+  <div>
+    <p class="font-extrabold" style="font-size: 1.375rem;">Sedang menganalisis foto...</p>
+    <p class="text-secondary mt-2" style="font-weight: 500;">Estimasi 3-5 detik</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var MAX_SIDE = 1280;
+  var form = document.getElementById('scan-form');
+  var input = document.getElementById('photo-input');
+  var video = document.getElementById('camera-video');
+  var preview = document.getElementById('preview-img');
+  var placeholder = document.getElementById('vf-placeholder');
+  var message = document.getElementById('vf-message');
+  var dockCapture = document.getElementById('dock-capture');
+  var dockReview = document.getElementById('dock-review');
+  var shutter = document.getElementById('shutter-btn');
+  var galleryBtn = document.getElementById('gallery-btn');
+  var flashBtn = document.getElementById('flash-btn');
+  var retakeBtn = document.getElementById('retake-btn');
+  var overlay = document.getElementById('loading-overlay');
+  var stream = null;
+  var torchOn = false;
+
+  function setState(state) {
+    var review = state === 'review';
+    video.hidden = state !== 'camera';
+    preview.hidden = !review;
+    placeholder.hidden = state !== 'idle';
+    dockCapture.hidden = review;
+    dockReview.hidden = !review;
+  }
+
+  function setTorchIcon() {
+    flashBtn.querySelector('[data-flash-on]').hidden = !torchOn;
+    flashBtn.querySelector('[data-flash-off]').hidden = torchOn;
+  }
+
+  function stopCamera() {
+    if (stream) {
+      stream.getTracks().forEach(function (track) { track.stop(); });
+      stream = null;
+    }
+    torchOn = false;
+    setTorchIcon();
+  }
+
+  function showIdle(text) {
+    stopCamera();
+    message.textContent = text;
+    shutter.disabled = true;
+    flashBtn.disabled = true;
+    setState('idle');
+  }
+
+  async function startCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showIdle('Kamera tidak didukung di browser ini. Pilih foto dari galeri.');
+      return;
+    }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false
+      });
+      video.srcObject = stream;
+      await video.play().catch(function () {});
+      var track = stream.getVideoTracks()[0];
+      var capabilities = track.getCapabilities ? track.getCapabilities() : {};
+      flashBtn.disabled = !capabilities.torch;
+      shutter.disabled = false;
+      setState('camera');
+    } catch (error) {
+      showIdle('Akses kamera ditolak atau tidak tersedia. Pilih foto dari galeri.');
+    }
+  }
+
+  function scaledBlob(source, width, height) {
+    var scale = Math.min(1, MAX_SIDE / Math.max(width, height));
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+    canvas.getContext('2d').drawImage(source, 0, 0, canvas.width, canvas.height);
+    return new Promise(function (resolve) { canvas.toBlob(resolve, 'image/jpeg', 0.85); });
+  }
+
+  function acceptBlob(blob) {
+    var file = new File([blob], 'meal.jpg', { type: 'image/jpeg' });
+    var transfer = new DataTransfer();
+    transfer.items.add(file);
+    input.files = transfer.files;
+    preview.src = URL.createObjectURL(blob);
+    stopCamera();
+    setState('review');
+  }
+
+  shutter.addEventListener('click', async function () {
+    if (!video.videoWidth) return;
+    acceptBlob(await scaledBlob(video, video.videoWidth, video.videoHeight));
+  });
+
+  galleryBtn.addEventListener('click', function () { input.click(); });
+
+  input.addEventListener('change', async function () {
+    var file = input.files[0];
+    if (!file) return;
+    try {
+      var bitmap = await createImageBitmap(file);
+      acceptBlob(await scaledBlob(bitmap, bitmap.width, bitmap.height));
+    } catch (error) {
+      preview.src = URL.createObjectURL(file);
+      stopCamera();
+      setState('review');
+    }
+  });
+
+  flashBtn.addEventListener('click', async function () {
+    var track = stream && stream.getVideoTracks()[0];
+    if (!track) return;
+    torchOn = !torchOn;
+    try {
+      await track.applyConstraints({ advanced: [{ torch: torchOn }] });
+    } catch (error) {
+      torchOn = false;
+    }
+    setTorchIcon();
+  });
+
+  retakeBtn.addEventListener('click', function () {
+    input.value = '';
+    preview.removeAttribute('src');
+    message.textContent = 'Menyalakan kamera...';
+    setState('idle');
+    startCamera();
+  });
+
+  form.addEventListener('submit', function (event) {
+    if (!input.files.length) {
+      event.preventDefault();
+      return;
+    }
+    overlay.classList.add('show');
+  });
+
+  window.addEventListener('pageshow', function () { overlay.classList.remove('show'); });
+
+  startCamera();
+})();
+</script>
+{% endblock %}
