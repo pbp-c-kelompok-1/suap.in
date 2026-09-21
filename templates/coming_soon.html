@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} — Suap.in{% endblock %}
+
+{% block content %}
+<div class="flex flex-col items-center text-center" style="padding: 56px 0;">
+  <span class="ring ring-circle mb-8">
+    <span class="btn-neu btn-icon-lg" style="cursor: default;">{% include 'partials/icon.html' with name=icon cls='ico-xl' %}</span>
+  </span>
+  <span class="badge mb-4">Segera hadir</span>
+  <h1 class="page-title">{{ title }}</h1>
+  <p class="page-sub" style="max-width: 420px; line-height: 1.6;">{{ description }}</p>
+  <span class="ring ring-squircle mt-10">
+    <a href="{% url 'scanner:scan' %}" class="btn-accent btn-lg">{% include 'partials/icon.html' with name='camera' %} Scan makanan dulu</a>
+  </span>
+</div>
+{% endblock %}
