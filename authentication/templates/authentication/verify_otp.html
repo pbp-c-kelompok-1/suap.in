@@ -1,0 +1,26 @@
+{% extends 'auth_base.html' %}
+
+{% block title %}OTP Verification — Suap.in{% endblock %}
+
+{% block auth_content %}
+<h1 class="auth-title mb-3">OTP Verification</h1>
+<p class="text-secondary mb-8" style="font-weight: 500; line-height: 1.6;">
+  Enter the 6-digit verification code we just sent to
+  <strong class="text-primary">{{ email }}</strong>.
+</p>
+
+<form method="post" class="flex flex-col gap-5" novalidate>
+  {% csrf_token %}
+  {% include 'partials/form_alert.html' %}
+  {% include 'partials/field.html' with field=form.code %}
+
+  <span class="ring ring-squircle ring-block mt-2">
+    <button type="submit" class="btn-accent btn-lg">Verify</button>
+  </span>
+</form>
+
+<p class="text-center mt-10 text-sm font-medium">
+  Didn't receive code?
+  <a href="{% url 'authentication:forgot_password' %}" class="text-accent font-bold">Resend</a>
+</p>
+{% endblock %}

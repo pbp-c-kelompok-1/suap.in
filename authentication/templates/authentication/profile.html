@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Profil {{ profile_user.username }} — Suap.in{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
+
+  <section class="card flex flex-col items-center text-center" style="padding: 32px 24px;">
+    <span class="ring ring-circle">
+      <span class="avatar avatar-healthy" style="width: 104px; height: 104px; font-size: 2.5rem;">{{ profile_user.username|first|upper }}</span>
+    </span>
+    <h1 class="page-title mt-5" style="font-size: 1.5rem;">{{ profile_user.username }}</h1>
+    <p class="text-secondary text-sm mt-1">Bergabung sejak {{ profile_user.date_joined|date:"d M Y" }}</p>
+
+    {% if is_own_profile %}
+    <div class="flex flex-col gap-3 mt-7 w-full">
+      <span class="ring ring-squircle ring-block">
+        <a href="{% url 'scanner:daily_log' %}" class="btn-neu">{% include 'partials/icon.html' with name='log' %} Riwayat hari ini</a>
+      </span>
+      <span class="ring ring-squircle ring-block">
+        <a href="{% url 'authentication:logout' %}" class="btn-neu" style="color: var(--accent-red);">{% include 'partials/icon.html' with name='logout' %} Keluar</a>
+      </span>
+    </div>
+    {% endif %}
+  </section>
+
+  <div class="flex flex-col gap-6">
+    <section class="grid grid-cols-3 gap-4">
+      <div class="stat-tile">
+        <p class="stat-label">Total scan</p>
+        <p class="stat-value">{{ scan_count }}</p>
+      </div>
+      <div class="stat-tile">
+        <p class="stat-label">Total CO₂</p>
+        <p class="stat-value">{{ total_co2|floatformat:"0g" }}<span class="text-secondary" style="font-size: 0.875rem; font-weight: 600;"> g</span></p>
+      </div>
+      <div class="stat-tile">
+        <p class="stat-label">Hari aktif</p>
+        <p class="stat-value">{{ active_days }}</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="font-bold" style="font-size: 1.125rem;">Emisi 7 hari terakhir</h2>
+        <span class="badge">gram CO₂</span>
+      </div>
+
+      {% if chart.has_data %}
+      <svg viewBox="0 0 {{ chart.width }} {{ chart.height }}" class="w-full" role="img" aria-label="Grafik emisi CO2 7 hari terakhir">
+        <polyline points="{{ chart.polyline }}" fill="none" stroke="#4A6CF7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        {% for p in chart.points %}
+        <circle cx="{{ p.x }}" cy="{{ p.y }}" r="6.5" fill="#F0F4FF" stroke="#4A6CF7" stroke-width="3.5"><title>{{ p.label }}: {{ p.value }} g CO₂</title></circle>
+        {% endfor %}
+      </svg>
+      <div class="grid grid-cols-7 text-center text-xs font-semibold text-muted mt-3">
+        {% for p in chart.points %}<span>{{ p.label }}</span>{% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-slot">Belum ada data scan minggu ini</div>
+      {% endif %}
+    </section>
+  </div>
+
+</div>
+{% endblock %}

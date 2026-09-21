@@ -1,0 +1,36 @@
+{% extends 'auth_base.html' %}
+
+{% block title %}Login — Suap.in{% endblock %}
+
+{% block auth_content %}
+<h1 class="auth-title mb-8">Welcome back!<br>Glad to see you, Again!</h1>
+
+<form method="post" class="flex flex-col gap-5" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  {% include 'partials/form_alert.html' %}
+
+  {% include 'partials/field.html' with field=form.identifier %}
+  {% include 'partials/field.html' with field=form.password toggle=True %}
+
+  <div class="flex items-center justify-between">
+    <label class="flex items-center gap-3 text-sm font-medium cursor-pointer">
+      <input type="checkbox" name="remember" class="switch">
+      Remember me
+    </label>
+    <a href="{% url 'authentication:forgot_password' %}" class="text-accent text-sm font-semibold">Forgot password?</a>
+  </div>
+
+  <span class="ring ring-squircle ring-block mt-2">
+    <button type="submit" class="btn-accent btn-lg">Login</button>
+  </span>
+</form>
+
+<div class="divider-label my-8">Or Login with</div>
+{% include 'partials/social_login.html' %}
+
+<p class="text-center mt-10 text-sm font-medium">
+  Don't have an account?
+  <a href="{% url 'authentication:register' %}" class="text-accent font-bold">Register Now</a>
+</p>
+{% endblock %}
