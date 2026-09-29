@@ -1,0 +1,110 @@
+[
+  {
+    "model": "social.university",
+    "pk": 1,
+    "fields": {
+      "name": "Universitas Indonesia",
+      "short_name": "UI",
+      "city": "Depok"
+    }
+  },
+  {
+    "model": "social.university",
+    "pk": 2,
+    "fields": {
+      "name": "Institut Teknologi Bandung",
+      "short_name": "ITB",
+      "city": "Bandung"
+    }
+  },
+  {
+    "model": "social.university",
+    "pk": 3,
+    "fields": {
+      "name": "Universitas Gadjah Mada",
+      "short_name": "UGM",
+      "city": "Yogyakarta"
+    }
+  },
+  {
+    "model": "social.university",
+    "pk": 4,
+    "fields": {
+      "name": "Institut Pertanian Bogor",
+      "short_name": "IPB",
+      "city": "Bogor"
+    }
+  },
+  {
+    "model": "social.university",
+    "pk": 5,
+    "fields": {
+      "name": "Institut Teknologi Sepuluh Nopember",
+      "short_name": "ITS",
+      "city": "Surabaya"
+    }
+  },
+  {
+    "model": "social.university",
+    "pk": 6,
+    "fields": {
+      "name": "Universitas Airlangga",
+      "short_name": "UNAIR",
+      "city": "Surabaya"
+    }
+  },
+  {
+    "model": "social.university",
+    "pk": 7,
+    "fields": {
+      "name": "Universitas Padjadjaran",
+      "short_name": "UNPAD",
+      "city": "Sumedang"
+    }
+  },
+  {
+    "model": "social.university",
+    "pk": 8,
+    "fields": {
+      "name": "Universitas Diponegoro",
+      "short_name": "UNDIP",
+      "city": "Semarang"
+    }
+  },
+  {
+    "model": "social.university",
+    "pk": 9,
+    "fields": {
+      "name": "Universitas Brawijaya",
+      "short_name": "UB",
+      "city": "Malang"
+    }
+  },
+  {
+    "model": "social.university",
+    "pk": 10,
+    "fields": {
+      "name": "Universitas Bina Nusantara",
+      "short_name": "BINUS",
+      "city": "Jakarta"
+    }
+  },
+  {
+    "model": "social.university",
+    "pk": 11,
+    "fields": {
+      "name": "Universitas Hasanuddin",
+      "short_name": "UNHAS",
+      "city": "Makassar"
+    }
+  },
+  {
+    "model": "social.university",
+    "pk": 12,
+    "fields": {
+      "name": "Universitas Sumatera Utara",
+      "short_name": "USU",
+      "city": "Medan"
+    }
+  }
+]
