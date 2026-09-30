@@ -10,23 +10,23 @@
 
   <nav class="nav" aria-label="Navigasi utama">
 
-    <a href="#/misi" data-page="misi">
+    <a href="{% url 'challenge:list' %}#/misi" data-page="misi">
       <svg class="i"><use href="#i-target"/></svg>
       <span>Misi</span>
     </a>
 
-    <a href="#/laporan" data-page="laporan">
+    <a href="{% url 'challenge:list' %}#/laporan" data-page="laporan">
       <svg class="i"><use href="#i-chart"/></svg>
       <span>Laporan</span>
     </a>
 
-    <a href="#/notifikasi" data-page="notifikasi">
+    <a href="{% url 'challenge:list' %}#/notifikasi" data-page="notifikasi">
       <svg class="i"><use href="#i-bell"/></svg>
       <span>Notifikasi</span>
       <em class="badge" id="navBadge" hidden>0</em>
     </a>
 
-    <a href="#/profil" data-page="profil">
+    <a href="{% url 'challenge:list' %}#/profil" data-page="profil">
       <svg class="i"><use href="#i-user"/></svg>
       <span>Profil</span>
     </a>
