@@ -4,84 +4,74 @@
 
 {% block content %}
 {% if user.is_authenticated %}
-<h1 class="page-title">Halo, {{ user.username }}!</h1>
-<p class="page-sub">Yuk catat makananmu hari ini dan jaga jejak karbonmu.</p>
+<div class="topbar"><h1>Halo, {{ user.username }}!</h1>{% include 'partials/auth_status.html' %}</div>
+<p class="ref-note">Yuk catat makananmu hari ini dan jaga jejak karbonmu.</p>
 
-<div class="grid grid-cols-1 gap-6 mt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
-  <section class="card">
-    <div class="flex items-start justify-between gap-3 mb-4">
+<div class="grid-2" style="align-items:start">
+  <div class="raise card">
+    <div class="budget-top" style="margin-bottom:8px">
       <div>
-        <p class="stat-label">Budget karbon hari ini</p>
-        <p class="stat-value">{{ used_grams|floatformat:"0g" }}g <span class="text-secondary" style="font-size: 0.875rem; font-weight: 600;">/ {{ limit_grams|floatformat:"0g" }}g</span></p>
+        <span class="chip lvl">{{ status_label }}</span>
+        <div class="big" style="margin-top:12px"><b>{{ used_grams|floatformat:"0g" }}</b><span>/ {{ limit_grams|floatformat:"0g" }} g CO₂</span></div>
+        <p style="margin-top:10px">
+          {% if over_grams %}Melebihi budget {{ over_grams|floatformat:"0g" }} g hari ini.
+          {% else %}Sisa {{ remaining_grams|floatformat:"0g" }} g CO₂ hari ini.{% endif %}
+          {% if used_grams > 0 %}{{ analogy }}{% endif %}
+        </p>
       </div>
-      <span class="badge badge-{{ status_color }}">{{ status_label }}</span>
     </div>
-    <div class="progress-track">
-      <div class="progress-fill-{{ status_color }}" style="width: {{ progress_percent }}%;"></div>
+    <div class="xp-track" style="height:16px;margin-bottom:18px">
+      <div class="xp-fill" style="width:{{ progress_percent }}%"></div>
     </div>
-    <p class="text-secondary text-sm mt-3" style="font-weight: 500;">
-      {% if over_grams %}Melebihi budget {{ over_grams|floatformat:"0g" }}g{% else %}Sisa {{ remaining_grams|floatformat:"0g" }}g{% endif %}
-      {% if used_grams > 0 %}· {{ analogy }}{% endif %}
-    </p>
-    <a href="{% url 'scanner:scan' %}" class="btn-accent btn-lg btn-block mt-6">{% include 'partials/icon.html' with name='camera' %} Scan Makanan</a>
-  </section>
+    <a href="{% url 'scanner:scan' %}" class="btn ok wide"><svg class="i"><use href="#i-camera"/></svg>Scan Makanan</a>
+  </div>
 
-  <section class="card">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="font-bold" style="font-size: 1.125rem;">Scan terakhir</h2>
-      <a href="{% url 'scanner:daily_log' %}" class="text-accent text-sm font-semibold">Lihat riwayat</a>
-    </div>
-    <div class="flex flex-col gap-3">
+  <div class="raise card">
+    <div class="sec-head"><h2>Scan terakhir</h2><span><a href="{% url 'scanner:daily_log' %}" class="link-sm">Lihat riwayat</a></span></div>
+    <div style="display:grid;gap:12px">
       {% for log in recent_logs %}
-      <div class="card-sm flex items-center justify-between gap-3">
-        <div class="min-w-0">
-          <p class="font-semibold text-sm truncate">{{ log.display_name }}</p>
-          <p class="text-muted text-xs" style="font-weight: 500;">{{ log.scanned_at|date:"d M, H:i" }}</p>
-        </div>
-        <p class="font-bold text-sm whitespace-nowrap">{{ log.co2_grams|floatformat:"0g" }}g</p>
+      <div class="log-item">
+        <span class="li-ico">🍽️</span>
+        <span class="li-txt"><b>{{ log.display_name }}</b><small>{{ log.scanned_at|date:"d M, H:i" }}</small></span>
+        <b style="font-family:'Fredoka'">{{ log.co2_grams|floatformat:"0g" }} g</b>
       </div>
       {% empty %}
-      <div class="empty-slot">Belum ada scan. Mulai dengan foto makanan pertamamu.</div>
+      <p class="authsub">Belum ada scan. Mulai dengan foto makanan pertamamu.</p>
       {% endfor %}
     </div>
-  </section>
+  </div>
 </div>
 
 {% else %}
-<section class="card" style="padding: 40px 28px;">
-  <span class="badge badge-accent mb-5">Untuk mahasiswa yang peduli bumi</span>
-  <h1 class="page-title" style="font-size: 2.5rem; line-height: 1.1;">Foto makananmu,<br><span class="text-accent">jaga bumiku.</span></h1>
-  <p class="page-sub" style="max-width: 520px; line-height: 1.65;">
-    Suap.in menghitung jejak karbon dari setiap suapan lewat satu foto. Kumpulkan streak, naik level, dan bersaing sehat dengan teman sekampus.
-  </p>
-  <div class="flex flex-wrap items-center gap-4 mt-8">
-    <a href="{% url 'authentication:register' %}" class="btn-accent btn-lg">Daftar gratis</a>
-    <a href="{% url 'authentication:login' %}" class="btn-neu btn-lg">Masuk</a>
-  </div>
-</section>
+<div class="topbar"><h1>Suap.in</h1>{% include 'partials/auth_status.html' %}</div>
 
-<section class="grid grid-cols-1 gap-5 mt-6 md:grid-cols-3">
-  <div class="card-sm flex items-center gap-4">
-    <span class="meal-icon">{% include 'partials/icon.html' with name='scan' cls='ico-lg' %}</span>
-    <div>
-      <p class="font-bold">AI Food Scanner</p>
-      <p class="text-secondary text-sm">Semua item terdeteksi dari satu foto.</p>
+<div class="raise hero land-hero">
+  <div class="mascot-wrap" id="mascotLand"></div>
+  <div>
+    <span class="land-badge">Untuk mahasiswa yang peduli bumi</span>
+    <h2 class="land-title">Foto makananmu,<br><span class="accent">jaga bumiku.</span></h2>
+    <p class="land-sub">Suap.in menghitung jejak karbon dari tiap suapan lewat satu foto. Kumpulkan streak, naik level, dan bersaing sehat dengan teman sekampus.</p>
+    <div class="land-cta">
+      <a href="{% url 'authentication:register' %}" class="btn">Daftar gratis</a>
+      <a href="{% url 'authentication:login' %}" class="btn ghost">Masuk</a>
     </div>
   </div>
-  <div class="card-sm flex items-center gap-4">
-    <span class="meal-icon">{% include 'partials/icon.html' with name='fire' cls='ico-lg' %}</span>
-    <div>
-      <p class="font-bold">Streak &amp; Level</p>
-      <p class="text-secondary text-sm">Konsisten setiap hari, naik level.</p>
-    </div>
-  </div>
-  <div class="card-sm flex items-center gap-4">
-    <span class="meal-icon">{% include 'partials/icon.html' with name='board' cls='ico-lg' %}</span>
-    <div>
-      <p class="font-bold">Leaderboard Kampus</p>
-      <p class="text-secondary text-sm">Adu emisi terendah antar universitas.</p>
-    </div>
-  </div>
-</section>
+</div>
+
+<div class="land-feats">
+  <div class="raise-sm land-feat"><div class="lf-ico"><svg class="i"><use href="#i-scan"/></svg></div><div><b>AI Food Scanner</b><span>Semua item terdeteksi dari satu foto.</span></div></div>
+  <div class="raise-sm land-feat"><div class="lf-ico"><svg class="i"><use href="#i-flame"/></svg></div><div><b>Streak &amp; Level</b><span>Konsisten setiap hari, naik level.</span></div></div>
+  <div class="raise-sm land-feat"><div class="lf-ico"><svg class="i"><use href="#i-trophy"/></svg></div><div><b>Leaderboard Kampus</b><span>Adu emisi terendah antar universitas.</span></div></div>
+</div>
 {% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var slot = document.getElementById('mascotLand');
+  var tpl = document.getElementById('mascot-tpl');
+  if (slot && tpl) slot.appendChild(tpl.content.cloneNode(true));
+})();
+</script>
 {% endblock %}
