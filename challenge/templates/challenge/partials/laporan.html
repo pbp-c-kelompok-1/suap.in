@@ -2,28 +2,45 @@
 <section class="page" id="page-laporan" aria-labelledby="h-lap">
   <div class="topbar">
     <h1 id="h-lap">Laporan minggu ini</h1>
-    <span class="chip">21 – 27 Sep 2026</span>
+    {% if week_start %}<span class="chip">{{ week_start|date:"d" }} – {{ week_end|date:"d M Y" }}</span>{% endif %}
   </div>
 
   <div class="grid-2">
     <div class="raise card">
       <div class="big"><b id="weekTotal">0</b><span>kg CO₂</span></div>
-      <div class="delta"><svg class="i"><use href="#i-down"/></svg>12% lebih rendah dari minggu lalu (20,9 kg)</div>
+      {% if delta_percent is not None %}
+      <div class="delta" {% if delta_percent > 0 %}style="color:var(--danger);background:var(--surface)"{% endif %}>
+        <svg class="i" {% if delta_percent > 0 %}style="transform:rotate(180deg)"{% endif %}><use href="#i-down"/></svg>
+        {{ delta_percent|floatformat:0 }}% {% if delta_percent > 0 %}lebih tinggi{% else %}lebih rendah{% endif %} dari minggu lalu ({{ prev_week_kg|floatformat:1 }} kg)
+      </div>
+      {% else %}
+      <div class="delta">Belum cukup data untuk dibandingkan dengan minggu lalu.</div>
+      {% endif %}
       <div class="chart">
         <div class="bars" id="bars" role="list"></div>
         <div class="legend">
           <span><i style="background:var(--green-500)"></i>Di bawah budget</span>
           <span><i style="background:var(--danger)"></i>Lewat budget</span>
           <span><i style="background:var(--blue-500)"></i>Hari terbaik</span>
+          <span><i style="background:var(--bg);box-shadow:inset 0 0 0 1px var(--sh-d)"></i>Belum ada data</span>
         </div>
       </div>
     </div>
 
     <div class="raise card proj">
       <h3>Proyeksi setahun</h3>
-      <div class="big"><b>957</b><span>kg CO₂</span></div>
+      {% if projection_kg is not None %}
+      <div class="big"><b>{{ projection_kg }}</b><span>kg CO₂</span></div>
       <p>Kalau ritme minggu ini terjaga sampai 52 minggu ke depan.</p>
-      <div class="save"><svg class="i"><use href="#i-leaf"/></svg><span>Hemat ± 130 kg dibanding ritme minggu lalu, setara ± 6 pohon.</span></div>
+      {% if is_saving %}
+      <div class="save"><svg class="i"><use href="#i-leaf"/></svg><span>Hemat ± {{ savings_kg }} kg dibanding ritme minggu lalu, setara ± {{ savings_trees }} pohon.</span></div>
+      {% elif savings_kg is not None %}
+      <div class="save"><span>Emisimu naik ± {{ savings_kg }} kg dibanding ritme minggu lalu.</span></div>
+      {% endif %}
+      {% else %}
+      <div class="big"><b>–</b><span>kg CO₂</span></div>
+      <p>Mulai scan makananmu minggu ini untuk melihat proyeksi tahunan.</p>
+      {% endif %}
     </div>
   </div>
 

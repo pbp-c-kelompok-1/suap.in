@@ -19,6 +19,7 @@
   box-shadow:0 4px 0 var(--green-800);transition:height .9s cubic-bezier(.2,.9,.3,1.15);cursor:pointer;position:relative}
 .pillar.over{background:linear-gradient(180deg,#FF7A7A,var(--danger));box-shadow:0 4px 0 #A82D2D}
 .pillar.best{background:linear-gradient(180deg,var(--blue-400),var(--blue-600));box-shadow:0 4px 0 var(--blue-800)}
+.pillar.nodata{background:var(--bg);box-shadow:inset 3px 3px 6px var(--sh-d),inset -3px -3px 6px var(--sh-l);cursor:default}
 .pillar:hover{filter:brightness(1.08)}
 .pillar .tip{position:absolute;bottom:calc(100% + 10px);left:50%;transform:translate(-50%,6px);background:var(--text);color:var(--bg);
   font-family:'Fredoka';font-size:.82rem;padding:4px 10px;border-radius:10px;white-space:nowrap;opacity:0;pointer-events:none;transition:.15s}

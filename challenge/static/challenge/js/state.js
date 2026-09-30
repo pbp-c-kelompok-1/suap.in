@@ -1,9 +1,14 @@
 // State aplikasi (data dummy) + tier & formatter
 
+const real = window.SUAPIN_REAL || null;
+const realWeekly = real ? real.weekly.map(w => ({ d: w.d, v: w.v, hasData: w.hasData })) : null;
+const realRank = real ? real.rank.map(r => [r.name, r.kg, r.is_me ? 1 : 0]) : null;
+
 /* ---------------- STATE ---------------- */
 export const state = {
   xp: 340, cap: 500, level: 12, streak: 7,
   budget: { used: 2.1, max: 3.5 },
+  budgetCapKg: real ? real.budgetCapKg : 3.5,
   freeze: 1,
   quests: [
     { id: 1, icon: 'leaf',   tone: 'green', title: 'Menu nabati siang ini', desc: 'Ganti 1 porsi lauk hewani dengan tempe, tahu, atau sayur.', goal: 1, val: 0, xp: 30, why: 'Karena kamu sering makan daging sapi', claimed: false },
@@ -11,14 +16,14 @@ export const state = {
     { id: 3, icon: 'plate',  tone: 'teal',  title: 'Habiskan piringmu', desc: 'Habiskan 2 porsi tanpa sisa.',                          goal: 2, val: 0, xp: 25, why: 'Sisa makanan menambah emisi ± 0,4 kg', claimed: false },
   ],
   chestOpen: false,
-  weekly: [
+  weekly: realWeekly || [
     { d: 'Sen', v: 2.4 }, { d: 'Sel', v: 3.1 }, { d: 'Rab', v: 2.2 }, { d: 'Kam', v: 3.6 },
     { d: 'Jum', v: 2.9 }, { d: 'Sab', v: 2.5 }, { d: 'Min', v: 1.7 },
   ],
   rank: {
-    teman:    [['Dinda', 14.8], ['Kamu', 18.4, 1], ['Bima', 19.6], ['Salsa', 22.0]],
-    kampus:   [['Dinda A.', 15.2], ['Bima R.', 17.8], ['Kamu', 18.4, 1], ['Salsa P.', 19.1], ['Raka T.', 20.3]],
-    nasional: [['Alya N.', 11.9], ['Fajar S.', 12.6], ['Citra W.', 13.4], ['Kamu', 18.4, 1], ['Gilang M.', 19.0]],
+    teman:    realRank || [['Dinda', 14.8], ['Kamu', 18.4, 1], ['Bima', 19.6], ['Salsa', 22.0]],
+    kampus:   realRank || [['Dinda A.', 15.2], ['Bima R.', 17.8], ['Kamu', 18.4, 1], ['Salsa P.', 19.1], ['Raka T.', 20.3]],
+    nasional: realRank || [['Alya N.', 11.9], ['Fajar S.', 12.6], ['Citra W.', 13.4], ['Kamu', 18.4, 1], ['Gilang M.', 19.0]],
   },
   notifs: [
     { id: 1, type: 'streak',    ico: 'flame',  tone: 'amber', t: 'Streak 7 hari!', p: 'Sedikit lagi ke lencana "Streak 14 Hari".', time: '5 mnt', read: false },
@@ -30,7 +35,7 @@ export const state = {
   ],
   filter: 'all', rankTab: 'kampus',
   avatar: 0, pending: 0, pTab: 'all', demoUnlock: false,
-  profile: { name: 'Annisa', bio: 'Lagi belajar makan lebih hijau.' },
+  profile: { name: real ? real.profileName : 'Kamu', bio: 'Lagi belajar makan lebih hijau.' },
 };
 const tiers = [[0, 'Pemula Sadar'], [10, 'Pejuang Hijau'], [20, 'Guardian Bumi'], [35, 'Legenda Lestari']];
 export const tierFor = l => [...tiers].reverse().find(t => l >= t[0])[1];

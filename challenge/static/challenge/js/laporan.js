@@ -4,15 +4,18 @@ import { avatarIcon } from './avatar.js';
 import { fmt, state } from './state.js';
 import { toast } from './fx.js';
 
-const CAP = 3.5;
 export function renderReport() {
-  const max = 4.2;
-  const best = Math.min(...state.weekly.map(w => w.v));
+  const cap = state.budgetCapKg;
+  const withData = state.weekly.filter(w => w.hasData);
+  const best = withData.length ? Math.min(...withData.map(w => w.v)) : null;
+  const max = Math.max(cap, ...state.weekly.map(w => w.v), 0.1) * 1.2;
   $('#bars').innerHTML =
-    `<div class="cap" style="bottom:calc(${CAP / max * 100}% * .88 + 28px)"><span>Budget ${fmt(CAP).replace('.', ',')}</span></div>` +
+    `<div class="cap" style="bottom:calc(${cap / max * 100}% * .88 + 28px)"><span>Budget ${fmt(cap).replace('.', ',')}</span></div>` +
     state.weekly.map(w => {
-      const cls = w.v > CAP ? 'over' : w.v === best ? 'best' : '';
-      return `<div class="col" role="listitem"><button class="pillar ${cls}" data-h="${w.v / max * 100}" aria-label="${w.d}: ${w.v} kg CO₂"><span class="tip">${fmt(w.v).replace('.', ',')} kg</span></button><small>${w.d}</small></div>`;
+      const cls = !w.hasData ? 'nodata' : w.v > cap ? 'over' : w.v === best ? 'best' : '';
+      const label = w.hasData ? `${w.d}: ${fmt(w.v).replace('.', ',')} kg CO₂` : `${w.d}: belum ada data`;
+      const tip = w.hasData ? `${fmt(w.v).replace('.', ',')} kg` : 'Belum ada data';
+      return `<div class="col" role="listitem"><button class="pillar ${cls}" data-h="${w.hasData ? w.v / max * 100 : 4}" aria-label="${label}"><span class="tip">${tip}</span></button><small>${w.d}</small></div>`;
     }).join('');
 }
 export function animateReport() {

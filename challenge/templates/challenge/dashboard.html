@@ -1,6 +1,16 @@
 {% extends 'challenge/base_challenge.html' %}
 
 {% block content %}
+    {% if user.is_authenticated %}
+    <script>
+      window.SUAPIN_REAL = {
+        profileName: "{{ user.username|escapejs }}",
+        weekly: JSON.parse("{{ weekly_json|escapejs }}"),
+        rank: JSON.parse("{{ rank_json|escapejs }}"),
+        budgetCapKg: {{ budget_cap_kg_js }}
+      };
+    </script>
+    {% endif %}
     {% include 'challenge/partials/svg_sprite.html' %}
     {% include 'challenge/partials/mascot_template.html' %}
 
