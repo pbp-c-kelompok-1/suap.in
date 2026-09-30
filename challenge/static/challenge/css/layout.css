@@ -31,7 +31,7 @@
   box-shadow:4px 4px 9px var(--sh-d),-4px -4px 9px var(--sh-l)}
 .theme-btn:active{box-shadow:inset 3px 3px 7px var(--sh-d),inset -3px -3px 7px var(--sh-l)}
 
-main{min-width:0;padding:28px clamp(16px,4vw,48px) 60px;max-width:1080px;width:100%}
+main{min-width:0;padding:28px clamp(16px,4vw,48px) 60px;max-width:1080px;width:100%;margin-inline:auto}
 .page{display:none}
 .page.on{display:block;animation:pageIn .35s ease both}
 @keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
