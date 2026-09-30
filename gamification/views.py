@@ -4,6 +4,8 @@ from django.utils import timezone
 from scanner.models import CarbonBudget, FoodLog
 from scanner.services import calculate_carbon_analogy, get_carbon_status
 
+from gamification.models import GameProfile
+
 
 def dashboard_view(request):
     context = {}
@@ -35,19 +37,40 @@ def dashboard_view(request):
 
 
 def streak_view(request):
-    return render(request, 'coming_soon.html', {
+    context = {
         'title': 'Streak',
         'icon': 'fire',
         'description': 'Pantau streak harianmu dan pakai streak freeze di sini.',
-    })
+    }
+
+    if request.user.is_authenticated:
+        profile, _ = GameProfile.objects.get_or_create(user=request.user)
+        context = {
+            'title': 'Streak',
+            'icon': 'fire',
+            'description': 'Pantau streak harianmu dan pakai streak freeze di sini.',
+            'profile': profile,
+        }
+    return render(request, 'gamification/streak.html', context)
 
 
 def level_view(request):
-    return render(request, 'coming_soon.html', {
+    context = {
         'title': 'Level & XP',
         'icon': 'sparkle',
         'description': 'Lihat progres XP, tier level, dan koleksi lencanamu.',
-    })
+    }
+
+    if request.user.is_authenticated:
+        profile, _ = GameProfile.objects.get_or_create(user=request.user)
+        context = {
+            'title': 'Level & XP',
+            'icon': 'sparkle',
+            'description': 'Lihat progres XP, tier level, dan koleksi lencanamu.',
+            'profile': profile,
+        }
+
+    return render(request, 'gamification/level.html', context)
 
 
 def story_view(request):
