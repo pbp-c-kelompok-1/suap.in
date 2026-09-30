@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Bab {{ comic.bab }} — Suap.in{% endblock %}
+
+{% block content %}
+<a href="{% url 'story:story_list' %}" class="text-sm text-secondary">← Kembali ke daftar bab</a>
+<h1 class="page-title mt-3 mb-2">Bab {{ comic.bab }}: {{ comic.title }}</h1>
+<p class="page-sub mb-6">{{ comic.description }}</p>
+
+<div class="card flex flex-col items-center justify-center text-center mb-6" style="min-height: 360px;">
+  {% include 'partials/icon.html' with name='image' cls='ico-xl' %}
+  <p class="font-semibold mt-3">Halaman {{ current_page }}</p>
+  <p class="text-xs text-muted">Panel komik segera hadir</p>
+</div>
+
+<div class="flex justify-between items-center">
+  {% if has_prev %}
+    <a href="?page={{ prev_page }}" class="btn-neu shape-pill">← Sebelumnya</a>
+  {% else %}<span></span>{% endif %}
+  <span class="text-sm text-secondary">{{ current_page }} / {{ comic.total_pages }}</span>
+  {% if has_next %}
+    <a href="?page={{ next_page }}" class="btn-accent shape-pill">Selanjutnya →</a>
+  {% else %}
+    <a href="{% url 'story:story_list' %}" class="btn-accent shape-pill">Selesai</a>
+  {% endif %}
+</div>
+{% endblock %}

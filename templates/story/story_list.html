@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Story — Suap.in{% endblock %}
+
+{% block content %}
+<h1 class="page-title mb-2">Story</h1>
+<p class="page-sub mb-6">Episode komik perjalanan makanan dari ladang ke piring. Naik level untuk membuka bab baru.</p>
+
+{% include 'story/_subnav.html' with active='story' %}
+
+<div class="card mb-6">
+  <div class="flex justify-between items-center mb-3">
+    <p class="font-semibold">{{ user_title }}</p>
+    <span class="badge">Lv. {{ user_level }}</span>
+  </div>
+  <div class="xp-bar-track mb-2"><div class="xp-bar-fill" style="width: {{ xp_percentage }}%"></div></div>
+  <p class="text-xs text-muted">{{ xp_needed }} scan lagi ke Level {{ next_level }}</p>
+</div>
+
+<div class="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+  {% for item in comics %}
+  <div class="card flex flex-col gap-3" {% if not item.is_unlocked %}style="opacity: 0.6;"{% endif %}>
+    <div class="flex justify-between items-center">
+      <span class="badge">Bab {{ item.comic.bab }}</span>
+      {% if item.is_unlocked %}
+        <span class="badge badge-green">Terbuka</span>
+      {% else %}
+        <span class="badge">{% include 'partials/icon.html' with name='lock' %} Level {{ item.comic.unlock_level }}</span>
+      {% endif %}
+    </div>
+    <p class="font-bold text-lg">{{ item.comic.title }}</p>
+    <p class="text-sm text-secondary">{{ item.comic.description }}</p>
+    <p class="text-xs text-muted">{{ item.comic.total_pages }} halaman</p>
+    {% if item.is_unlocked %}
+      <a href="{% url 'story:story_reader' item.comic.bab %}" class="btn-accent shape-pill mt-auto">Baca</a>
+    {% else %}
+      <button class="btn-neu shape-pill mt-auto" disabled>Terbuka di Level {{ item.comic.unlock_level }}</button>
+    {% endif %}
+  </div>
+  {% empty %}
+  <div class="empty-slot">Belum ada episode.</div>
+  {% endfor %}
+</div>
+{% endblock %}
