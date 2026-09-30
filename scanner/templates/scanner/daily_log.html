@@ -29,7 +29,7 @@
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:16px;margin-bottom:20px">
     {% for meal in meals %}
     <div class="mbar {% if not meal.total %}empty{% endif %}">
-      <div class="inset">{% if meal.total %}<div class="fill" style="height:{% widthratio meal.total budget.budget_grams 100 %}%"></div>{% endif %}</div>
+      <div class="inset">{% if meal.total %}<div class="fill" style="height:{{ meal.percent }}%"></div>{% endif %}</div>
       <b>{% if meal.total %}{{ meal.total|floatformat:"0g" }} g{% else %}–{% endif %}</b>
       <span>{{ meal.label }}</span>
     </div>
