@@ -11,5 +11,6 @@ urlpatterns = [
     path('scanner/', include('scanner.urls')),
     path('social/', include('social.urls')),
     path('challenge/', include('challenge.urls')),
+    path('story/', include('story.urls')),
     path('design-test/', TemplateView.as_view(template_name='test_design.html'), name='design_test'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
