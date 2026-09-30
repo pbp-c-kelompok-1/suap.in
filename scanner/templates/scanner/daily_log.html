@@ -8,9 +8,7 @@
     <h1 class="page-title">Riwayat</h1>
     <p class="page-sub" style="font-weight: 700;">Hari ini • Total: {{ total_co2|floatformat:"0g" }}g CO₂</p>
   </div>
-  <span class="ring ring-squircle">
-    <a href="{% url 'scanner:scan' %}" class="btn-accent btn-icon-sm" aria-label="Scan makanan baru">{% include 'partials/icon.html' with name='camera' %}</a>
-  </span>
+  <a href="{% url 'scanner:scan' %}" class="btn-accent btn-icon-sm" aria-label="Scan makanan baru">{% include 'partials/icon.html' with name='camera' %}</a>
 </div>
 
 <div class="grid grid-cols-1 gap-6 mt-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
@@ -27,7 +25,7 @@
           <p class="font-bold whitespace-nowrap">{{ meal.total|floatformat:"0g" }}g</p>
           <span class="meal-chevron">{% include 'partials/icon.html' with name='chevron-down' %}</span>
         </summary>
-        <ul class="flex flex-col gap-3 mt-4 pt-4" style="border-top: 2px solid rgba(200, 211, 240, 0.45);">
+        <ul class="flex flex-col gap-3 mt-4 pt-4" style="border-top: 1px solid var(--border-soft);">
           {% for log in meal.entries %}
           <li class="flex items-center justify-between gap-3">
             <div class="min-w-0">
@@ -69,9 +67,7 @@
       </p>
     </section>
 
-    <span class="ring ring-squircle ring-block">
-      <a href="{% url 'challenge:report' %}" class="btn-neu btn-lg">Lihat ringkasan mingguan {% include 'partials/icon.html' with name='arrow-right' %}</a>
-    </span>
+    <a href="{% url 'challenge:report' %}" class="btn-neu btn-lg btn-block">Lihat ringkasan mingguan {% include 'partials/icon.html' with name='arrow-right' %}</a>
   </aside>
 </div>
 {% endblock %}
