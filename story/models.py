@@ -18,23 +18,6 @@ class StoryComic(models.Model):
         return f"Bab {self.bab}: {self.title}"
 
 
-class MilestoneReward(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='milestone_rewards')
-    days_required = models.PositiveIntegerField()
-    title = models.CharField(max_length=100)
-    reward = models.CharField(max_length=255)
-    is_claimed = models.BooleanField(default=False)
-    claimed_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        ordering = ['days_required']
-        unique_together = ['user', 'days_required']
-
-    def __str__(self):
-        return f"{self.user.username} - {self.title}"
-
-
 class FriendChallenge(models.Model):
     METRIC_CHOICES = [
         ('lowest_co2', 'Emisi CO₂ terendah'),

@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import FriendChallengeForm
-from .models import FriendChallenge, MilestoneReward, StoryComic
+from .models import FriendChallenge, StoryComic
 
 
 def story_list(request):
@@ -57,62 +57,6 @@ def story_reader(request, bab):
         "next_page": page + 1,
     }
     return render(request, "story/story_reader.html", context)
-
-
-# ---------- Milestone Reward ----------
-
-DEFAULT_MILESTONES = [
-    {"days_required": 7, "title": "Seminggu Konsisten", "reward": "Item avatar baru"},
-    {"days_required": 30, "title": "Sebulan Hijau", "reward": "Naik tier badge"},
-    {"days_required": 100, "title": "100 Hari", "reward": "Masuk Hall of Fame"},
-    {"days_required": 365, "title": "Setahun Penuh", "reward": "Sertifikat digital"},
-]
-
-
-@login_required
-def milestone_list(request):
-    # placeholder: streak asli nanti diambil dari modul gamification
-    current_streak = 9
-
-    for m in DEFAULT_MILESTONES:
-        MilestoneReward.objects.get_or_create(
-            user=request.user, days_required=m["days_required"],
-            defaults={"title": m["title"], "reward": m["reward"]},
-        )
-
-    milestones = []
-    for reward in MilestoneReward.objects.filter(user=request.user):
-        if reward.is_claimed:
-            state = "claimed"
-        elif current_streak >= reward.days_required:
-            state = "claimable"
-        else:
-            state = "locked"
-        milestones.append({
-            "reward": reward,
-            "state": state,
-            "progress": min(100, round(current_streak / reward.days_required * 100)),
-        })
-
-    context = {
-        "current_streak": current_streak,
-        "milestones": milestones,
-    }
-    return render(request, "story/milestone_list.html", context)
-
-
-@login_required
-@require_POST
-def claim_milestone(request, pk):
-    current_streak = 9  # placeholder, samakan dengan milestone_list
-    reward = get_object_or_404(MilestoneReward, pk=pk, user=request.user)
-    if not reward.is_claimed and current_streak >= reward.days_required:
-        reward.is_claimed = True
-        reward.claimed_at = timezone.now()
-        reward.save()
-        messages.success(request, f"Reward \"{reward.title}\" berhasil diklaim!")
-    return redirect("story:milestone_list")
-
 
 # ---------- Friend Challenge (1v1) ----------
 

@@ -1,7 +1,13 @@
 {% extends 'base.html' %}
+{% load static %}
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/story.css' %}">
+{% endblock %}
 {% block title %}Story — Suap.in{% endblock %}
 
 {% block content %}
+<div class="story-theme">
 <h1 class="page-title mb-2">Story</h1>
 <p class="page-sub mb-6">Episode komik perjalanan makanan dari ladang ke piring. Naik level untuk membuka bab baru.</p>
 
@@ -39,5 +45,6 @@
   {% empty %}
   <div class="empty-slot">Belum ada episode.</div>
   {% endfor %}
+</div>
 </div>
 {% endblock %}

@@ -1,17 +1,11 @@
 from django.contrib import admin
 
-from .models import FriendChallenge, MilestoneReward, StoryComic
+from .models import FriendChallenge, StoryComic
 
 
 @admin.register(StoryComic)
 class StoryComicAdmin(admin.ModelAdmin):
     list_display = ['bab', 'title', 'unlock_level', 'total_pages']
-
-
-@admin.register(MilestoneReward)
-class MilestoneRewardAdmin(admin.ModelAdmin):
-    list_display = ['user', 'title', 'days_required', 'is_claimed', 'claimed_at']
-    list_filter = ['is_claimed']
 
 
 @admin.register(FriendChallenge)

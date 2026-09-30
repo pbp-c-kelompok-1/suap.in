@@ -1,0 +1,99 @@
+body:has(.story-theme),
+.story-theme {
+  --bg-base: #E7EEEC;
+  --shadow-light: #FFFFFF;
+  --shadow-dark: #C2CECA;
+  --accent-rgb: 14, 124, 116;
+  --accent-primary: #0E7C74;
+  --accent-secondary: #3B6EF6;
+  --accent-green: #3FA65A;
+  --accent-yellow: #F0A93A;
+  --accent-red: #E5484D;
+  --text-primary: #1F2A28;
+  --text-secondary: #5B6B67;
+  --text-muted: #93A29E;
+
+  --shadow-raised: 6px 6px 12px #C2CECA, -6px -6px 12px #FFFFFF;
+  --shadow-raised-lg: 10px 10px 20px #C2CECA, -10px -10px 20px #FFFFFF;
+  --shadow-inset: inset 4px 4px 8px #C2CECA, inset -4px -4px 8px #FFFFFF;
+  --shadow-subtle: 3px 3px 6px #C2CECA, -3px -3px 6px #FFFFFF;
+
+  --st-teal-light: #3FB0A6;
+  --st-teal-dark: #0B5F59;
+  --st-surface-hi: #F6FAF8;
+  --st-surface-lo: #DBE5E2;
+  --st-font-body: 'Inter', system-ui, sans-serif;
+  --st-font-head: 'Poppins', 'Inter', sans-serif; 
+}
+
+/*Latar & font*/
+body:has(.story-theme) { background-color: var(--bg-base); font-family: var(--st-font-body); }
+.story-theme { font-family: var(--st-font-body); color: var(--text-primary); }
+.story-theme .page-title,
+.story-theme h1, .story-theme h2, .story-theme h3 { font-family: var(--st-font-head); font-weight: 700; }
+.story-theme .page-sub { color: var(--text-secondary); }
+
+/* Tombol */
+.story-theme .btn-neu {
+  color: var(--accent-primary);
+  background: linear-gradient(145deg, var(--st-surface-hi), var(--st-surface-lo));
+  box-shadow: 9px 9px 18px #C2CECA, -9px -9px 18px #FFFFFF,
+              inset 1px 1px 1px rgba(255,255,255,.95), inset -1px -1px 2px rgba(194,206,202,.7);
+}
+.story-theme .btn-neu:hover {
+  box-shadow: 12px 12px 22px #C2CECA, -12px -12px 22px #FFFFFF,
+              inset 1px 1px 1px rgba(255,255,255,.95), inset -1px -1px 2px rgba(194,206,202,.7);
+}
+.story-theme .btn-neu:active {
+  background: linear-gradient(145deg, var(--st-surface-lo), var(--st-surface-hi));
+  box-shadow: var(--shadow-inset);
+}
+.story-theme .btn-accent {
+  background: linear-gradient(145deg, var(--st-teal-light) 0%, var(--accent-primary) 48%, var(--st-teal-dark) 100%);
+  text-shadow: 0 1px 2px rgba(6,50,46,.35);
+  box-shadow: 9px 9px 20px rgba(var(--accent-rgb), .38), -7px -7px 16px #FFFFFF,
+              inset 1px 1px 2px rgba(255,255,255,.6), inset -2px -3px 7px rgba(6,50,46,.3);
+}
+.story-theme .btn-accent:hover {
+  box-shadow: 12px 12px 24px rgba(var(--accent-rgb), .44), -9px -9px 18px #FFFFFF,
+              inset 1px 1px 2px rgba(255,255,255,.6), inset -2px -3px 7px rgba(6,50,46,.3);
+}
+.story-theme .btn-accent:active {
+  box-shadow: inset 4px 4px 10px rgba(6,50,46,.45), inset -3px -3px 8px rgba(63,176,166,.5);
+}
+
+/* Kartu, badge, bar XP */
+.story-theme .card { border-radius: 24px; }
+.story-theme .badge { color: var(--accent-primary); }
+.story-theme .badge-green { color: #2F8747; }
+.story-theme .badge-yellow { color: #B87413; }
+.story-theme .badge-red { color: #C93A3F; }
+.story-theme .xp-bar-fill {
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-green));
+  box-shadow: 0 2px 6px rgba(var(--accent-rgb), .5);
+}
+.story-theme .empty-slot { border-color: rgba(147,162,158,.55); }
+
+/* Form (halaman Tantangan 1v1) */
+.story-theme select,
+.story-theme input:not([type=hidden]):not([type=checkbox]):not([type=radio]) {
+  width: 100%; background: var(--bg-base); box-shadow: var(--shadow-inset); border: none;
+  border-radius: 16px; padding: 14px 18px; color: var(--text-primary);
+  font-family: inherit; font-size: .9375rem; outline: none;
+}
+.story-theme select:focus,
+.story-theme input:focus { box-shadow: var(--shadow-inset), 0 0 0 2px var(--accent-primary); }
+.story-theme .field-error { color: var(--accent-red); }
+
+/* sidebar/topbar */
+body:has(.story-theme) .sidebar { box-shadow: 8px 0 24px rgba(194,206,202,.6); }
+body:has(.story-theme) .brand-mark {
+  background: linear-gradient(145deg, var(--st-teal-light), var(--st-teal-dark));
+  box-shadow: 5px 5px 12px rgba(var(--accent-rgb), .35), -4px -4px 10px #FFFFFF, inset 1px 1px 2px rgba(255,255,255,.55);
+}
+body:has(.story-theme) .topbar { background: rgba(231,238,236,.85); }
+body:has(.story-theme) .tabbar { box-shadow: -2px -6px 16px #FFFFFF, 2px -6px 16px rgba(194,206,202,.85); }
+body:has(.story-theme) .user-chip {
+  background: linear-gradient(145deg, var(--st-surface-hi), var(--st-surface-lo));
+  box-shadow: 6px 6px 12px #C2CECA, -6px -6px 12px #FFFFFF, inset 1px 1px 1px rgba(255,255,255,.95);
+}

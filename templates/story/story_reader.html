@@ -1,7 +1,13 @@
 {% extends 'base.html' %}
+{% load static %}
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/story.css' %}">
+{% endblock %}
 {% block title %}Bab {{ comic.bab }} — Suap.in{% endblock %}
 
 {% block content %}
+<div class="story-theme">
 <a href="{% url 'story:story_list' %}" class="text-sm text-secondary">← Kembali ke daftar bab</a>
 <h1 class="page-title mt-3 mb-2">Bab {{ comic.bab }}: {{ comic.title }}</h1>
 <p class="page-sub mb-6">{{ comic.description }}</p>
@@ -22,5 +28,6 @@
   {% else %}
     <a href="{% url 'story:story_list' %}" class="btn-accent shape-pill">Selesai</a>
   {% endif %}
+</div>
 </div>
 {% endblock %}
