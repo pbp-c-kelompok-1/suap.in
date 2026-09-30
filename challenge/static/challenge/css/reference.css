@@ -138,6 +138,8 @@
 .mbar .fill{width:100%;border-radius:14px;background:linear-gradient(180deg,var(--green-400),var(--green-600));height:0;transition:height .8s cubic-bezier(.2,.9,.3,1.15)}
 .mbar b{display:block;font-family:'Fredoka';font-size:.95rem}
 .mbar span{color:var(--text-2);font-size:.8rem;font-weight:800}
+.mbar.empty .inset{border:2px dashed var(--sh-d);box-shadow:none}
+.mbar.empty b{color:var(--text-2)}
 
 @media (max-width:820px){
   .land-hero,.avo-top{text-align:center}
