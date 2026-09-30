@@ -3,11 +3,7 @@ from django.shortcuts import render
 
 
 def challenge_list_view(request):
-    return render(request, 'coming_soon.html', {
-        'title': 'Misi',
-        'icon': 'mission',
-        'description': 'Tiga misi harian otomatis berdasarkan kebiasaan makanmu akan muncul di sini.',
-    })
+    return render(request, 'challenge/dashboard.html')
 
 
 def weekly_report_view(request):

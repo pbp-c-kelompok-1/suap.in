@@ -1,0 +1,19 @@
+{% extends 'challenge/base_challenge.html' %}
+
+{% block content %}
+    {% include 'challenge/partials/svg_sprite.html' %}
+    {% include 'challenge/partials/mascot_template.html' %}
+
+    <div class="app">
+        {% include 'challenge/partials/sidebar.html' %}
+
+        <main>
+        {% include 'challenge/partials/misi.html' %}
+        {% include 'challenge/partials/laporan.html' %}
+        {% include 'challenge/partials/notifikasi.html' %}
+        {% include 'challenge/partials/profil.html' %}
+        {% include 'challenge/partials/ref_auth.html' %}
+        {% include 'challenge/partials/ref_scanner.html' %}
+        </main>
+    </div>
+{% endblock %}
