@@ -1,0 +1,17 @@
+{% if user.is_authenticated %}
+<div class="user-menu">
+  <button class="chip" id="userMenuBtn" aria-haspopup="true" aria-expanded="false">
+    <span class="av avme" style="width:28px;height:28px;background:var(--teal-500);color:#fff;display:grid;place-items:center;font-weight:800;font-size:.8rem">{{ user.username|first|upper }}</span>
+    {{ user.username }}
+    <svg class="i" style="width:16px;height:16px"><use href="#i2-chevron-down"/></svg>
+  </button>
+  <div class="user-menu-panel" id="userMenuPanel" hidden>
+    <a href="{% url 'authentication:profile' user.username %}"><svg class="i"><use href="#i-user"/></svg> Profil saya</a>
+    <a href="{% url 'scanner:daily_log' %}"><svg class="i"><use href="#i-inbox"/></svg> Riwayat hari ini</a>
+    <a href="{% url 'authentication:logout' %}"><svg class="i"><use href="#i2-logout"/></svg> Keluar</a>
+  </div>
+</div>
+{% else %}
+<a href="{% url 'authentication:login' %}" class="btn ghost sm">Masuk</a>
+<a href="{% url 'authentication:register' %}" class="btn sm">Daftar</a>
+{% endif %}
