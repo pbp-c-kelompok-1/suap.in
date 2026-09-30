@@ -21,16 +21,13 @@
     <a href="{% url 'authentication:forgot_password' %}" class="text-accent text-sm font-semibold">Forgot password?</a>
   </div>
 
-  <span class="ring ring-squircle ring-block mt-2">
-    <button type="submit" class="btn-accent btn-lg">Login</button>
-  </span>
+  <button type="submit" class="btn-accent btn-lg btn-block mt-2">Login</button>
 </form>
 
 <div class="divider-label my-8">Or Login with</div>
 {% include 'partials/social_login.html' %}
 
 <p class="text-center mt-10 text-sm font-medium">
-  Don't have an account?
-  <a href="{% url 'authentication:register' %}" class="text-accent font-bold">Register Now</a>
+  Don't have an account? <a href="{% url 'authentication:register' %}" class="text-accent font-bold">Register Now</a>
 </p>
 {% endblock %}
