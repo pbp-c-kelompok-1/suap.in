@@ -1,0 +1,4 @@
+<div class="flex flex-wrap gap-3 mb-6">
+  <a href="{% url 'story:story_list' %}" class="{% if active == 'story' %}btn-accent{% else %}btn-neu{% endif %} shape-pill">{% include 'partials/icon.html' with name='leaf' %} Story</a>
+  <a href="{% url 'story:challenge_list' %}" class="{% if active == 'challenge' %}btn-accent{% else %}btn-neu{% endif %} shape-pill">{% include 'partials/icon.html' with name='fire' %} Tantangan 1v1</a>
+</div>

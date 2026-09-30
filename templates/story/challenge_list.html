@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/story.css' %}">
+{% endblock %}
+{% block title %}Tantangan 1v1 — Suap.in{% endblock %}
+
+{% block content %}
+<div class="story-theme">
+<h1 class="page-title mb-2">Tantangan 1v1</h1>
+<p class="page-sub mb-6">Tantang temanmu, siapa yang paling hijau minggu ini?</p>
+
+{% include 'story/_subnav.html' with active='challenge' %}
+
+<div class="grid gap-6 grid-cols-1 lg:grid-cols-3">
+  <form method="post" class="card flex flex-col gap-4">
+    {% csrf_token %}
+    <p class="font-bold text-lg">Buat Tantangan</p>
+    {% for field in form %}
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      </div>
+    {% endfor %}
+    <button type="submit" class="btn-accent shape-pill">Kirim Tantangan</button>
+  </form>
+
+  <div class="lg:col-span-2 flex flex-col gap-3">
+    <p class="font-bold text-lg">Tantangan Saya</p>
+    {% for c in challenges %}
+    <div class="card-sm flex items-center justify-between gap-3">
+      <div>
+        <p class="font-semibold">{{ c.challenger.username }} vs {{ c.opponent.username }}</p>
+        <p class="text-xs text-muted">{{ c.get_metric_display }} · {{ c.get_duration_days_display }}</p>
+      </div>
+      <div class="flex items-center gap-2">
+        {% if c.status == 'pending' %}
+          <span class="badge badge-yellow">Menunggu</span>
+          {% if c.challenger == user %}
+          <form method="post" action="{% url 'story:cancel_challenge' c.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-neu btn-sm shape-pill">Batalkan</button>
+          </form>
+          {% endif %}
+        {% elif c.status == 'active' %}
+          <span class="badge">Berlangsung</span>
+        {% elif c.winner == user %}
+          <span class="badge badge-green">Menang</span>
+        {% elif c.winner %}
+          <span class="badge badge-red">Kalah</span>
+        {% else %}
+          <span class="badge">Seri</span>
+        {% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <div class="empty-slot">Belum ada tantangan. Tantang temanmu duluan!</div>
+    {% endfor %}
+  </div>
+</div>
+</div>
+{% endblock %}
