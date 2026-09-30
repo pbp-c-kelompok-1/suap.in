@@ -1,23 +1,23 @@
-{% extends 'auth_base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}OTP Verification — Suap.in{% endblock %}
+{% block title %}Verifikasi Kode — Suap.in{% endblock %}
 
-{% block auth_content %}
-<h1 class="auth-title mb-3">OTP Verification</h1>
-<p class="text-secondary mb-8" style="font-weight: 500; line-height: 1.6;">
-  Enter the 6-digit verification code we just sent to
-  <strong class="text-primary">{{ email }}</strong>.
-</p>
+{% block content %}
+<div class="topbar"><h1>Verifikasi Kode</h1></div>
 
-<form method="post" class="flex flex-col gap-5" novalidate>
-  {% csrf_token %}
-  {% include 'partials/form_alert.html' %}
-  {% include 'partials/field.html' with field=form.code %}
+<div class="raise authcard">
+  <h2>Cek email kamu</h2>
+  <p class="authsub">Masukkan kode 6 digit yang kami kirim ke <strong>{{ email }}</strong>.</p>
 
-  <button type="submit" class="btn-accent btn-lg btn-block mt-2">Verify</button>
-</form>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <p class="strength-lbl" style="color:var(--danger);margin-bottom:14px">{% for error in form.non_field_errors %}{{ error }}{% endfor %}</p>
+    {% endif %}
+    {% include 'partials/field.html' with field=form.code %}
+    <button type="submit" class="btn ok wide">Verifikasi</button>
+  </form>
 
-<p class="text-center mt-10 text-sm font-medium">
-  Didn't receive code? <a href="{% url 'authentication:forgot_password' %}" class="text-accent font-bold">Resend</a>
-</p>
+  <p class="authswitch">Tidak menerima kode? <a href="{% url 'authentication:forgot_password' %}">Kirim ulang</a></p>
+</div>
 {% endblock %}

@@ -1,26 +1,78 @@
-{% extends 'auth_base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}Register — Suap.in{% endblock %}
+{% block title %}Daftar — Suap.in{% endblock %}
 
-{% block auth_content %}
-<h1 class="auth-title mb-8">Hello! Register<br>to get started</h1>
+{% block content %}
+<div class="topbar"><h1>Daftar</h1></div>
 
-<form method="post" class="flex flex-col gap-5" novalidate>
-  {% csrf_token %}
-  {% include 'partials/form_alert.html' %}
+{% if messages %}
+{% for message in messages %}
+<div class="raise-sm" style="padding:14px 18px;margin-bottom:18px;color:var(--danger);font-weight:800">{{ message }}</div>
+{% endfor %}
+{% endif %}
 
-  {% include 'partials/field.html' with field=form.username hint='Huruf, angka, dan @ . + - _ saja, tanpa spasi.' %}
-  {% include 'partials/field.html' with field=form.email %}
-  {% include 'partials/field.html' with field=form.password1 toggle=True hint='Minimal 8 karakter. Hindari kata sandi umum (mis. 12345678, password) dan jangan hanya angka.' %}
-  {% include 'partials/field.html' with field=form.password2 toggle=True %}
+<div class="raise authcard">
+  <h2>Buat akun baru</h2>
+  <p class="authsub">Gratis, dan kamu bisa langsung mulai streak hari ini.</p>
 
-  <button type="submit" class="btn-accent btn-lg btn-block mt-2">Register</button>
-</form>
+  <form method="post" novalidate>
+    {% csrf_token %}
 
-<div class="divider-label my-8">Or Register with</div>
-{% include 'partials/social_login.html' %}
+    {% if form.non_field_errors %}
+    <p class="strength-lbl" style="color:var(--danger);margin-bottom:14px">{% for error in form.non_field_errors %}{{ error }}{% endfor %}</p>
+    {% endif %}
 
-<p class="text-center mt-10 text-sm font-medium">
-  Already have an account? <a href="{% url 'authentication:login' %}" class="text-accent font-bold">Login Now</a>
-</p>
+    {% include 'partials/field.html' with field=form.username hint='Huruf, angka, dan @ . + - _ saja, tanpa spasi.' %}
+    {% include 'partials/field.html' with field=form.email %}
+
+    <div class="field">
+      <label for="{{ form.password1.id_for_label }}">{{ form.password1.label }}</label>
+      <div class="pass-wrap">
+        {{ form.password1 }}
+        <button type="button" class="eye-btn" data-toggle-password="{{ form.password1.id_for_label }}" aria-label="Tampilkan atau sembunyikan kata sandi">
+          <svg class="i" data-eye><use href="#i-eye"/></svg>
+          <svg class="i" data-eye-off hidden><use href="#i-eye-off"/></svg>
+        </button>
+      </div>
+      <div class="field-strength" id="strengthWrap">
+        <div class="strength"><div class="strength-bar" id="strengthBar"></div></div>
+        <small class="strength-lbl" id="strengthLbl">Kekuatan sandi</small>
+      </div>
+      {% for error in form.password1.errors %}<small class="strength-lbl" style="color:var(--danger)">{{ error }}</small>{% endfor %}
+    </div>
+
+    {% include 'partials/field.html' with field=form.password2 toggle=True %}
+
+    <button type="submit" class="btn ok wide">Daftar gratis</button>
+  </form>
+
+  <p class="authswitch">Sudah punya akun? <a href="{% url 'authentication:login' %}">Masuk</a></p>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var input = document.getElementById('{{ form.password1.id_for_label }}');
+  var bar = document.getElementById('strengthBar');
+  var lbl = document.getElementById('strengthLbl');
+  var wrap = document.getElementById('strengthWrap');
+  if (!input || !bar) return;
+  input.addEventListener('input', function () {
+    var value = input.value;
+    wrap.classList.toggle('show', value.length > 0);
+    var score = 0;
+    if (value.length >= 8) score++;
+    if (/[A-Z]/.test(value)) score++;
+    if (/[0-9]/.test(value)) score++;
+    if (/[^A-Za-z0-9]/.test(value)) score++;
+    var pct = [0, 25, 50, 75, 100][score];
+    var color = score <= 1 ? 'var(--danger)' : score === 2 ? 'var(--warn)' : 'var(--ok)';
+    var label = value.length === 0 ? 'Kekuatan sandi' : ['Sangat lemah', 'Lemah', 'Cukup', 'Kuat', 'Sangat kuat'][score];
+    bar.style.width = pct + '%';
+    bar.style.background = color;
+    lbl.textContent = label;
+  });
+})();
+</script>
 {% endblock %}

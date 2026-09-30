@@ -21,7 +21,6 @@ class RegisterForm(UserCreationForm):
         }
         for name, (placeholder, autocomplete) in specs.items():
             self.fields[name].widget.attrs.update({
-                'class': 'input-neu',
                 'placeholder': placeholder,
                 'autocomplete': autocomplete,
             })
@@ -37,14 +36,12 @@ class RegisterForm(UserCreationForm):
 class LoginForm(forms.Form):
     identifier = forms.CharField(
         widget=forms.TextInput(attrs={
-            'class': 'input-neu',
             'placeholder': 'Enter your email or username',
             'autocomplete': 'username',
         })
     )
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={
-            'class': 'input-neu',
             'placeholder': 'Enter your password',
             'autocomplete': 'current-password',
         })
@@ -55,7 +52,6 @@ class LoginForm(forms.Form):
 class ForgotPasswordForm(forms.Form):
     email = forms.EmailField(
         widget=forms.EmailInput(attrs={
-            'class': 'input-neu',
             'placeholder': 'Enter your email',
             'autocomplete': 'email',
         })
@@ -67,7 +63,6 @@ class OtpForm(forms.Form):
         min_length=6,
         max_length=6,
         widget=forms.TextInput(attrs={
-            'class': 'input-neu',
             'placeholder': '000000',
             'inputmode': 'numeric',
             'autocomplete': 'one-time-code',
@@ -86,14 +81,12 @@ class OtpForm(forms.Form):
 class NewPasswordForm(forms.Form):
     password1 = forms.CharField(
         widget=forms.PasswordInput(attrs={
-            'class': 'input-neu',
             'placeholder': 'New password',
             'autocomplete': 'new-password',
         })
     )
     password2 = forms.CharField(
         widget=forms.PasswordInput(attrs={
-            'class': 'input-neu',
             'placeholder': 'Confirm new password',
             'autocomplete': 'new-password',
         })
