@@ -4,9 +4,7 @@
 
 {% block content %}
 <div class="flex items-center gap-4 mb-6">
-  <span class="ring ring-squircle">
-    <a href="{% url 'scanner:scan' %}" class="btn-neu btn-icon-sm" aria-label="Kembali ke scan">{% include 'partials/icon.html' with name='chevron-left' %}</a>
-  </span>
+  <a href="{% url 'scanner:scan' %}" class="btn-neu btn-icon-sm" aria-label="Kembali ke scan">{% include 'partials/icon.html' with name='chevron-left' %}</a>
   <div>
     <h1 class="page-title">Hasil Scan</h1>
     <div class="flex items-center gap-2 mt-2">
@@ -42,8 +40,11 @@
   </section>
 
   <section class="flex flex-col gap-5">
-    <div class="card" style="position: relative; padding-top: 44px;">
-      <span class="xp-pill" style="position: absolute; top: -20px; left: -12px; transform: rotate(-12deg);">+{{ xp_earned }} XP</span>
+    <div class="card">
+      <div class="flex items-center justify-between mb-4">
+        <p class="font-bold" style="font-size: 1.0625rem;">Item Terdeteksi</p>
+        <span class="xp-pill">+{{ xp_earned }} XP</span>
+      </div>
       <table class="data-table">
         <thead>
           <tr><th>Item</th><th>CO₂</th></tr>
@@ -94,9 +95,7 @@
     {% endif %}
 
     <div class="flex flex-col items-center gap-4 mt-2">
-      <span class="ring ring-squircle ring-block">
-        <button type="submit" class="btn-accent btn-lg" id="save-btn">{% include 'partials/icon.html' with name='check' %} Simpan</button>
-      </span>
+      <button type="submit" class="btn-accent btn-lg btn-block" id="save-btn">{% include 'partials/icon.html' with name='check' %} Simpan</button>
       <button type="button" id="edit-toggle" class="text-secondary text-sm font-semibold" style="background: none; border: none; cursor: pointer;">Koreksi hasil deteksi</button>
     </div>
   </section>

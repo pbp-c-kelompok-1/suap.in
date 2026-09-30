@@ -23,9 +23,7 @@
       {% if over_grams %}Melebihi budget {{ over_grams|floatformat:"0g" }}g{% else %}Sisa {{ remaining_grams|floatformat:"0g" }}g{% endif %}
       {% if used_grams > 0 %}· {{ analogy }}{% endif %}
     </p>
-    <span class="ring ring-squircle ring-block mt-6">
-      <a href="{% url 'scanner:scan' %}" class="btn-accent btn-lg">{% include 'partials/icon.html' with name='camera' %} Scan Makanan</a>
-    </span>
+    <a href="{% url 'scanner:scan' %}" class="btn-accent btn-lg btn-block mt-6">{% include 'partials/icon.html' with name='camera' %} Scan Makanan</a>
   </section>
 
   <section class="card">
@@ -51,14 +49,14 @@
 
 {% else %}
 <section class="card" style="padding: 40px 28px;">
-  <span class="badge mb-5">Untuk mahasiswa yang peduli bumi</span>
+  <span class="badge badge-accent mb-5">Untuk mahasiswa yang peduli bumi</span>
   <h1 class="page-title" style="font-size: 2.5rem; line-height: 1.1;">Foto makananmu,<br><span class="text-accent">jaga bumiku.</span></h1>
   <p class="page-sub" style="max-width: 520px; line-height: 1.65;">
     Suap.in menghitung jejak karbon dari setiap suapan lewat satu foto. Kumpulkan streak, naik level, dan bersaing sehat dengan teman sekampus.
   </p>
-  <div class="flex flex-wrap items-center gap-5 mt-8">
-    <span class="ring ring-squircle"><a href="{% url 'authentication:register' %}" class="btn-accent btn-lg">Daftar gratis</a></span>
-    <span class="ring ring-squircle"><a href="{% url 'authentication:login' %}" class="btn-neu btn-lg">Masuk</a></span>
+  <div class="flex flex-wrap items-center gap-4 mt-8">
+    <a href="{% url 'authentication:register' %}" class="btn-accent btn-lg">Daftar gratis</a>
+    <a href="{% url 'authentication:login' %}" class="btn-neu btn-lg">Masuk</a>
   </div>
 </section>
 

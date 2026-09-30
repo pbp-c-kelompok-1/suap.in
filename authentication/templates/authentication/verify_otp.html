@@ -14,13 +14,10 @@
   {% include 'partials/form_alert.html' %}
   {% include 'partials/field.html' with field=form.code %}
 
-  <span class="ring ring-squircle ring-block mt-2">
-    <button type="submit" class="btn-accent btn-lg">Verify</button>
-  </span>
+  <button type="submit" class="btn-accent btn-lg btn-block mt-2">Verify</button>
 </form>
 
 <p class="text-center mt-10 text-sm font-medium">
-  Didn't receive code?
-  <a href="{% url 'authentication:forgot_password' %}" class="text-accent font-bold">Resend</a>
+  Didn't receive code? <a href="{% url 'authentication:forgot_password' %}" class="text-accent font-bold">Resend</a>
 </p>
 {% endblock %}

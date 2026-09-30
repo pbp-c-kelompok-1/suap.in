@@ -25,11 +25,9 @@
     </div>
 
     <div class="control-dock" id="dock-capture">
-      <button type="button" class="btn-neu btn-icon" id="gallery-btn" aria-label="Pilih dari galeri">{% include 'partials/icon.html' with name='image' cls='ico-lg' %}</button>
-      <span class="ring ring-circle">
-        <button type="button" class="btn-accent btn-icon-lg" id="shutter-btn" aria-label="Ambil foto" disabled>{% include 'partials/icon.html' with name='camera' cls='ico-lg' %}</button>
-      </span>
-      <button type="button" class="btn-neu btn-icon" id="flash-btn" aria-label="Lampu kilat" disabled>
+      <button type="button" class="btn-neu btn-icon shape-circle" id="gallery-btn" aria-label="Pilih dari galeri">{% include 'partials/icon.html' with name='image' cls='ico-lg' %}</button>
+      <button type="button" class="btn-accent btn-icon-lg" id="shutter-btn" aria-label="Ambil foto" disabled>{% include 'partials/icon.html' with name='camera' cls='ico-lg' %}</button>
+      <button type="button" class="btn-neu btn-icon shape-circle" id="flash-btn" aria-label="Lampu kilat" disabled>
         <span data-flash-on hidden>{% include 'partials/icon.html' with name='flash' cls='ico-lg' %}</span>
         <span data-flash-off>{% include 'partials/icon.html' with name='flash-off' cls='ico-lg' %}</span>
       </button>
@@ -37,9 +35,7 @@
 
     <div class="control-dock" id="dock-review" style="gap: 16px;" hidden>
       <button type="button" class="btn-neu" id="retake-btn">Ambil ulang</button>
-      <span class="ring ring-squircle" style="flex: 1;">
-        <button type="submit" class="btn-accent btn-lg btn-block" id="analyze-btn">{% include 'partials/icon.html' with name='sparkle' %} Analisis Makanan</button>
-      </span>
+      <button type="submit" class="btn-accent btn-lg" id="analyze-btn" style="flex: 1;">{% include 'partials/icon.html' with name='sparkle' %} Analisis Makanan</button>
     </div>
   </div>
 
@@ -52,9 +48,7 @@
         <li class="flex gap-3"><span class="text-accent">{% include 'partials/icon.html' with name='check' %}</span>Ambil dari atas agar tiap lauk terlihat jelas.</li>
       </ul>
     </div>
-    <span class="ring ring-squircle ring-block">
-      <a href="{% url 'scanner:daily_log' %}" class="btn-neu">{% include 'partials/icon.html' with name='log' %} Lihat riwayat hari ini</a>
-    </span>
+    <a href="{% url 'scanner:daily_log' %}" class="btn-neu btn-block">{% include 'partials/icon.html' with name='log' %} Lihat riwayat hari ini</a>
   </aside>
 </form>
 

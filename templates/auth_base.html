@@ -13,7 +13,8 @@
     </a>
 
     <div class="relative">
-      <h2 style="font-size: 2.75rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.03em;">
+      <span class="mascot mb-6">{% include 'partials/icon.html' with name='leaf' cls='ico-xl' %}</span>
+      <h2 class="font-display" style="font-size: 2.5rem; font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; margin-top: 20px;">
         Foto makananmu,<br><span class="text-accent">jaga bumiku.</span>
       </h2>
       <p class="text-secondary mt-4" style="max-width: 420px; font-weight: 500; line-height: 1.6;">
@@ -48,9 +49,7 @@
 
   <section class="auth-panel">
     <div class="flex items-center justify-between mb-10">
-      <span class="ring ring-squircle">
-        <a href="{% url 'gamification:dashboard' %}" class="btn-neu btn-icon-sm" aria-label="Kembali">{% include 'partials/icon.html' with name='chevron-left' %}</a>
-      </span>
+      <a href="{% url 'gamification:dashboard' %}" class="btn-neu btn-icon-sm" aria-label="Kembali">{% include 'partials/icon.html' with name='chevron-left' %}</a>
       <span class="brand-mark hide-desktop">{% include 'partials/icon.html' with name='leaf' %}</span>
     </div>
 
