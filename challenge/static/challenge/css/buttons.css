@@ -1,0 +1,24 @@
+/* =========================================================
+   CHUNKY BUTTONS (tactile, ala Duolingo)
+   ========================================================= */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:13px 22px;border-radius:18px;font-family:'Fredoka',sans-serif;font-weight:600;font-size:1rem;
+  color:#fff;background:var(--cta);
+  box-shadow:0 5px 0 var(--cta-edge),0 12px 22px var(--cta-glow);
+  transform:translateY(0);transition:transform .08s ease,box-shadow .08s ease,filter .15s;
+  position:relative;top:0;
+}
+.btn:hover{filter:brightness(1.06)}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--cta-edge),0 4px 8px var(--cta-glow)}
+.btn.ok{background:var(--ok);box-shadow:0 5px 0 var(--ok-edge),0 12px 22px rgba(30,168,84,.32)}
+.btn.ok:active{box-shadow:0 1px 0 var(--ok-edge),0 4px 8px rgba(30,168,84,.3)}
+.btn.ghost{
+  color:var(--cta);background:var(--surface);
+  box-shadow:5px 5px 11px var(--sh-d),-5px -5px 11px var(--sh-l);
+}
+.btn.ghost:active{transform:none;box-shadow:inset 3px 3px 7px var(--sh-d),inset -3px -3px 7px var(--sh-l)}
+.btn.sm{padding:9px 16px;font-size:.9rem;border-radius:14px;box-shadow:0 4px 0 var(--cta-edge),0 8px 14px var(--cta-glow)}
+.btn.sm.ghost{box-shadow:4px 4px 9px var(--sh-d),-4px -4px 9px var(--sh-l)}
+.btn[disabled]{cursor:default;filter:none;transform:none;color:var(--text-2);background:var(--bg);
+  box-shadow:inset 3px 3px 7px var(--sh-d),inset -3px -3px 7px var(--sh-l)}

@@ -1,0 +1,40 @@
+/* =========================================================
+   DESIGN TOKENS — dari TND Color System
+   ========================================================= */
+:root{
+  /* brand */
+  --teal-50:#E6FBFA; --teal-100:#C0F5F2; --teal-200:#8AEAE3; --teal-300:#4DD8CE; --teal-400:#22BFB4;
+  --teal-500:#0DA69B; --teal-600:#0A8880; --teal-700:#086866; --teal-800:#07514D; --teal-900:#063C39;
+  --blue-50:#EAF2FF; --blue-100:#CFE3FF; --blue-300:#74ACFF; --blue-400:#4B90FF; --blue-500:#2F80ED; --blue-600:#2166C7; --blue-700:#1A4FA0; --blue-800:#143C79; --blue-900:#0E2A54;
+  --green-50:#EAFBF0; --green-100:#C8F5D9; --green-300:#63D68C; --green-400:#35C06A; --green-500:#1EA854; --green-600:#178A44; --green-700:#126C36; --green-800:#0D5029; --green-900:#08381C;
+  --lime:#00E676; --spring:#00FF94;
+  --warn:#F5A623; --danger:#EB4848;
+
+  /* mode token — LIGHT */
+  --bg:#EAF7F1;
+  --surface:#FFFFFF;
+  --surface-2:#F5FBF8;
+  --text:#12201D;
+  --text-2:#5B6B66;
+  --border:#E4E9E8;
+  --cta:#2F80ED; --cta-edge:#1A4FA0; --cta-glow:rgba(47,128,237,.35);
+  --ok:#1EA854; --ok-edge:#126C36;
+  --xp-a:#116C36; --xp-b:#096B5D;
+  /* neumorph */
+  --sh-d:#BFDCCF;
+  --sh-l:#FFFFFF;
+  --sh-d-soft:rgba(150,196,176,.55);
+  --radius:26px;
+}
+:root[data-theme="dark"]{
+  --bg:#0E1815;
+  --surface:#15231F;
+  --surface-2:#1A2B26;
+  --text:#EAF7F1;
+  --text-2:#93A9A1;
+  --border:#22362F;
+  --sh-d:#080F0D;
+  --sh-l:#1F332C;
+  --sh-d-soft:rgba(0,0,0,.5);
+  --cta-glow:rgba(47,128,237,.25);
+}

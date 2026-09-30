@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Suap.in — Misi, Laporan & Notifikasi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- SVG sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00E676"/><stop offset="1" stop-color="#0DA69B"/></linearGradient>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+    <symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18M18 17V9M13 17V5M8 17v-3"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></symbol>
+    <symbol id="i-plate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></symbol>
+    <symbol id="i-sword" viewBox="0 0 24 24"><path d="m14.5 17.5 3 3M13 19l6-6M2 2l7 0 10 10-3 3L6 5z"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z" fill="currentColor"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.6 20.6 0 0 1 5.06-6.06M9.9 4.24A10.4 10.4 0 0 1 12 4c7 0 11 8 11 8a20.7 20.7 0 0 1-2.29 3.36M14.12 14.12a3 3 0 1 1-4.24-4.24M1 1l22 22"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></symbol>
+    <symbol id="i-userplus" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M19 8v6M22 11h-6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m2 7 10 6 10-6"/></symbol>
+    <symbol id="i-building" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 21v-5h6v5M9 8h1M14 8h1M9 12h1M14 12h1"/></symbol>
+    <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  </defs>
+</svg>
+
+<!-- Mascot template -->
+<template id="mascot-tpl">
+  <svg class="mascot" viewBox="0 0 132 132" role="img" aria-label="Tunas, maskot Suap.in">
+    <ellipse cx="66" cy="122" rx="32" ry="6" fill="#0DA69B" opacity=".18"/>
+    <!-- daun -->
+    <path d="M66 34C66 18 52 10 36 12c0 16 10 26 30 22Z" fill="#35C06A"/>
+    <path d="M66 34c0-14 12-22 28-22 0 16-10 24-28 22Z" fill="#1EA854"/>
+    <path d="M66 36c-2-6-6-12-14-17" stroke="#126C36" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <!-- badan -->
+    <path d="M66 32c24 0 40 18 40 44 0 26-16 42-40 42S26 102 26 76c0-26 16-44 40-44Z" fill="#00E676"/>
+    <path d="M66 32c24 0 40 18 40 44 0 26-16 42-40 42" fill="none"/>
+    <path d="M30 84c6 20 22 30 44 28-30 10-52-8-44-28Z" fill="#0DA69B" opacity=".35"/>
+    <ellipse cx="48" cy="52" rx="10" ry="6" fill="#fff" opacity=".35" transform="rotate(-25 48 52)"/>
+    <!-- muka -->
+    <g class="blink"><ellipse cx="52" cy="76" rx="6" ry="8" fill="#12201D"/><circle cx="54" cy="73" r="2.4" fill="#fff"/></g>
+    <g class="blink"><ellipse cx="82" cy="76" rx="6" ry="8" fill="#12201D"/><circle cx="84" cy="73" r="2.4" fill="#fff"/></g>
+    <ellipse cx="42" cy="90" rx="6" ry="4" fill="#FF7A7A" opacity=".55"/>
+    <ellipse cx="92" cy="90" rx="6" ry="4" fill="#FF7A7A" opacity=".55"/>
+    <path d="M58 90c4 6 14 6 18 0" stroke="#12201D" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+  </svg>
+</template>
+
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-mark"><svg class="i" style="width:24px;height:24px"><use href="#i-leaf"/></svg></div>
+      <b>Suap.in</b>
+    </div>
+    <nav class="nav" aria-label="Navigasi utama">
+      <a href="#/misi" data-page="misi"><svg class="i"><use href="#i-target"/></svg><span>Misi</span></a>
+      <a href="#/laporan" data-page="laporan"><svg class="i"><use href="#i-chart"/></svg><span>Laporan</span></a>
+      <a href="#/notifikasi" data-page="notifikasi"><svg class="i"><use href="#i-bell"/></svg><span>Notifikasi</span><em class="badge" id="navBadge" hidden>0</em></a>
+      <a href="#/profil" data-page="profil"><svg class="i"><use href="#i-user"/></svg><span>Profil</span></a>
+      <span class="nav-label">Referensi modul lain</span>
+      <a href="#/auth" data-page="auth"><svg class="i"><use href="#i-lock"/></svg><span>Autentikasi</span></a>
+      <a href="#/scanner" data-page="scanner"><svg class="i"><use href="#i-scan"/></svg><span>Scanner</span></a>
+    </nav>
+    <div class="side-foot">
+      <span class="lbl" style="color:var(--text-2);font-weight:800;font-size:.85rem">Tampilan</span>
+      <button class="theme-btn" id="themeBtn" aria-label="Ganti mode terang / gelap"><svg class="i"><use id="themeIco" href="#i-moon"/></svg></button>
+    </div>
+  </aside>
+
+  <main>
+    <!-- ================= MISI ================= -->
+    <section class="page" id="page-misi" aria-labelledby="h-misi">
+      <div class="topbar">
+        <h1 id="h-misi">Misi hari ini</h1>
+        <span class="chip streak" title="Streak aktif"><svg class="i"><use href="#i-flame"/></svg><span id="streakNum">7</span> hari</span>
+        <span class="chip lvl"><svg class="i"><use href="#i-leaf"/></svg>Lv <span id="lvlNum">12</span></span>
+      </div>
+
+      <div class="raise hero">
+        <div class="mascot-wrap" id="mascotHero"></div>
+        <div class="bubble" id="bubble"></div>
+        <div class="ring" role="img" aria-label="Budget karbon harian">
+          <svg viewBox="0 0 120 120">
+            <circle class="tr" cx="60" cy="60" r="50" fill="none" stroke-width="14"/>
+            <circle class="fg" id="ringFg" cx="60" cy="60" r="50" fill="none" stroke-width="14" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+          </svg>
+          <div class="ring-c"><b id="ringVal">2,1</b><span>dari 3,5 kg CO₂</span></div>
+        </div>
+      </div>
+
+      <div class="xp-row">
+        <span class="lbl display" id="tierName">Pejuang Hijau</span>
+        <div class="xp-track" role="progressbar" aria-label="Progres XP" id="xpTrack"><div class="xp-fill" id="xpFill"></div></div>
+        <span class="xp-num" id="xpNum">340 / 500 XP</span>
+      </div>
+
+      <div class="sec-head"><h2>3 misi untukmu</h2><span id="questCount">0/3 selesai</span></div>
+      <div class="quests" id="quests"></div>
+
+      <div class="raise chest" id="chest">
+        <div class="chest-ico"><svg class="i"><use href="#i-gift"/></svg></div>
+        <div>
+          <h3 id="chestTitle">Peti bonus terkunci</h3>
+          <p id="chestDesc">Selesaikan ketiga misi untuk buka peti dan dapat 1 streak freeze.</p>
+        </div>
+        <button class="btn ok" id="chestBtn" disabled>Buka peti</button>
+      </div>
+    </section>
+
+    <!-- ================= LAPORAN ================= -->
+    <section class="page" id="page-laporan" aria-labelledby="h-lap">
+      <div class="topbar">
+        <h1 id="h-lap">Laporan minggu ini</h1>
+        <span class="chip">21 – 27 Sep 2026</span>
+      </div>
+
+      <div class="grid-2">
+        <div class="raise card">
+          <div class="big"><b id="weekTotal">0</b><span>kg CO₂</span></div>
+          <div class="delta"><svg class="i"><use href="#i-down"/></svg>12% lebih rendah dari minggu lalu (20,9 kg)</div>
+          <div class="chart">
+            <div class="bars" id="bars" role="list"></div>
+            <div class="legend">
+              <span><i style="background:var(--green-500)"></i>Di bawah budget</span>
+              <span><i style="background:var(--danger)"></i>Lewat budget</span>
+              <span><i style="background:var(--blue-500)"></i>Hari terbaik</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="raise card proj">
+          <h3>Proyeksi setahun</h3>
+          <div class="big"><b>957</b><span>kg CO₂</span></div>
+          <p>Kalau ritme minggu ini terjaga sampai 52 minggu ke depan.</p>
+          <div class="save"><svg class="i"><use href="#i-leaf"/></svg><span>Hemat ± 130 kg dibanding ritme minggu lalu, setara ± 6 pohon.</span></div>
+        </div>
+      </div>
+
+      <div class="raise card">
+        <h2 style="font-size:1.35rem">Peringkat mingguan</h2>
+        <div class="tabs" role="tablist" aria-label="Level peringkat" id="rankTabs">
+          <button class="tab" role="tab" aria-selected="false" data-r="teman">Teman</button>
+          <button class="tab" role="tab" aria-selected="true" data-r="kampus">Kampus</button>
+          <button class="tab" role="tab" aria-selected="false" data-r="nasional">Nasional</button>
+        </div>
+        <ol class="rank" id="rankList"></ol>
+        <div class="rep-actions">
+          <button class="btn" id="shareBtn"><svg class="i"><use href="#i-share"/></svg>Bagikan ke Story</button>
+          <button class="btn ghost" id="challengeBtn"><svg class="i"><use href="#i-sword"/></svg>Tantang teman</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= NOTIFIKASI ================= -->
+    <section class="page" id="page-notifikasi" aria-labelledby="h-not">
+      <div class="topbar">
+        <h1 id="h-not">Notifikasi</h1>
+      </div>
+      <div class="chips" role="group" aria-label="Filter notifikasi" id="filters">
+        <button class="fchip" aria-pressed="true" data-f="all">Semua</button>
+        <button class="fchip" aria-pressed="false" data-f="streak">Streak</button>
+        <button class="fchip" aria-pressed="false" data-f="misi">Misi</button>
+        <button class="fchip" aria-pressed="false" data-f="peringkat">Peringkat</button>
+        <span class="spacer"></span>
+        <button class="btn ghost sm" id="readAll"><svg class="i"><use href="#i-check"/></svg>Tandai semua dibaca</button>
+      </div>
+      <div class="notifs" id="notifs" aria-live="polite"></div>
+    </section>
+
+    <!-- ================= PROFIL ================= -->
+    <section class="page" id="page-profil" aria-labelledby="h-prof">
+      <div class="topbar">
+        <h1 id="h-prof">Profil</h1>
+        <span class="chip streak"><svg class="i"><use href="#i-flame"/></svg><span id="pStreak">7</span> hari</span>
+        <span class="chip lvl"><svg class="i"><use href="#i-leaf"/></svg>Lv <span id="pLvl">12</span></span>
+      </div>
+
+      <div class="prof-grid">
+        <div class="raise card prof-card">
+          <div class="pedestal"><div class="avw big" id="avBig"></div></div>
+          <div class="av-name display" id="avName">Tunas Lime</div>
+          <div class="av-meta" id="avMeta">Dipakai sekarang</div>
+          <button class="btn ok" id="avUse">Pakai avatar ini</button>
+          <div class="field"><label for="pName">Nama</label><input id="pName" maxlength="24" autocomplete="off"></div>
+          <div class="field"><label for="pBio">Bio <small id="bioCount"></small></label><textarea id="pBio" maxlength="80" rows="2"></textarea></div>
+          <button class="btn ghost" id="saveProfile">Simpan profil</button>
+        </div>
+
+        <div class="raise card">
+          <div class="sec-head"><h2>Pilih avatarmu</h2><span id="avCount">0/140 terbuka</span></div>
+          <div class="sptabs" id="spTabs" role="tablist" aria-label="Jenis avatar"></div>
+          <div class="pick-actions">
+            <button class="btn ghost sm" id="avShuffle"><svg class="i"><use href="#i-shuffle"/></svg>Acak</button>
+            <button class="btn ghost sm" id="avDemo" aria-pressed="false"><svg class="i"><use href="#i-lock"/></svg><span>Buka semua (demo)</span></button>
+          </div>
+          <div class="lockbar" id="lockBar" hidden></div>
+          <div class="av-grid" id="avGrid"></div>
+        </div>
+      </div>
+
+      <div class="raise card" style="margin-top:26px">
+        <div class="sec-head"><h2>Statistik & lencana</h2></div>
+        <div class="stats">
+          <div class="stat"><b>128</b><span>Total scan</span></div>
+          <div class="stat"><b>14</b><span>Streak terbaik (hari)</span></div>
+          <div class="stat"><b>46,2</b><span>kg CO₂ terhindar</span></div>
+          <div class="stat"><b>#3</b><span>Peringkat kampus</span></div>
+        </div>
+        <div class="badges">
+          <div class="badge-i tone-green" style="--col:var(--green-500);--edge:var(--green-700)"><div class="bi"><svg class="i"><use href="#i-camera"/></svg></div>Langkah Pertama</div>
+          <div class="badge-i" style="--col:var(--warn);--edge:#B87400"><div class="bi"><svg class="i"><use href="#i-flame"/></svg></div>3 Hari Beruntun</div>
+          <div class="badge-i" style="--col:var(--teal-500);--edge:var(--teal-700)"><div class="bi"><svg class="i"><use href="#i-leaf"/></svg></div>Pemakan Nabati</div>
+          <div class="badge-i" style="--col:var(--blue-500);--edge:var(--blue-700)"><div class="bi"><svg class="i"><use href="#i-trophy"/></svg></div>Top 3 Kampus</div>
+          <div class="badge-i lock"><div class="bi"><svg class="i"><use href="#i-lock"/></svg></div>Streak 14 Hari</div>
+          <div class="badge-i lock"><div class="bi"><svg class="i"><use href="#i-lock"/></svg></div>Hemat 100 kg</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= AUTENTIKASI (referensi) ================= -->
+    <section class="page" id="page-auth" aria-labelledby="h-auth">
+      <div class="topbar"><h1 id="h-auth">Modul Autentikasi</h1></div>
+      <p class="ref-note">Auth bukan cuma halaman Login. Biasanya ada 5 halaman: Landing, Daftar, Masuk, Profil Publik, dan halaman Avatar (evolusi + kondisi).</p>
+      <div class="tabs wraptabs" id="authTabs" role="tablist" aria-label="Halaman autentikasi">
+        <button class="tab" role="tab" aria-selected="true" data-sub="landing">Landing</button>
+        <button class="tab" role="tab" aria-selected="false" data-sub="daftar">Daftar</button>
+        <button class="tab" role="tab" aria-selected="false" data-sub="masuk">Masuk</button>
+        <button class="tab" role="tab" aria-selected="false" data-sub="publik">Profil Publik</button>
+        <button class="tab" role="tab" aria-selected="false" data-sub="avatar">Halaman Avatar</button>
+      </div>
+
+      <div class="subpage" data-sub="landing">
+        <div class="raise hero land-hero">
+          <div class="mascot-wrap" id="mascotLand"></div>
+          <div>
+            <span class="land-badge">Untuk mahasiswa yang peduli bumi</span>
+            <h2 class="land-title">Foto makananmu,<br><span class="accent">jaga bumiku.</span></h2>
+            <p class="land-sub">Suap.in menghitung jejak karbon dari tiap suapan lewat satu foto. Kumpulkan streak, naik level, dan bersaing sehat dengan teman sekampus.</p>
+            <div class="land-cta"><button class="btn" data-goto="daftar">Daftar gratis</button><button class="btn ghost" data-goto="masuk">Masuk</button></div>
+          </div>
+        </div>
+        <div class="land-feats">
+          <div class="raise-sm land-feat"><div class="lf-ico"><svg class="i"><use href="#i-scan"/></svg></div><div><b>AI Food Scanner</b><span>Semua item terdeteksi dari satu foto.</span></div></div>
+          <div class="raise-sm land-feat"><div class="lf-ico"><svg class="i"><use href="#i-flame"/></svg></div><div><b>Streak & Level</b><span>Konsisten setiap hari, naik level.</span></div></div>
+          <div class="raise-sm land-feat"><div class="lf-ico"><svg class="i"><use href="#i-trophy"/></svg></div><div><b>Leaderboard Kampus</b><span>Adu emisi terendah antar universitas.</span></div></div>
+        </div>
+      </div>
+
+      <div class="subpage" data-sub="daftar" hidden>
+        <div class="raise authcard">
+          <h2>Buat akun baru</h2>
+          <p class="authsub">Gratis, dan kamu bisa langsung mulai streak hari ini.</p>
+          <div class="field"><label>Nama lengkap</label><input placeholder="Nama kamu" autocomplete="off"></div>
+          <div class="field"><label>Email kampus</label><input type="email" placeholder="nama@student.ac.id"></div>
+          <div class="field"><label>Universitas</label><select><option>Pilih universitas</option><option>Universitas Indonesia</option><option>Institut Teknologi Bandung</option><option>Universitas Gadjah Mada</option><option>Universitas Diponegoro</option></select></div>
+          <div class="field">
+            <label>Kata sandi</label>
+            <div class="pass-wrap"><input id="regPass" type="password" placeholder="Minimal 8 karakter" autocomplete="off"><button type="button" class="eye-btn" data-toggle="regPass"><svg class="i"><use href="#i-eye"/></svg></button></div>
+            <div class="strength"><div class="strength-bar" id="strengthBar"></div></div>
+            <small class="strength-lbl" id="strengthLbl">Kekuatan sandi</small>
+          </div>
+          <div class="field"><label>Konfirmasi kata sandi</label><div class="pass-wrap"><input id="regPass2" type="password" autocomplete="off"><button type="button" class="eye-btn" data-toggle="regPass2"><svg class="i"><use href="#i-eye"/></svg></button></div></div>
+          <label class="check-row"><input type="checkbox">Saya setuju dengan Syarat &amp; Ketentuan</label>
+          <button class="btn ok wide">Daftar gratis</button>
+          <p class="authswitch">Sudah punya akun? <a href="#" data-goto="masuk">Masuk</a></p>
+        </div>
+      </div>
+
+      <div class="subpage" data-sub="masuk" hidden>
+        <div class="raise authcard">
+          <h2>Selamat datang lagi</h2>
+          <p class="authsub">Masuk untuk melanjutkan streak-mu.</p>
+          <div class="field"><label>Email atau username</label><input placeholder="nama@student.ac.id" autocomplete="off"></div>
+          <div class="field"><label>Kata sandi</label><div class="pass-wrap"><input id="loginPass" type="password" autocomplete="off"><button type="button" class="eye-btn" data-toggle="loginPass"><svg class="i"><use href="#i-eye"/></svg></button></div></div>
+          <div class="row-between"><label class="check-row sm"><input type="checkbox">Ingat saya</label><a href="#" class="link-sm">Lupa sandi?</a></div>
+          <button class="btn ok wide">Masuk</button>
+          <p class="authswitch">Belum punya akun? <a href="#" data-goto="daftar">Daftar</a></p>
+        </div>
+      </div>
+
+      <div class="subpage" data-sub="publik" hidden>
+        <div class="tabs sm" id="viewAsTabs" role="tablist" aria-label="Lihat sebagai">
+          <button class="tab" role="tab" aria-selected="true" data-view="me">Lihat sebagai kamu</button>
+          <button class="tab" role="tab" aria-selected="false" data-view="friend">Lihat sebagai teman</button>
+        </div>
+        <div class="raise card pubprofile">
+          <div class="pub-head">
+            <div class="avw" style="width:84px;height:84px" id="pubAvatarIcon"></div>
+            <div class="pub-id"><h2 id="pubName">Kamu</h2><span class="chip lvl" id="pubUni">Universitas Indonesia</span></div>
+            <div class="pub-actions" id="pubActions"></div>
+          </div>
+          <div class="stats">
+            <div class="stat"><b>128</b><span>Total scan</span></div>
+            <div class="stat"><b>7</b><span>Streak aktif</span></div>
+            <div class="stat"><b>46,2</b><span>kg CO₂ terhindar</span></div>
+            <div class="stat"><b>#3</b><span>Peringkat kampus</span></div>
+          </div>
+          <div class="badges">
+            <div class="badge-i" style="--col:var(--green-500);--edge:var(--green-700)"><div class="bi"><svg class="i"><use href="#i-camera"/></svg></div>Langkah Pertama</div>
+            <div class="badge-i" style="--col:var(--warn);--edge:#B87400"><div class="bi"><svg class="i"><use href="#i-flame"/></svg></div>3 Hari Beruntun</div>
+            <div class="badge-i" style="--col:var(--teal-500);--edge:var(--teal-700)"><div class="bi"><svg class="i"><use href="#i-leaf"/></svg></div>Pemakan Nabati</div>
+            <div class="badge-i" style="--col:var(--blue-500);--edge:var(--blue-700)"><div class="bi"><svg class="i"><use href="#i-trophy"/></svg></div>Top 3 Kampus</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subpage" data-sub="avatar" hidden>
+        <div class="raise card avo-card">
+          <div class="avo-top">
+            <div class="avo-big" id="avoBig"></div>
+            <div class="cond-tabs" id="condTabs">
+              <button class="ctab" aria-pressed="true" data-cond="sehat">Sehat</button>
+              <button class="ctab" aria-pressed="false" data-cond="waspada">Waspada</button>
+              <button class="ctab" aria-pressed="false" data-cond="layu">Layu</button>
+            </div>
+            <div class="avo-status" id="avoStatus"></div>
+            <p class="avo-desc" id="avoDesc"></p>
+          </div>
+          <div class="sec-head"><h2>Jalur evolusi</h2></div>
+          <div class="evo-path" id="evoPath">
+            <div class="evo-step done"><div class="evo-ico">🌱</div><span>Benih</span></div>
+            <div class="evo-line done"></div>
+            <div class="evo-step cur"><div class="evo-ico">🌿</div><span>Tunas</span></div>
+            <div class="evo-line"></div>
+            <div class="evo-step"><div class="evo-ico">🌳</div><span>Pohon Kecil</span></div>
+            <div class="evo-line"></div>
+            <div class="evo-step"><div class="evo-ico">🌲</div><span>Pohon Besar</span></div>
+            <div class="evo-line"></div>
+            <div class="evo-step"><div class="evo-ico">🌴</div><span>Hutan</span></div>
+          </div>
+          <div class="raise-sm tips-card">
+            <h3>Cara jaga kondisi avatar</h3>
+            <ul><li>Foto minimal 1 makanan tiap hari supaya streak jalan</li><li>Jaga budget karbon harian tidak lewat batas</li><li>Kalau terpaksa skip, pakai streak freeze dari peti misi</li></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SCANNER (referensi) ================= -->
+    <section class="page" id="page-scanner" aria-labelledby="h-scan">
+      <div class="topbar"><h1 id="h-scan">Modul FoodScan AI</h1></div>
+      <p class="ref-note">4 halaman inti: ambil/upload foto, lihat hasil deteksi, riwayat harian, dan budget karbon real-time.</p>
+      <div class="tabs wraptabs" id="scanTabs" role="tablist" aria-label="Halaman scanner">
+        <button class="tab" role="tab" aria-selected="true" data-sub="scan">Scan</button>
+        <button class="tab" role="tab" aria-selected="false" data-sub="hasil">Hasil Scan</button>
+        <button class="tab" role="tab" aria-selected="false" data-sub="log">Log Harian</button>
+        <button class="tab" role="tab" aria-selected="false" data-sub="budget">Budget Karbon</button>
+      </div>
+
+      <div class="subpage" data-sub="scan">
+        <div class="raise scan-frame">
+          <span class="frame-corner tl"></span><span class="frame-corner tr"></span><span class="frame-corner bl"></span><span class="frame-corner br"></span>
+          <div class="scan-cam"><svg class="i" style="width:44px;height:44px"><use href="#i-camera"/></svg></div>
+          <p>Arahkan kamera ke makananmu</p>
+        </div>
+        <div class="scan-actions">
+          <button class="btn ok wide" id="doScan"><svg class="i"><use href="#i-camera"/></svg>Ambil Foto</button>
+          <button class="btn ghost wide"><svg class="i"><use href="#i-upload"/></svg>Upload dari Galeri</button>
+        </div>
+        <div class="sec-head" style="margin-top:24px"><h2>Scan terakhir</h2></div>
+        <div class="recent-scans">
+          <div class="rs-item"><div class="rs-thumb">🍛</div><span>08:12</span></div>
+          <div class="rs-item"><div class="rs-thumb">🥗</div><span>12:40</span></div>
+          <div class="rs-item"><div class="rs-thumb">🍜</div><span>19:05</span></div>
+        </div>
+      </div>
+
+      <div class="subpage" data-sub="hasil" hidden>
+        <div class="raise card hasil-card">
+          <div class="hasil-top">
+            <div class="hasil-photo">🍛</div>
+            <div class="hasil-id"><h2>Hasil Scan</h2><span class="chip">Dideteksi otomatis · EfficientNet</span></div>
+            <span class="xp-tag big">+30 XP</span>
+          </div>
+          <div class="detect-list">
+            <div class="detect-item"><span class="di-name">Nasi Putih</span><span class="di-conf">98% yakin</span><span class="di-em">0,45 kg CO₂</span><button class="di-edit" aria-label="Koreksi item"><svg class="i"><use href="#i-edit"/></svg></button></div>
+            <div class="detect-item"><span class="di-name">Ayam Goreng</span><span class="di-conf">94% yakin</span><span class="di-em">0,60 kg CO₂</span><button class="di-edit" aria-label="Koreksi item"><svg class="i"><use href="#i-edit"/></svg></button></div>
+            <div class="detect-item"><span class="di-name">Tumis Kangkung</span><span class="di-conf">89% yakin</span><span class="di-em">0,15 kg CO₂</span><button class="di-edit" aria-label="Koreksi item"><svg class="i"><use href="#i-edit"/></svg></button></div>
+          </div>
+          <div class="hasil-total"><span>Total emisi</span><b>1,2 kg CO₂</b></div>
+          <div class="raise-sm suggest-card"><svg class="i"><use href="#i-leaf"/></svg><div><b>Saran alternatif</b><p>Ganti nasi putih dengan nasi merah, hemat sekitar 0,3 kg CO₂.</p></div></div>
+          <div class="hasil-actions"><button class="btn ok wide" data-goto2="log">Simpan ke Log</button><button class="btn ghost wide" data-goto2="scan">Scan Ulang</button></div>
+        </div>
+      </div>
+
+      <div class="subpage" data-sub="log" hidden>
+        <div class="sec-head"><h2>Riwayat hari ini</h2><span>3 scan · 1,2 kg CO₂</span></div>
+        <div class="log-group"><h3>Sarapan</h3>
+          <div class="log-item"><span class="li-ico">🍛</span><span class="li-txt"><b>Nasi Goreng, Telur Ceplok</b><small>08:12 · 0,8 kg CO₂</small></span><button class="del" aria-label="Hapus"><svg class="i"><use href="#i-x"/></svg></button></div>
+        </div>
+        <div class="log-group"><h3>Makan Siang</h3>
+          <div class="log-item"><span class="li-ico">🥗</span><span class="li-txt"><b>Gado-gado</b><small>12:40 · 0,3 kg CO₂</small></span><button class="del" aria-label="Hapus"><svg class="i"><use href="#i-x"/></svg></button></div>
+        </div>
+        <div class="log-group"><h3>Makan Malam</h3>
+          <div class="log-item"><span class="li-ico">🍜</span><span class="li-txt"><b>Mie Ayam</b><small>19:05 · 0,5 kg CO₂</small></span><button class="del" aria-label="Hapus"><svg class="i"><use href="#i-x"/></svg></button></div>
+        </div>
+      </div>
+
+      <div class="subpage" data-sub="budget" hidden>
+        <div class="raise card budget-card">
+          <div class="budget-top">
+            <div class="ring" role="img" aria-label="Budget karbon harian">
+              <svg viewBox="0 0 120 120"><circle class="tr" cx="60" cy="60" r="50" fill="none" stroke-width="14"/><circle class="fg" id="budgetRingFg" cx="60" cy="60" r="50" fill="none" stroke-width="14" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/></svg>
+              <div class="ring-c"><b>2,1</b><span>dari 3,5 kg</span></div>
+            </div>
+            <div><b class="big-lbl">Masih aman</b><p>Sisa 1,4 kg CO₂ sebelum kamu lewat budget harian.</p></div>
+          </div>
+          <div class="sec-head"><h2>Per waktu makan</h2></div>
+          <div class="mini-bars" id="miniBars"></div>
+          <div class="raise-sm tips-card">
+            <h3>Tips hemat karbon</h3>
+            <ul><li>Pilih lauk nabati untuk 1 dari 3 kali makan</li><li>Habiskan porsi supaya tidak ada makanan terbuang</li><li>Kurangi daging sapi, ganti dengan ayam atau ikan</li></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="avatar.js" defer></script>
+</body>
+</html>

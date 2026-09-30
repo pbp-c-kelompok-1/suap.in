@@ -1,0 +1,78 @@
+<!-- ================= SCANNER (referensi) ================= -->
+<section class="page" id="page-scanner" aria-labelledby="h-scan">
+  <div class="topbar"><h1 id="h-scan">Modul FoodScan AI</h1></div>
+  <p class="ref-note">4 halaman inti: ambil/upload foto, lihat hasil deteksi, riwayat harian, dan budget karbon real-time.</p>
+  <div class="tabs wraptabs" id="scanTabs" role="tablist" aria-label="Halaman scanner">
+    <button class="tab" role="tab" aria-selected="true" data-sub="scan">Scan</button>
+    <button class="tab" role="tab" aria-selected="false" data-sub="hasil">Hasil Scan</button>
+    <button class="tab" role="tab" aria-selected="false" data-sub="log">Log Harian</button>
+    <button class="tab" role="tab" aria-selected="false" data-sub="budget">Budget Karbon</button>
+  </div>
+
+  <div class="subpage" data-sub="scan">
+    <div class="raise scan-frame">
+      <span class="frame-corner tl"></span><span class="frame-corner tr"></span><span class="frame-corner bl"></span><span class="frame-corner br"></span>
+      <div class="scan-cam"><svg class="i" style="width:44px;height:44px"><use href="#i-camera"/></svg></div>
+      <p>Arahkan kamera ke makananmu</p>
+    </div>
+    <div class="scan-actions">
+      <button class="btn ok wide" id="doScan"><svg class="i"><use href="#i-camera"/></svg>Ambil Foto</button>
+      <button class="btn ghost wide"><svg class="i"><use href="#i-upload"/></svg>Upload dari Galeri</button>
+    </div>
+    <div class="sec-head" style="margin-top:24px"><h2>Scan terakhir</h2></div>
+    <div class="recent-scans">
+      <div class="rs-item"><div class="rs-thumb">🍛</div><span>08:12</span></div>
+      <div class="rs-item"><div class="rs-thumb">🥗</div><span>12:40</span></div>
+      <div class="rs-item"><div class="rs-thumb">🍜</div><span>19:05</span></div>
+    </div>
+  </div>
+
+  <div class="subpage" data-sub="hasil" hidden>
+    <div class="raise card hasil-card">
+      <div class="hasil-top">
+        <div class="hasil-photo">🍛</div>
+        <div class="hasil-id"><h2>Hasil Scan</h2><span class="chip">Dideteksi otomatis · EfficientNet</span></div>
+        <span class="xp-tag big">+30 XP</span>
+      </div>
+      <div class="detect-list">
+        <div class="detect-item"><span class="di-name">Nasi Putih</span><span class="di-conf">98% yakin</span><span class="di-em">0,45 kg CO₂</span><button class="di-edit" aria-label="Koreksi item"><svg class="i"><use href="#i-edit"/></svg></button></div>
+        <div class="detect-item"><span class="di-name">Ayam Goreng</span><span class="di-conf">94% yakin</span><span class="di-em">0,60 kg CO₂</span><button class="di-edit" aria-label="Koreksi item"><svg class="i"><use href="#i-edit"/></svg></button></div>
+        <div class="detect-item"><span class="di-name">Tumis Kangkung</span><span class="di-conf">89% yakin</span><span class="di-em">0,15 kg CO₂</span><button class="di-edit" aria-label="Koreksi item"><svg class="i"><use href="#i-edit"/></svg></button></div>
+      </div>
+      <div class="hasil-total"><span>Total emisi</span><b>1,2 kg CO₂</b></div>
+      <div class="raise-sm suggest-card"><svg class="i"><use href="#i-leaf"/></svg><div><b>Saran alternatif</b><p>Ganti nasi putih dengan nasi merah, hemat sekitar 0,3 kg CO₂.</p></div></div>
+      <div class="hasil-actions"><button class="btn ok wide" data-goto2="log">Simpan ke Log</button><button class="btn ghost wide" data-goto2="scan">Scan Ulang</button></div>
+    </div>
+  </div>
+
+  <div class="subpage" data-sub="log" hidden>
+    <div class="sec-head"><h2>Riwayat hari ini</h2><span>3 scan · 1,2 kg CO₂</span></div>
+    <div class="log-group"><h3>Sarapan</h3>
+      <div class="log-item"><span class="li-ico">🍛</span><span class="li-txt"><b>Nasi Goreng, Telur Ceplok</b><small>08:12 · 0,8 kg CO₂</small></span><button class="del" aria-label="Hapus"><svg class="i"><use href="#i-x"/></svg></button></div>
+    </div>
+    <div class="log-group"><h3>Makan Siang</h3>
+      <div class="log-item"><span class="li-ico">🥗</span><span class="li-txt"><b>Gado-gado</b><small>12:40 · 0,3 kg CO₂</small></span><button class="del" aria-label="Hapus"><svg class="i"><use href="#i-x"/></svg></button></div>
+    </div>
+    <div class="log-group"><h3>Makan Malam</h3>
+      <div class="log-item"><span class="li-ico">🍜</span><span class="li-txt"><b>Mie Ayam</b><small>19:05 · 0,5 kg CO₂</small></span><button class="del" aria-label="Hapus"><svg class="i"><use href="#i-x"/></svg></button></div>
+    </div>
+  </div>
+
+  <div class="subpage" data-sub="budget" hidden>
+    <div class="raise card budget-card">
+      <div class="budget-top">
+        <div class="ring" role="img" aria-label="Budget karbon harian">
+          <svg viewBox="0 0 120 120"><circle class="tr" cx="60" cy="60" r="50" fill="none" stroke-width="14"/><circle class="fg" id="budgetRingFg" cx="60" cy="60" r="50" fill="none" stroke-width="14" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/></svg>
+          <div class="ring-c"><b>2,1</b><span>dari 3,5 kg</span></div>
+        </div>
+        <div><b class="big-lbl">Masih aman</b><p>Sisa 1,4 kg CO₂ sebelum kamu lewat budget harian.</p></div>
+      </div>
+      <div class="sec-head"><h2>Per waktu makan</h2></div>
+      <div class="mini-bars" id="miniBars"></div>
+      <div class="raise-sm tips-card">
+        <h3>Tips hemat karbon</h3>
+        <ul><li>Pilih lauk nabati untuk 1 dari 3 kali makan</li><li>Habiskan porsi supaya tidak ada makanan terbuang</li><li>Kurangi daging sapi, ganti dengan ayam atau ikan</li></ul>
+      </div>
+    </div>
+  </div>
+</section>

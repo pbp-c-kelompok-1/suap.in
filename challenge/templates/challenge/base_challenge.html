@@ -1,0 +1,33 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>{% block title %}Suap.in — Misi, Laporan & Notifikasi{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700;800&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'challenge/css/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'challenge/css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'challenge/css/buttons.css' %}">
+    <link rel="stylesheet" href="{% static 'challenge/css/layout.css' %}">
+    <link rel="stylesheet" href="{% static 'challenge/css/misi.css' %}">
+    <link rel="stylesheet" href="{% static 'challenge/css/laporan.css' %}">
+    <link rel="stylesheet" href="{% static 'challenge/css/notifikasi.css' %}">
+    <link rel="stylesheet" href="{% static 'challenge/css/fx.css' %}">
+    <link rel="stylesheet" href="{% static 'challenge/css/profil.css' %}">
+    <link rel="stylesheet" href="{% static 'challenge/css/reference.css' %}">
+    <link rel="stylesheet" href="{% static 'challenge/css/responsive.css' %}">
+</head>
+<body>
+
+{% block content %}{% endblock %}
+
+<div class="toast" id="toast" role="status"></div>
+
+<script type="module" src="{% static 'challenge/js/main.js' %}"></script>
+</body>
+</html>

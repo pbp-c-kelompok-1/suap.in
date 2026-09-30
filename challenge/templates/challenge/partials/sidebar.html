@@ -1,0 +1,67 @@
+<aside class="side">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg class="i" style="width:24px;height:24px">
+        <use href="#i-leaf"/>
+      </svg>
+    </div>
+    <b>Suap.in</b>
+  </div>
+
+  <nav class="nav" aria-label="Navigasi utama">
+
+    <a href="#/misi" data-page="misi">
+      <svg class="i"><use href="#i-target"/></svg>
+      <span>Misi</span>
+    </a>
+
+    <a href="#/laporan" data-page="laporan">
+      <svg class="i"><use href="#i-chart"/></svg>
+      <span>Laporan</span>
+    </a>
+
+    <a href="#/notifikasi" data-page="notifikasi">
+      <svg class="i"><use href="#i-bell"/></svg>
+      <span>Notifikasi</span>
+      <em class="badge" id="navBadge" hidden>0</em>
+    </a>
+
+    <a href="#/profil" data-page="profil">
+      <svg class="i"><use href="#i-user"/></svg>
+      <span>Profil</span>
+    </a>
+
+    <span class="nav-label">Modul lain</span>
+
+    <a href="{% url 'gamification:dashboard' %}">
+      <svg class="i"><use href="#i-home"/></svg>
+      <span>Beranda</span>
+    </a>
+
+    <a href="{% url 'scanner:scan' %}">
+      <svg class="i"><use href="#i-scan"/></svg>
+      <span>Scan Makanan</span>
+    </a>
+
+    <a href="{% url 'social:leaderboard' %}">
+      <svg class="i"><use href="#i-chart"/></svg>
+      <span>Peringkat</span>
+    </a>
+
+  </nav>
+
+  <div class="side-foot">
+    <span class="lbl" style="color:var(--text-2);font-weight:800;font-size:.85rem">
+      Tampilan
+    </span>
+
+    <button
+      class="theme-btn"
+      id="themeBtn"
+      aria-label="Ganti mode terang / gelap">
+      <svg class="i">
+        <use id="themeIco" href="#i-moon"/>
+      </svg>
+    </button>
+  </div>
+</aside>

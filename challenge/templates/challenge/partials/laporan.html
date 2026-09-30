@@ -1,0 +1,43 @@
+<!-- ================= LAPORAN ================= -->
+<section class="page" id="page-laporan" aria-labelledby="h-lap">
+  <div class="topbar">
+    <h1 id="h-lap">Laporan minggu ini</h1>
+    <span class="chip">21 – 27 Sep 2026</span>
+  </div>
+
+  <div class="grid-2">
+    <div class="raise card">
+      <div class="big"><b id="weekTotal">0</b><span>kg CO₂</span></div>
+      <div class="delta"><svg class="i"><use href="#i-down"/></svg>12% lebih rendah dari minggu lalu (20,9 kg)</div>
+      <div class="chart">
+        <div class="bars" id="bars" role="list"></div>
+        <div class="legend">
+          <span><i style="background:var(--green-500)"></i>Di bawah budget</span>
+          <span><i style="background:var(--danger)"></i>Lewat budget</span>
+          <span><i style="background:var(--blue-500)"></i>Hari terbaik</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="raise card proj">
+      <h3>Proyeksi setahun</h3>
+      <div class="big"><b>957</b><span>kg CO₂</span></div>
+      <p>Kalau ritme minggu ini terjaga sampai 52 minggu ke depan.</p>
+      <div class="save"><svg class="i"><use href="#i-leaf"/></svg><span>Hemat ± 130 kg dibanding ritme minggu lalu, setara ± 6 pohon.</span></div>
+    </div>
+  </div>
+
+  <div class="raise card">
+    <h2 style="font-size:1.35rem">Peringkat mingguan</h2>
+    <div class="tabs" role="tablist" aria-label="Level peringkat" id="rankTabs">
+      <button class="tab" role="tab" aria-selected="false" data-r="teman">Teman</button>
+      <button class="tab" role="tab" aria-selected="true" data-r="kampus">Kampus</button>
+      <button class="tab" role="tab" aria-selected="false" data-r="nasional">Nasional</button>
+    </div>
+    <ol class="rank" id="rankList"></ol>
+    <div class="rep-actions">
+      <button class="btn" id="shareBtn"><svg class="i"><use href="#i-share"/></svg>Bagikan ke Story</button>
+      <button class="btn ghost" id="challengeBtn"><svg class="i"><use href="#i-sword"/></svg>Tantang teman</button>
+    </div>
+  </div>
+</section>
