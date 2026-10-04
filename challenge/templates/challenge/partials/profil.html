@@ -1,0 +1,49 @@
+<!-- ================= PROFIL ================= -->
+<section class="page" id="page-profil" aria-labelledby="h-prof">
+  <div class="topbar">
+    <h1 id="h-prof">Profil</h1>
+    <span class="chip streak"><svg class="i"><use href="#i-flame"/></svg><span id="pStreak">7</span> hari</span>
+    <span class="chip lvl"><svg class="i"><use href="#i-leaf"/></svg>Lv <span id="pLvl">12</span></span>
+  </div>
+
+  <div class="prof-grid">
+    <div class="raise card prof-card">
+      <div class="pedestal"><div class="avw big" id="avBig"></div></div>
+      <div class="av-name display" id="avName">Tunas Lime</div>
+      <div class="av-meta" id="avMeta">Dipakai sekarang</div>
+      <button class="btn ok" id="avUse">Pakai avatar ini</button>
+      <div class="field"><label for="pName">Nama</label><input id="pName" maxlength="24" autocomplete="off"></div>
+      <div class="field"><label for="pBio">Bio <small id="bioCount"></small></label><textarea id="pBio" maxlength="80" rows="2"></textarea></div>
+      <button class="btn ghost" id="saveProfile">Simpan profil</button>
+    </div>
+
+    <div class="raise card">
+      <div class="sec-head"><h2>Pilih avatarmu</h2><span id="avCount">0/140 terbuka</span></div>
+      <div class="sptabs" id="spTabs" role="tablist" aria-label="Jenis avatar"></div>
+      <div class="pick-actions">
+        <button class="btn ghost sm" id="avShuffle"><svg class="i"><use href="#i-shuffle"/></svg>Acak</button>
+        <button class="btn ghost sm" id="avDemo" aria-pressed="false"><svg class="i"><use href="#i-lock"/></svg><span>Buka semua (demo)</span></button>
+      </div>
+      <div class="lockbar" id="lockBar" hidden></div>
+      <div class="av-grid" id="avGrid"></div>
+    </div>
+  </div>
+
+  <div class="raise card" style="margin-top:26px">
+    <div class="sec-head"><h2>Statistik & lencana</h2></div>
+    <div class="stats">
+      <div class="stat"><b>128</b><span>Total scan</span></div>
+      <div class="stat"><b>14</b><span>Streak terbaik (hari)</span></div>
+      <div class="stat"><b>46,2</b><span>kg CO₂ terhindar</span></div>
+      <div class="stat"><b>#3</b><span>Peringkat kampus</span></div>
+    </div>
+    <div class="badges">
+      <div class="badge-i tone-green" style="--col:var(--green-500);--edge:var(--green-700)"><div class="bi"><svg class="i"><use href="#i-camera"/></svg></div>Langkah Pertama</div>
+      <div class="badge-i" style="--col:var(--warn);--edge:#B87400"><div class="bi"><svg class="i"><use href="#i-flame"/></svg></div>3 Hari Beruntun</div>
+      <div class="badge-i" style="--col:var(--teal-500);--edge:var(--teal-700)"><div class="bi"><svg class="i"><use href="#i-leaf"/></svg></div>Pemakan Nabati</div>
+      <div class="badge-i" style="--col:var(--blue-500);--edge:var(--blue-700)"><div class="bi"><svg class="i"><use href="#i-trophy"/></svg></div>Top 3 Kampus</div>
+      <div class="badge-i lock"><div class="bi"><svg class="i"><use href="#i-lock"/></svg></div>Streak 14 Hari</div>
+      <div class="badge-i lock"><div class="bi"><svg class="i"><use href="#i-lock"/></svg></div>Hemat 100 kg</div>
+    </div>
+  </div>
+</section>

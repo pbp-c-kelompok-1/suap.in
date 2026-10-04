@@ -1,0 +1,15 @@
+<!-- ================= NOTIFIKASI ================= -->
+<section class="page" id="page-notifikasi" aria-labelledby="h-not">
+  <div class="topbar">
+    <h1 id="h-not">Notifikasi</h1>
+  </div>
+  <div class="chips" role="group" aria-label="Filter notifikasi" id="filters">
+    <button class="fchip" aria-pressed="true" data-f="all">Semua</button>
+    <button class="fchip" aria-pressed="false" data-f="streak">Streak</button>
+    <button class="fchip" aria-pressed="false" data-f="misi">Misi</button>
+    <button class="fchip" aria-pressed="false" data-f="peringkat">Peringkat</button>
+    <span class="spacer"></span>
+    <button class="btn ghost sm" id="readAll"><svg class="i"><use href="#i-check"/></svg>Tandai semua dibaca</button>
+  </div>
+  <div class="notifs" id="notifs" aria-live="polite"></div>
+</section>

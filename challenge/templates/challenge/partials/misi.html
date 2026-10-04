@@ -1,0 +1,38 @@
+<!-- ================= MISI ================= -->
+<section class="page" id="page-misi" aria-labelledby="h-misi">
+  <div class="topbar">
+    <h1 id="h-misi">Misi hari ini</h1>
+    <span class="chip streak" title="Streak aktif"><svg class="i"><use href="#i-flame"/></svg><span id="streakNum">7</span> hari</span>
+    <span class="chip lvl"><svg class="i"><use href="#i-leaf"/></svg>Lv <span id="lvlNum">12</span></span>
+  </div>
+
+  <div class="raise hero">
+    <div class="mascot-wrap" id="mascotHero"></div>
+    <div class="bubble" id="bubble"></div>
+    <div class="ring" role="img" aria-label="Budget karbon harian">
+      <svg viewBox="0 0 120 120">
+        <circle class="tr" cx="60" cy="60" r="50" fill="none" stroke-width="14"/>
+        <circle class="fg" id="ringFg" cx="60" cy="60" r="50" fill="none" stroke-width="14" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+      </svg>
+      <div class="ring-c"><b id="ringVal">2,1</b><span>dari 3,5 kg CO₂</span></div>
+    </div>
+  </div>
+
+  <div class="xp-row">
+    <span class="lbl display" id="tierName">Pejuang Hijau</span>
+    <div class="xp-track" role="progressbar" aria-label="Progres XP" id="xpTrack"><div class="xp-fill" id="xpFill"></div></div>
+    <span class="xp-num" id="xpNum">340 / 500 XP</span>
+  </div>
+
+  <div class="sec-head"><h2>3 misi untukmu</h2><span id="questCount">0/3 selesai</span></div>
+  <div class="quests" id="quests"></div>
+
+  <div class="raise chest" id="chest">
+    <div class="chest-ico"><svg class="i"><use href="#i-gift"/></svg></div>
+    <div>
+      <h3 id="chestTitle">Peti bonus terkunci</h3>
+      <p id="chestDesc">Selesaikan ketiga misi untuk buka peti dan dapat 1 streak freeze.</p>
+    </div>
+    <button class="btn ok" id="chestBtn" disabled>Buka peti</button>
+  </div>
+</section>
