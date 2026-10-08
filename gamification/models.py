@@ -18,6 +18,9 @@ class GameProfile(models.Model):
     record_streak = models.PositiveIntegerField(default=0)
     streak_freezes = models.PositiveSmallIntegerField(default=0)
     last_activity_date = models.DateField(null=True, blank=True)
+    # Extra data for freeze streak
+    freeze_week_start = models.DateField(null=True, blank=True)
+    freezes_claimed_this_week = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         constraints = [
