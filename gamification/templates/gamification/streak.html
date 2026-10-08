@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Streak — Suap.in{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'gamification/css/streak.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <h1>Streak</h1>
+  <span class="chip streak"><svg class="i">
+      <use href="#i-flame" />
+    </svg>{{ streak }} hari</span>
+  {% include 'partials/auth_status.html' %}
+</div>
+
+{% if user.is_authenticated %}
+<div class="raise streak-hero">
+  <div class="flame-orb {% if not streak %}cold{% endif %}">
+    <svg class="i">
+      <use href="#i-flame" />
+    </svg>
+    <span class="flame-num">{{ streak }}</span>
+  </div>
+  <div>
+    {% if scanned_today %}
+    <h2>Streak hari ini aman</h2>
+    <p>Kamu sudah scan makanan hari ini. Lanjut besok untuk menambah satu hari.</p>
+    {% elif streak %}
+    <h2>Scan satu makanan untuk menjaga streak</h2>
+    <p>Streak {{ streak }} harimu berakhir jika belum ada scan sebelum 23.59.</p>
+    {% else %}
+    <h2>Mulai streak pertamamu</h2>
+    <p>Scan satu makanan hari ini, lalu ulangi setiap hari.</p>
+    {% endif %}
+    {% if not scanned_today %}
+    <a href="{% url 'scanner:scan' %}" class="btn ok"><svg class="i">
+        <use href="#i-camera" />
+      </svg>Scan Makanan</a>
+    {% else %}
+    <a href="{% url 'scanner:daily_log' %}" class="btn ghost">Lihat riwayat hari ini</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="raise card">
+    <div class="sec-head">
+      <h2>7 hari terakhir</h2><span>{{ week_done }}/7 hari aktif</span>
+    </div>
+    <div class="wk">
+      {% for d in week %}
+      <div class="wk-day">
+        <div class="dy {{ d.state }} {% if d.is_today %}today{% endif %}"
+          aria-label="{{ d.label }}: {{ d.state_label }}">
+          {% if d.state == 'done' %}<svg class="i">
+            <use href="#i-check" />
+          </svg>
+          {% elif d.state == 'freeze' %}❄️
+          {% elif d.state == 'missed' %}<svg class="i">
+            <use href="#i-x" />
+          </svg>{% endif %}
+        </div>
+        <small>{{ d.label }}</small>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="wk-legend">
+      <span><i style="background:var(--warn)"></i>Scan</span>
+      <span><i style="background:var(--blue-500)"></i>Freeze</span>
+      <span><i style="background:var(--danger)"></i>Terlewat</span>
+    </div>
+  </div>
+
+  <div class="raise card">
+    <div class="stats" style="grid-template-columns:repeat(2,1fr);margin-bottom:22px">
+      <div class="stat"><b>{{ record }}</b><span>Rekor streak (hari)</span></div>
+      <div class="stat"><b>{{ freezes }}</b><span>Streak freeze</span></div>
+    </div>
+    <div class="sec-head">
+      <h2>Target berikutnya</h2><span>{{ next_goal }} hari</span>
+    </div>
+    <div class="goal-row">
+      <div class="xp-track" role="progressbar" aria-label="Progres menuju target" aria-valuenow="{{ goal_percent }}"
+        aria-valuemin="0" aria-valuemax="100">
+        <div class="xp-fill" style="width:{{ goal_percent }}%"></div>
+      </div>
+      <b>{{ streak }}/{{ next_goal }}</b>
+    </div>
+    <p class="authsub" style="margin:10px 0 0">Tinggal {{ days_left }} hari lagi untuk lencana "Streak {{ next_goal }}
+      Hari".</p>
+  </div>
+</div>
+
+<div class="raise card" style="margin-top:26px">
+  <div class="sec-head">
+    <h2>Lencana streak</h2><span>{{ reached_count }}/{{ milestones|length }} terbuka</span>
+  </div>
+  <div class="badges">
+    {% for m in milestones %}
+    {% if m.reached %}
+    <div class="badge-i" style="--col:var(--warn);--edge:#B87400">
+      <div class="bi"><svg class="i">
+          <use href="#i-flame" />
+        </svg></div>{{ m.days }} Hari Beruntun
+    </div>
+    {% else %}
+    <div class="badge-i lock">
+      <div class="bi"><svg class="i">
+          <use href="#i-lock" />
+        </svg></div>{{ m.days }} Hari Beruntun
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+<div class="raise freeze-card">
+  <div class="freeze-ico">❄️</div>
+  <div>
+    <h3>Streak freeze</h3>
+    <p>Kamu punya {{ freezes }} freeze. Satu freeze menjaga streak saat kamu melewatkan satu hari.</p>
+  </div>
+  <a href="{% url 'challenge:list' %}#/misi" class="btn ghost">Dapatkan dari misi</a>
+</div>
+
+{% else %}
+<div class="raise card" style="text-align:center">
+  <div class="mascot-wrap" id="mascotStreak" style="margin:0 auto 12px"></div>
+  <h2>Masuk untuk melihat streak</h2>
+  <p class="authsub">Streak tersimpan di akunmu.</p>
+  <a href="{% url 'authentication:login' %}" class="btn ok">Masuk</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    var slot = document.getElementById('mascotStreak');
+    var tpl = document.getElementById('mascot-tpl');
+    if (slot && tpl) slot.appendChild(tpl.content.cloneNode(true));
+  })();
+</script>
+{% endblock %}
