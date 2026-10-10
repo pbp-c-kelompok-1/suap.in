@@ -1,9 +1,12 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 
+from .community import nearest_canteens
 from .forms import CampusForm
-from .models import CampusMembership
-from .services import month_start, ranked_campuses, ranked_users, week_start
+from .models import Canteen, CampusMembership
+from .services import canteen_pins, canteen_posts, month_start, ranked_campuses, ranked_users, week_start
 
 
 def leaderboard_view(request):
@@ -51,6 +54,50 @@ def choose_campus_view(request):
         membership.save()
         return redirect('social:campus_war')
     return render(request, 'social/choose_campus.html', {'form': form})
+
+
+# ---------- Community ----------
+
+def community_map_view(request):
+    faculties = Canteen.objects.filter(is_active=True).values_list('faculty', flat=True).distinct().order_by('faculty')
+    return render(request, 'social/community_map.html', {'faculties': list(faculties)})
+
+
+def api_canteens(request):
+    range_key = request.GET.get('range', 'today')
+    if range_key not in ('today', 'week', 'all'):
+        range_key = 'today'
+    faculty = request.GET.get('faculty', '')
+    return JsonResponse({'range': range_key, 'canteens': canteen_pins(range_key, faculty)})
+
+
+def api_canteen_posts(request, pk):
+    canteen = get_object_or_404(Canteen, pk=pk, is_active=True)
+    range_key = request.GET.get('range', 'today')
+    if range_key not in ('today', 'week', 'all'):
+        range_key = 'today'
+    try:
+        page = max(1, int(request.GET.get('page', 1)))
+    except ValueError:
+        page = 1
+    return JsonResponse(canteen_posts(canteen, range_key, page))
+
+
+@require_POST
+def api_nearest(request):
+    """Terima lat/lng dari browser, balas 3 kantin terdekat. Koordinat tidak disimpan."""
+    try:
+        lat = float(request.POST['lat'])
+        lng = float(request.POST['lng'])
+    except (KeyError, ValueError):
+        return JsonResponse({'error': 'lat dan lng wajib berupa angka'}, status=400)
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return JsonResponse({'error': 'koordinat tidak valid'}, status=400)
+    try:
+        accuracy = float(request.POST.get('accuracy', ''))
+    except ValueError:
+        accuracy = None
+    return JsonResponse(nearest_canteens(lat, lng, accuracy))
 
 
 def friends_view(request):
