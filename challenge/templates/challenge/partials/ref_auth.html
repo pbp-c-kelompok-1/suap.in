@@ -1,0 +1,118 @@
+<!-- ================= AUTENTIKASI (referensi) ================= -->
+<section class="page" id="page-auth" aria-labelledby="h-auth">
+  <div class="topbar"><h1 id="h-auth">Modul Autentikasi</h1></div>
+  <p class="ref-note">Auth bukan cuma halaman Login. Biasanya ada 5 halaman: Landing, Daftar, Masuk, Profil Publik, dan halaman Avatar (evolusi + kondisi).</p>
+  <div class="tabs wraptabs" id="authTabs" role="tablist" aria-label="Halaman autentikasi">
+    <button class="tab" role="tab" aria-selected="true" data-sub="landing">Landing</button>
+    <button class="tab" role="tab" aria-selected="false" data-sub="daftar">Daftar</button>
+    <button class="tab" role="tab" aria-selected="false" data-sub="masuk">Masuk</button>
+    <button class="tab" role="tab" aria-selected="false" data-sub="publik">Profil Publik</button>
+    <button class="tab" role="tab" aria-selected="false" data-sub="avatar">Halaman Avatar</button>
+  </div>
+
+  <div class="subpage" data-sub="landing">
+    <div class="raise hero land-hero">
+      <div class="mascot-wrap" id="mascotLand"></div>
+      <div>
+        <span class="land-badge">Untuk mahasiswa yang peduli bumi</span>
+        <h2 class="land-title">Foto makananmu,<br><span class="accent">jaga bumiku.</span></h2>
+        <p class="land-sub">Suap.in menghitung jejak karbon dari tiap suapan lewat satu foto. Kumpulkan streak, naik level, dan bersaing sehat dengan teman sekampus.</p>
+        <div class="land-cta"><button class="btn" data-goto="daftar">Daftar gratis</button><button class="btn ghost" data-goto="masuk">Masuk</button></div>
+      </div>
+    </div>
+    <div class="land-feats">
+      <div class="raise-sm land-feat"><div class="lf-ico"><svg class="i"><use href="#i-scan"/></svg></div><div><b>AI Food Scanner</b><span>Semua item terdeteksi dari satu foto.</span></div></div>
+      <div class="raise-sm land-feat"><div class="lf-ico"><svg class="i"><use href="#i-flame"/></svg></div><div><b>Streak & Level</b><span>Konsisten setiap hari, naik level.</span></div></div>
+      <div class="raise-sm land-feat"><div class="lf-ico"><svg class="i"><use href="#i-trophy"/></svg></div><div><b>Leaderboard Kampus</b><span>Adu emisi terendah antar universitas.</span></div></div>
+    </div>
+  </div>
+
+  <div class="subpage" data-sub="daftar" hidden>
+    <div class="raise authcard">
+      <h2>Buat akun baru</h2>
+      <p class="authsub">Gratis, dan kamu bisa langsung mulai streak hari ini.</p>
+      <div class="field"><label>Nama lengkap</label><input placeholder="Nama kamu" autocomplete="off"></div>
+      <div class="field"><label>Email kampus</label><input type="email" placeholder="nama@student.ac.id"></div>
+      <div class="field"><label>Universitas</label><select><option>Pilih universitas</option><option>Universitas Indonesia</option><option>Institut Teknologi Bandung</option><option>Universitas Gadjah Mada</option><option>Universitas Diponegoro</option></select></div>
+      <div class="field">
+        <label>Kata sandi</label>
+        <div class="pass-wrap"><input id="regPass" type="password" placeholder="Minimal 8 karakter" autocomplete="off"><button type="button" class="eye-btn" data-toggle="regPass"><svg class="i"><use href="#i-eye"/></svg></button></div>
+        <div class="strength"><div class="strength-bar" id="strengthBar"></div></div>
+        <small class="strength-lbl" id="strengthLbl">Kekuatan sandi</small>
+      </div>
+      <div class="field"><label>Konfirmasi kata sandi</label><div class="pass-wrap"><input id="regPass2" type="password" autocomplete="off"><button type="button" class="eye-btn" data-toggle="regPass2"><svg class="i"><use href="#i-eye"/></svg></button></div></div>
+      <label class="check-row"><input type="checkbox">Saya setuju dengan Syarat &amp; Ketentuan</label>
+      <button class="btn ok wide">Daftar gratis</button>
+      <p class="authswitch">Sudah punya akun? <a href="#" data-goto="masuk">Masuk</a></p>
+    </div>
+  </div>
+
+  <div class="subpage" data-sub="masuk" hidden>
+    <div class="raise authcard">
+      <h2>Selamat datang lagi</h2>
+      <p class="authsub">Masuk untuk melanjutkan streak-mu.</p>
+      <div class="field"><label>Email atau username</label><input placeholder="nama@student.ac.id" autocomplete="off"></div>
+      <div class="field"><label>Kata sandi</label><div class="pass-wrap"><input id="loginPass" type="password" autocomplete="off"><button type="button" class="eye-btn" data-toggle="loginPass"><svg class="i"><use href="#i-eye"/></svg></button></div></div>
+      <div class="row-between"><label class="check-row sm"><input type="checkbox">Ingat saya</label><a href="#" class="link-sm">Lupa sandi?</a></div>
+      <button class="btn ok wide">Masuk</button>
+      <p class="authswitch">Belum punya akun? <a href="#" data-goto="daftar">Daftar</a></p>
+    </div>
+  </div>
+
+  <div class="subpage" data-sub="publik" hidden>
+    <div class="tabs sm" id="viewAsTabs" role="tablist" aria-label="Lihat sebagai">
+      <button class="tab" role="tab" aria-selected="true" data-view="me">Lihat sebagai kamu</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="friend">Lihat sebagai teman</button>
+    </div>
+    <div class="raise card pubprofile">
+      <div class="pub-head">
+        <div class="avw" style="width:84px;height:84px" id="pubAvatarIcon"></div>
+        <div class="pub-id"><h2 id="pubName">Kamu</h2><span class="chip lvl" id="pubUni">Universitas Indonesia</span></div>
+        <div class="pub-actions" id="pubActions"></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><b>128</b><span>Total scan</span></div>
+        <div class="stat"><b>7</b><span>Streak aktif</span></div>
+        <div class="stat"><b>46,2</b><span>kg CO₂ terhindar</span></div>
+        <div class="stat"><b>#3</b><span>Peringkat kampus</span></div>
+      </div>
+      <div class="badges">
+        <div class="badge-i" style="--col:var(--green-500);--edge:var(--green-700)"><div class="bi"><svg class="i"><use href="#i-camera"/></svg></div>Langkah Pertama</div>
+        <div class="badge-i" style="--col:var(--warn);--edge:#B87400"><div class="bi"><svg class="i"><use href="#i-flame"/></svg></div>3 Hari Beruntun</div>
+        <div class="badge-i" style="--col:var(--teal-500);--edge:var(--teal-700)"><div class="bi"><svg class="i"><use href="#i-leaf"/></svg></div>Pemakan Nabati</div>
+        <div class="badge-i" style="--col:var(--blue-500);--edge:var(--blue-700)"><div class="bi"><svg class="i"><use href="#i-trophy"/></svg></div>Top 3 Kampus</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subpage" data-sub="avatar" hidden>
+    <div class="raise card avo-card">
+      <div class="avo-top">
+        <div class="avo-big" id="avoBig"></div>
+        <div class="cond-tabs" id="condTabs">
+          <button class="ctab" aria-pressed="true" data-cond="sehat">Sehat</button>
+          <button class="ctab" aria-pressed="false" data-cond="waspada">Waspada</button>
+          <button class="ctab" aria-pressed="false" data-cond="layu">Layu</button>
+        </div>
+        <div class="avo-status" id="avoStatus"></div>
+        <p class="avo-desc" id="avoDesc"></p>
+      </div>
+      <div class="sec-head"><h2>Jalur evolusi</h2></div>
+      <div class="evo-path" id="evoPath">
+        <div class="evo-step done"><div class="evo-ico">🌱</div><span>Benih</span></div>
+        <div class="evo-line done"></div>
+        <div class="evo-step cur"><div class="evo-ico">🌿</div><span>Tunas</span></div>
+        <div class="evo-line"></div>
+        <div class="evo-step"><div class="evo-ico">🌳</div><span>Pohon Kecil</span></div>
+        <div class="evo-line"></div>
+        <div class="evo-step"><div class="evo-ico">🌲</div><span>Pohon Besar</span></div>
+        <div class="evo-line"></div>
+        <div class="evo-step"><div class="evo-ico">🌴</div><span>Hutan</span></div>
+      </div>
+      <div class="raise-sm tips-card">
+        <h3>Cara jaga kondisi avatar</h3>
+        <ul><li>Foto minimal 1 makanan tiap hari supaya streak jalan</li><li>Jaga budget karbon harian tidak lewat batas</li><li>Kalau terpaksa skip, pakai streak freeze dari peti misi</li></ul>
+      </div>
+    </div>
+  </div>
+</section>

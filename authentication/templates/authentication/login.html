@@ -1,33 +1,39 @@
-{% extends 'auth_base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}Login — Suap.in{% endblock %}
+{% block title %}Masuk — Suap.in{% endblock %}
 
-{% block auth_content %}
-<h1 class="auth-title mb-8">Welcome back!<br>Glad to see you, Again!</h1>
+{% block content %}
+<div class="topbar"><h1>Masuk</h1></div>
 
-<form method="post" class="flex flex-col gap-5" novalidate>
-  {% csrf_token %}
-  <input type="hidden" name="next" value="{{ next }}">
-  {% include 'partials/form_alert.html' %}
+{% if messages %}
+{% for message in messages %}
+<div class="raise-sm" style="padding:14px 18px;margin-bottom:18px;color:var(--danger);font-weight:800">{{ message }}</div>
+{% endfor %}
+{% endif %}
 
-  {% include 'partials/field.html' with field=form.identifier %}
-  {% include 'partials/field.html' with field=form.password toggle=True %}
+<div class="raise authcard">
+  <h2>Selamat datang lagi</h2>
+  <p class="authsub">Masuk untuk melanjutkan streak-mu.</p>
 
-  <div class="flex items-center justify-between">
-    <label class="flex items-center gap-3 text-sm font-medium cursor-pointer">
-      <input type="checkbox" name="remember" class="switch">
-      Remember me
-    </label>
-    <a href="{% url 'authentication:forgot_password' %}" class="text-accent text-sm font-semibold">Forgot password?</a>
-  </div>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
 
-  <button type="submit" class="btn-accent btn-lg btn-block mt-2">Login</button>
-</form>
+    {% if form.non_field_errors %}
+    <p class="strength-lbl" style="color:var(--danger);margin-bottom:14px">{% for error in form.non_field_errors %}{{ error }}{% endfor %}</p>
+    {% endif %}
 
-<div class="divider-label my-8">Or Login with</div>
-{% include 'partials/social_login.html' %}
+    {% include 'partials/field.html' with field=form.identifier %}
+    {% include 'partials/field.html' with field=form.password toggle=True %}
 
-<p class="text-center mt-10 text-sm font-medium">
-  Don't have an account? <a href="{% url 'authentication:register' %}" class="text-accent font-bold">Register Now</a>
-</p>
+    <div class="row-between">
+      <label class="check-row sm"><input type="checkbox" name="remember">Ingat saya</label>
+      <a href="{% url 'authentication:forgot_password' %}" class="link-sm">Lupa sandi?</a>
+    </div>
+
+    <button type="submit" class="btn ok wide">Masuk</button>
+  </form>
+
+  <p class="authswitch">Belum punya akun? <a href="{% url 'authentication:register' %}">Daftar</a></p>
+</div>
 {% endblock %}

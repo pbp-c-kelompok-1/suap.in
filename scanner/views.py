@@ -104,7 +104,17 @@ def scan_view(request):
     else:
         form = FoodScanForm()
 
-    return render(request, 'scanner/scan.html', {'form': form})
+    recent_logs = []
+    if request.user.is_authenticated:
+        recent_logs = list(
+            FoodLog.objects.filter(user=request.user)
+            .select_related('food_item')
+            .order_by('-scanned_at')[:3]
+        )
+        for log in recent_logs:
+            log.display_name = log.custom_name or (log.food_item.name if log.food_item else 'Item')
+
+    return render(request, 'scanner/scan.html', {'form': form, 'recent_logs': recent_logs})
 
 
 @login_required
@@ -212,9 +222,15 @@ def daily_log_view(request):
             'total': sum(entry.co2_grams for entry in entries),
         })
 
+    max_meal_total = max((meal['total'] for meal in meals), default=0)
+    for meal in meals:
+        meal['percent'] = round(meal['total'] / max_meal_total * 100) if max_meal_total else 0
+
     budget = get_today_budget(request.user)
     status_color, status_label = get_carbon_status(budget.used_grams, budget.budget_grams)
     remaining = budget.remaining_grams
+    progress_percent = min(100, round(budget.percentage_used))
+    ring_circumference = 314.16
 
     context = {
         'meals': meals,
@@ -223,7 +239,8 @@ def daily_log_view(request):
         'over_grams': max(0, -remaining),
         'status_color': status_color,
         'status_label': status_label,
-        'progress_percent': min(100, round(budget.percentage_used)),
+        'progress_percent': progress_percent,
+        'ring_offset': round(ring_circumference * (1 - progress_percent / 100), 2),
         'today': today,
         'total_co2': budget.used_grams,
         'analogy': calculate_carbon_analogy(budget.used_grams),
