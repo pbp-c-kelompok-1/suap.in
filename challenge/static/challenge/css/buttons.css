@@ -4,7 +4,7 @@
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   padding:13px 22px;border-radius:18px;font-family:'Fredoka',sans-serif;font-weight:600;font-size:1rem;
-  color:#fff;background:var(--cta);
+  color:#fff;background:var(--cta);text-decoration:none;
   box-shadow:0 5px 0 var(--cta-edge),0 12px 22px var(--cta-glow);
   transform:translateY(0);transition:transform .08s ease,box-shadow .08s ease,filter .15s;
   position:relative;top:0;

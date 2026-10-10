@@ -48,11 +48,3 @@ def level_view(request):
         'icon': 'sparkle',
         'description': 'Lihat progres XP, tier level, dan koleksi lencanamu.',
     })
-
-
-def story_view(request):
-    return render(request, 'coming_soon.html', {
-        'title': 'Story',
-        'icon': 'leaf',
-        'description': 'Episode komik digital akan terbuka seiring naiknya levelmu.',
-    })

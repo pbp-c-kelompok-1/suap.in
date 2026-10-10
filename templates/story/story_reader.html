@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Bab {{ comic.bab }} — Suap.in{% endblock %}
+
+{% block content %}
+<div class="topbar"><h1>Bab {{ comic.bab }}: {{ comic.title }}</h1>{% include 'partials/auth_status.html' %}</div>
+<a href="{% url 'story:story_list' %}" class="link-sm" style="display:inline-block;margin-bottom:18px">← Kembali ke daftar bab</a>
+<p class="ref-note">{{ comic.description }}</p>
+
+<div class="empty raise" style="margin-bottom:24px">
+  <div class="mascot-wrap" id="mascotReader" style="width:120px;height:120px;margin:0 auto"></div>
+  <h3>Halaman {{ current_page }}</h3>
+  <p>Panel komik segera hadir</p>
+</div>
+
+<div class="topbar">
+  {% if has_prev %}
+  <a href="?page={{ prev_page }}" class="btn ghost">
+    <svg class="i"><use href="#i2-chevron-left"/></svg>Sebelumnya</a>
+  {% else %}<span></span>{% endif %}
+  <span class="chip">{{ current_page }} / {{ comic.total_pages }}</span>
+  {% if has_next %}
+  <a href="?page={{ next_page }}" class="btn ok">Selanjutnya<svg class="i"><use href="#i2-arrow-right"/></svg></a>
+  {% else %}
+  <a href="{% url 'story:story_list' %}" class="btn ok">Selesai</a>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var slot = document.getElementById('mascotReader');
+  var tpl = document.getElementById('mascot-tpl');
+  if (slot && tpl) slot.appendChild(tpl.content.cloneNode(true));
+})();
+</script>
+{% endblock %}

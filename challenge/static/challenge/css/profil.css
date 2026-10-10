@@ -14,7 +14,7 @@
 .prof-card .btn{width:100%}
 .field{width:100%;text-align:left}
 .field label{display:flex;justify-content:space-between;font-weight:800;font-size:.85rem;color:var(--text-2);margin:0 0 6px 8px}
-.field input,.field textarea{width:100%;border:0;border-radius:16px;background:var(--bg);color:var(--text);font:inherit;font-weight:700;
+.field input,.field textarea,.field select{width:100%;border:0;border-radius:16px;background:var(--bg);color:var(--text);font:inherit;font-weight:700;
   padding:12px 16px;resize:none;box-shadow:inset 4px 4px 9px var(--sh-d),inset -4px -4px 9px var(--sh-l)}
 .sptabs{display:flex;gap:12px;overflow-x:auto;padding:8px 8px 18px;margin:0 -8px}
 .sptab{flex:none;display:flex;align-items:center;gap:8px;padding:6px 16px 6px 6px;border-radius:99px;background:var(--surface);
