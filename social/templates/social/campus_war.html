@@ -2,33 +2,28 @@
 {% block title %}Campus War — Suap.in{% endblock %}
 
 {% block content %}
-<h1 class="page-title mb-2">Campus War</h1>
-<p class="page-sub mb-6">Rata-rata XP per mahasiswa bulan ini</p>
+<div class="topbar"><h1>Campus War</h1>{% include 'partials/auth_status.html' %}</div>
 
 {% if user.is_authenticated %}
-<div class="card mb-6 flex items-center justify-between">
-  <p>Kampusmu: <span class="font-bold">{{ my_campus.short_name|default:"belum dipilih" }}</span></p>
-  <a href="{% url 'social:choose_campus' %}" class="btn-neu shape-pill">{% if my_campus %}Ganti{% else %}Pilih{% endif %} kampus</a>
+<div class="raise card" style="margin-bottom:22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+  <svg class="i" style="width:28px;height:28px;color:var(--teal-500)"><use href="#i-building"/></svg>
+  <span style="flex:1">Kampusmu: <b>{{ my_campus.short_name|default:"belum dipilih" }}</b></span>
+  <a href="{% url 'social:choose_campus' %}" class="btn sm ghost" style="text-decoration:none">{% if my_campus %}Ganti{% else %}Pilih{% endif %} kampus</a>
 </div>
 {% endif %}
 
-<div class="flex flex-col gap-3">
-  {% for c in campuses %}
-  <div class="card-sm flex items-center justify-between" {% if c == my_campus %}style="outline: 2px solid var(--accent, #3a7);"{% endif %}>
-    <div class="flex items-center gap-3">
-      <span class="font-bold text-secondary">#{{ forloop.counter }}</span>
-      <div>
-        <p class="font-semibold">{{ c.short_name }}</p>
-        <p class="text-xs text-muted">{{ c.name }} · {{ c.member_count }} mahasiswa</p>
-      </div>
-    </div>
-    <div class="text-right">
-      <p class="font-bold">{{ c.avg_xp }} XP</p>
-      <p class="text-xs text-muted">total {{ c.total_xp }}</p>
-    </div>
-  </div>
-  {% empty %}
-  <div class="empty-slot">Belum ada data kampus.</div>
-  {% endfor %}
+<div class="raise card">
+  <div class="sec-head"><h2>Peringkat kampus bulan ini</h2><span>rata-rata XP per mahasiswa</span></div>
+  <ol class="rank">
+    {% for c in campuses %}
+    <li{% if c == my_campus %} class="me"{% endif %}>
+      <span class="pos{% if forloop.counter == 1 %} p1{% elif forloop.counter == 2 %} p2{% elif forloop.counter == 3 %} p3{% endif %}">{{ forloop.counter }}</span>
+      <span class="nm">{{ c.short_name }}<small style="display:block;color:var(--text-2);font-weight:700">{{ c.name }} · {{ c.member_count }} mahasiswa</small></span>
+      <span class="co">{{ c.avg_xp }} <small>XP</small><small style="display:block">total {{ c.total_xp }}</small></span>
+    </li>
+    {% empty %}
+    <div class="empty"><h3>Belum ada data kampus</h3></div>
+    {% endfor %}
+  </ol>
 </div>
 {% endblock %}

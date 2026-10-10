@@ -2,12 +2,15 @@
 {% block title %}Pilih Kampus — Suap.in{% endblock %}
 
 {% block content %}
-<h1 class="page-title mb-6">Pilih Kampus</h1>
-<form method="post" class="card flex flex-col gap-4" style="max-width: 420px;">
+<div class="topbar"><h1>Pilih Kampus</h1>{% include 'partials/auth_status.html' %}</div>
+
+<form method="post" class="raise card" style="max-width:460px;display:grid;gap:18px">
   {% csrf_token %}
-  {{ form.university.label_tag }}
-  {{ form.university }}
-  {{ form.university.errors }}
-  <button type="submit" class="btn-accent shape-pill">Simpan</button>
+  <div class="field">
+    <label for="{{ form.university.id_for_label }}">{{ form.university.label }}</label>
+    {{ form.university }}
+    {% for error in form.university.errors %}<p style="color:var(--danger);font-weight:700;margin:6px 0 0 8px">{{ error }}</p>{% endfor %}
+  </div>
+  <button type="submit" class="btn"><svg class="i"><use href="#i-check"/></svg>Simpan</button>
 </form>
 {% endblock %}

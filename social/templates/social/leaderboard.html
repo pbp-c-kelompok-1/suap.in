@@ -2,49 +2,55 @@
 {% block title %}Peringkat — Suap.in{% endblock %}
 
 {% block content %}
-<h1 class="page-title mb-2">Leaderboard</h1>
-<p class="page-sub mb-6">Ranking XP minggu ini</p>
+<div class="topbar"><h1>Peringkat</h1>{% include 'partials/auth_status.html' %}</div>
 
-<div class="flex flex-wrap gap-3 mb-6">
-  <a href="?tab=friends" class="{% if tab == 'friends' %}btn-accent{% else %}btn-neu{% endif %} shape-pill">Teman</a>
-  <a href="?tab=campus" class="{% if tab == 'campus' %}btn-accent{% else %}btn-neu{% endif %} shape-pill">Kampus</a>
-  <a href="?tab=national" class="{% if tab == 'national' %}btn-accent{% else %}btn-neu{% endif %} shape-pill">Nasional</a>
-  <a href="{% url 'social:campus_war' %}" class="btn-neu shape-pill">Campus War →</a>
+<div class="raise card">
+  <div class="sec-head"><h2>Leaderboard mingguan</h2><span>XP minggu ini</span></div>
+
+  <div class="tabs" role="tablist" aria-label="Level peringkat">
+    <a class="tab" role="tab" style="text-decoration:none" href="?tab=friends" aria-selected="{% if tab == 'friends' %}true{% else %}false{% endif %}">Teman</a>
+    <a class="tab" role="tab" style="text-decoration:none" href="?tab=campus" aria-selected="{% if tab == 'campus' %}true{% else %}false{% endif %}">Kampus</a>
+    <a class="tab" role="tab" style="text-decoration:none" href="?tab=national" aria-selected="{% if tab == 'national' %}true{% else %}false{% endif %}">Nasional</a>
+  </div>
+
+  {% if need_login %}
+    <div class="empty">
+      <h3>Masuk dulu</h3>
+      <p>Login untuk melihat peringkat teman sekampusmu.</p>
+      <a href="{% url 'authentication:login' %}" class="btn" style="text-decoration:none;margin-top:14px">Masuk</a>
+    </div>
+  {% elif need_campus %}
+    <div class="empty">
+      <h3>Kamu belum memilih kampus</h3>
+      <p>Pilih kampus dulu supaya bisa bersaing dengan teman sekampus.</p>
+      <a href="{% url 'social:choose_campus' %}" class="btn" style="text-decoration:none;margin-top:14px"><svg class="i"><use href="#i-building"/></svg>Pilih kampus</a>
+    </div>
+  {% elif tab == 'friends' %}
+    <div class="empty">
+      <h3>Segera hadir</h3>
+      <p>Peringkat teman akan muncul setelah fitur pertemanan tersedia.</p>
+    </div>
+  {% elif not ranking %}
+    <div class="empty">
+      <h3>Belum ada yang scan minggu ini</h3>
+      <p>Jadi yang pertama!</p>
+      <a href="{% url 'scanner:scan' %}" class="btn ok" style="text-decoration:none;margin-top:14px"><svg class="i"><use href="#i-camera"/></svg>Scan makanan</a>
+    </div>
+  {% else %}
+    <ol class="rank">
+      {% for u in ranking %}
+      <li{% if u == user %} class="me"{% endif %}>
+        <span class="pos{% if forloop.counter == 1 %} p1{% elif forloop.counter == 2 %} p2{% elif forloop.counter == 3 %} p3{% endif %}">{{ forloop.counter }}</span>
+        <span class="av" style="background:var(--teal-500)">{{ u.username|first|upper }}</span>
+        <span class="nm">{{ u.username }}<small style="display:block;color:var(--text-2);font-weight:700">{{ u.campus.university.short_name|default:"Belum pilih kampus" }}</small></span>
+        <span class="co">{{ u.xp }} <small>XP</small></span>
+      </li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+
+  <div class="rep-actions" style="margin-top:20px">
+    <a href="{% url 'social:campus_war' %}" class="btn ghost" style="text-decoration:none"><svg class="i"><use href="#i-trophy"/></svg>Lihat Campus War</a>
+  </div>
 </div>
-
-{% if need_login %}
-  <div class="empty-slot">Masuk dulu untuk melihat peringkat kampusmu. <a class="text-accent font-semibold" href="{% url 'authentication:login' %}">Masuk</a></div>
-{% elif need_campus %}
-  <div class="empty-slot">Kamu belum memilih kampus. <a class="text-accent font-semibold" href="{% url 'social:choose_campus' %}">Pilih kampus</a></div>
-{% elif tab == 'friends' %}
-  <div class="empty-slot">Leaderboard teman segera hadir.</div>
-{% elif not podium %}
-  <div class="empty-slot">Belum ada yang scan minggu ini. Jadi yang pertama!</div>
-{% else %}
-  <div class="grid gap-4 mb-6" style="grid-template-columns: repeat(3, 1fr); align-items: end;">
-    {% for u in podium %}
-    <div class="card text-center" style="order: {% if forloop.counter == 1 %}2{% elif forloop.counter == 2 %}1{% else %}3{% endif %};">
-      <p class="text-2xl font-bold">#{{ forloop.counter }}</p>
-      <p class="font-semibold">{{ u.username }}</p>
-      <p class="text-xs text-muted">{{ u.campus.university.short_name|default:"-" }}</p>
-      <span class="badge badge-green mt-2">{{ u.xp }} XP</span>
-    </div>
-    {% endfor %}
-  </div>
-
-  <div class="flex flex-col gap-3">
-    {% for u in others %}
-    <div class="card-sm flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <span class="font-bold text-secondary">#{{ forloop.counter|add:start_rank|add:"-1" }}</span>
-        <div>
-          <p class="font-semibold">{{ u.username }}</p>
-          <p class="text-xs text-muted">{{ u.campus.university.short_name|default:"-" }}</p>
-        </div>
-      </div>
-      <p class="font-bold">{{ u.xp }} XP</p>
-    </div>
-    {% endfor %}
-  </div>
-{% endif %}
 {% endblock %}

@@ -24,9 +24,7 @@ def leaderboard_view(request):
     ranking = list(users[:50])
     return render(request, 'social/leaderboard.html', {
         'tab': tab,
-        'podium': ranking[:3],
-        'others': ranking[3:],
-        'start_rank': 4,
+        'ranking': ranking,
         'need_login': need_login,
         'need_campus': need_campus,
     })
