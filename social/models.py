@@ -22,3 +22,52 @@ class CampusMembership(models.Model):
 
     def __str__(self):
         return f"{self.user.username} @ {self.university.short_name}"
+
+
+class Canteen(models.Model):
+    name = models.CharField(max_length=100)
+    faculty = models.CharField(max_length=50)
+    university = models.ForeignKey(University, on_delete=models.CASCADE, related_name='canteens')
+    latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    radius_m = models.PositiveIntegerField(default=150)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.faculty})"
+
+    class Meta:
+        ordering = ['faculty', 'name']
+
+
+class CommunityPost(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='community_posts')
+    photo = models.ImageField(upload_to='community/%Y/%m/')
+    food_logs = models.ManyToManyField('scanner.FoodLog', blank=True, related_name='community_posts')
+    total_co2_grams = models.FloatField(default=0)
+    canteen = models.ForeignKey(Canteen, on_delete=models.SET_NULL, null=True, blank=True, related_name='posts')
+    custom_location = models.CharField(max_length=100, blank=True)
+    food_name = models.CharField(max_length=100, blank=True)
+    price = models.PositiveIntegerField(null=True, blank=True)
+    is_shared = models.BooleanField(default=False)
+    is_hidden = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.food_name or 'Tanpa nama'}"
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+class PostReport(models.Model):
+    post = models.ForeignKey(CommunityPost, on_delete=models.CASCADE, related_name='reports')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='post_reports')
+    reason = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Laporan {self.user.username} untuk post #{self.post_id}"
+
+    class Meta:
+        unique_together = ['post', 'user']
