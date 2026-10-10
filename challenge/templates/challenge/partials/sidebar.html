@@ -48,6 +48,11 @@
       <span>Peringkat</span>
     </a>
 
+    <a href="{% url 'social:community_map' %}"{% if request.resolver_match.url_name == 'community_map' %} aria-current="page"{% endif %}>
+      <svg class="i"><use href="#i-building"/></svg>
+      <span>Community</span>
+    </a>
+
     <a href="{% url 'story:story_list' %}">
       <svg class="i"><use href="#i2-book"/></svg>
       <span>Cerita</span>

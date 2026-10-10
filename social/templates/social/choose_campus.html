@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Pilih Kampus — Suap.in{% endblock %}
+
+{% block content %}
+<div class="topbar"><h1>Pilih Kampus</h1>{% include 'partials/auth_status.html' %}</div>
+
+<form method="post" class="raise card" style="max-width:460px;display:grid;gap:18px">
+  {% csrf_token %}
+  <div class="field">
+    <label for="{{ form.university.id_for_label }}">{{ form.university.label }}</label>
+    {{ form.university }}
+    {% for error in form.university.errors %}<p style="color:var(--danger);font-weight:700;margin:6px 0 0 8px">{{ error }}</p>{% endfor %}
+  </div>
+  <button type="submit" class="btn"><svg class="i"><use href="#i-check"/></svg>Simpan</button>
+</form>
+{% endblock %}
