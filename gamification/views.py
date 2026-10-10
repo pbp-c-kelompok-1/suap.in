@@ -1,8 +1,16 @@
+from datetime import timedelta
+
 from django.shortcuts import render
 from django.utils import timezone
 
+from gamification.models import GameProfile
 from scanner.models import CarbonBudget, FoodLog
 from scanner.services import calculate_carbon_analogy, get_carbon_status
+
+
+MILESTONES = [3, 7, 14, 30]
+DAY_ABBR = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
+STATE_LABEL = {'done': 'ada scan', 'missed': 'terlewat', 'freeze': 'freeze', 'empty_day': 'belum'}
 
 
 def dashboard_view(request):
@@ -35,16 +43,44 @@ def dashboard_view(request):
 
 
 def streak_view(request):
-    return render(request, 'coming_soon.html', {
-        'title': 'Streak',
-        'icon': 'fire',
-        'description': 'Pantau streak harianmu dan pakai streak freeze di sini.',
-    })
+    context = {}
+    if request.user.is_authenticated:
+        gp, _ = GameProfile.objects.get_or_create(user=request.user)
+        today = timezone.localdate()
+        start = today - timedelta(days=6)
+        scanned = {timezone.localtime(l.scanned_at).date()
+                   for l in FoodLog.objects.filter(user=request.user, scanned_at__date__gte=start)}
+        week = []
+        for i in range(7):
+            d = start + timedelta(days=i)
+            state = 'done' if d in scanned else ('missed' if d < today else 'empty_day')
+            week.append({'label': DAY_ABBR[d.weekday()], 'state': state,
+                         'state_label': STATE_LABEL[state], 'is_today': d == today})
+
+        next_goal = next((m for m in MILESTONES if m > gp.current_streak), MILESTONES[-1])
+        context = {
+            'streak': gp.current_streak,
+            'record': gp.record_streak,
+            'freezes': gp.streak_freezes,
+            'scanned_today': today in scanned,
+            'week': week,
+            'week_done': sum(1 for w in week if w['state'] == 'done'),
+            'next_goal': next_goal,
+            'goal_percent': min(100, round(gp.current_streak / next_goal * 100)),
+            'days_left': max(0, next_goal - gp.current_streak),
+            'milestones': [{'days': m, 'reached': gp.record_streak >= m} for m in MILESTONES],
+            'reached_count': sum(1 for m in MILESTONES if gp.record_streak >= m),
+        }
+    return render(request, 'gamification/streak.html', context)
 
 
 def level_view(request):
-    return render(request, 'coming_soon.html', {
+    context = {
         'title': 'Level & XP',
         'icon': 'sparkle',
         'description': 'Lihat progres XP, tier level, dan koleksi lencanamu.',
-    })
+    }
+    if request.user.is_authenticated:
+        profile, _ = GameProfile.objects.get_or_create(user=request.user)
+        context['profile'] = profile
+    return render(request, 'coming_soon.html', context)
