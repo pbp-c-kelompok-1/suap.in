@@ -137,6 +137,16 @@ def claim_streak_freeze(user, today=None):
 
 # ==== Badge/Lencana ====================================================================
 
+def seedBadges():
+    if Badge.objects.exists():
+        return
+
+    badges = [
+        {}
+    ]
+    for b in badges:
+        Badge.objects.create(**b)
+
 def check_badges(user):
     profile = get_profile(user)
     values = {

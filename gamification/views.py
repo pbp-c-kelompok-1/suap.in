@@ -79,7 +79,7 @@ def streak_view(request):
     return render(request, 'gamification/streak.html', context)
 
 
-TIER_STYLE = [('teal', 'leaf'), ('green', 'target'), ('greenish-yellow', 'trophy'), ('amber', 'star')]
+TIER_STYLE = [('teal', 'leaf'), ('green', 'sprout'), ('greenish-yellow', 'tree'), ('amber', 'globe')]
 MISSION_XP = 25  # rata-rata XP misi harian (misi.js: 20-30)
 
 def level_view(request):
