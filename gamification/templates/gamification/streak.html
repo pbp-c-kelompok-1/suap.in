@@ -8,6 +8,7 @@
 {% endblock %}
 
 {% block content %}
+{% include 'gamification/partials/streak_icons.html' %}
 <div class="topbar">
   <h1>Streak</h1>
   <span class="chip streak"><svg class="i">
@@ -80,7 +81,11 @@
 </div>
 
 <div class="raise freeze-card">
-  <div class="freeze-ico">{% include 'gamification/partials/snowflake.html' %}</div>
+  <div class="freeze-ico">
+    <svg width="32" height="32" aria-hidden="true">
+      <use href="#i-snowflake"></use>
+    </svg>
+  </div>
   <div>
     <h3>Streak Freeze</h3>
     <p>Kamu punya <strong>{{ freezes }}</strong> freeze. Satu freeze menjaga streak saat kamu melewatkan satu hari.</p>
