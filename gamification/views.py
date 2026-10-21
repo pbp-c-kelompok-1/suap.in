@@ -3,6 +3,8 @@ from django.shortcuts import render
 from scanner.models import CarbonBudget, FoodLog
 from scanner.services import calculate_carbon_analogy, get_carbon_status
 
+from .services import MAX_LEVEL, TIERS, get_profile, tier_from_level, xp_needed, xp_progress, check_badges
+
 from gamification.models import GameProfile
 from datetime import timedelta
 from django.utils import timezone
@@ -39,7 +41,7 @@ def dashboard_view(request):
     return render(request, 'gamification/dashboard.html', context)
 
 
-MILESTONES = [3, 7, 14, 30]
+MILESTONES = [3, 7, 14, 30, 180, 360]
 DAY_ABBR = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
 STATE_LABEL = {'done': 'ada scan', 'missed': 'terlewat', 'freeze': 'freeze', 'empty_day': 'belum'}
 
@@ -48,7 +50,7 @@ def streak_view(request):
     if request.user.is_authenticated:
         gp, _ = GameProfile.objects.get_or_create(user=request.user)
         today = timezone.localdate()
-        start = today - timedelta(days=6)
+        start = today - timedelta(days=today.weekday())
         scanned = {timezone.localtime(l.scanned_at).date()
                    for l in FoodLog.objects.filter(user=request.user, scanned_at__date__gte=start)}
         week = []
@@ -59,7 +61,7 @@ def streak_view(request):
                          'state_label': STATE_LABEL[state], 'is_today': d == today})
         
         # To mark freeze days, store used freeze dates and set state='freeze' for them.
-        next_goal = next((m for m in MILESTONES if m > gp.current_streak), MILESTONES[-1])
+        next_goal = next((m for m in MILESTONES if m > (gp.current_streak % 360)), MILESTONES[-1])
         context = {
             'streak': gp.current_streak, 
             'record': gp.record_streak, 
@@ -73,25 +75,44 @@ def streak_view(request):
             'milestones': [{'days': m, 'reached': gp.record_streak >= m} for m in MILESTONES],
             'reached_count': sum(1 for m in MILESTONES if gp.record_streak >= m),
         }
+        check_badges(request.user)
     return render(request, 'gamification/streak.html', context)
 
 
+TIER_STYLE = [('teal', 'leaf'), ('green', 'target'), ('greenish-yellow', 'trophy'), ('amber', 'star')]
+MISSION_XP = 25  # rata-rata XP misi harian (misi.js: 20-30)
+
 def level_view(request):
-    context = {
-        'title': 'Level & XP',
-        'icon': 'sparkle',
-        'description': 'Lihat progres XP, tier level, dan koleksi lencanamu.',
-    }
-
+    context = {}
     if request.user.is_authenticated:
-        profile, _ = GameProfile.objects.get_or_create(user=request.user)
+        profile = get_profile(request.user)
+        level = profile.level
+        tiers = []
+        for i, (min_level, name) in enumerate(TIERS):
+            max_level = TIERS[i + 1][0] - 1 if i + 1 < len(TIERS) else None
+            span_end = (max_level or MAX_LEVEL) + 1
+            if max_level is not None and level > max_level:
+                state, percent = 'reached', 100
+            elif level >= min_level:
+                state = 'current'
+                percent = min(100, round((level - min_level) / (span_end - min_level) * 100))
+            else:
+                state, percent = 'locked', 0
+            tone, icon = TIER_STYLE[i % len(TIER_STYLE)]
+            tiers.append({
+                'name': name, 'min_level': min_level, 'max_level': max_level,
+                'state': state, 'percent': percent, 'tone': tone, 'icon': icon,
+                'levels_left': max(0, min_level - level),
+            })
+        is_max = level >= MAX_LEVEL
+        progress = xp_progress(profile)
         context = {
-            'title': 'Level & XP',
-            'icon': 'sparkle',
-            'description': 'Lihat progres XP, tier level, dan koleksi lencanamu.',
-            'profile': profile,
+            'level': level, 'tier_name': tier_from_level(level), 'total_xp': profile.total_xp,
+            'progress': progress, 'is_max_level': is_max, 'next_level': level + 1,
+            'xp_to_next': 0 if is_max else progress['needed'] - progress['current'],
+            'tiers': tiers, 'reached_count': sum(1 for t in tiers if t['state'] != 'locked'),
+            'mission_xp': MISSION_XP,
         }
-
     return render(request, 'gamification/level.html', context)
 
 

@@ -1,0 +1,28 @@
+{% if d.state == 'done' %}
+<div class="dy {{ d.state }} {% if d.is_today %}today{% endif %}" aria-label="{{ d.label }}: {{ d.state_label }}"
+    style="--d-color: var(--ok);">
+    {% include 'gamification/partials/check.html' %}
+    <use href="#i-x" />
+    </svg>
+</div>
+{% elif d.state == 'freeze' %}
+<div class="dy {{ d.state }} {% if d.is_today %}today{% endif %}" aria-label="{{ d.label }}: {{ d.state_label }}"
+    style="--d-color: var(--blue-500);">
+    {% include 'gamification/partials/snowflake.html' %}
+    <use href="#i-x" />
+    </svg>
+</div>
+{% elif d.state == 'missed' %}
+<div class="dy {{ d.state }} {% if d.is_today %}today{% endif %}" aria-label="{{ d.label }}: {{ d.state_label }}"
+    style="--d-color: var(--danger);">
+    {% include 'gamification/partials/cross.html' %}
+    <use href="#i-x" />
+    </svg>
+</div>
+{% else %}
+<div class="dy {{ d.state }} {% if d.is_today %}today{% endif %}" aria-label="{{ d.label }}: {{ d.state_label }}"
+    style="--d-color: var(--bg);">
+    <use href="#i-x" />
+    </svg>
+</div>
+{% endif %}

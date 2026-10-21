@@ -31,7 +31,7 @@
   place-items: center;
   background: var(--bg);
   position: relative;
-  box-shadow: inset 9px 9px 18px var(--sh-d), inset -9px -9px 18px var(--sh-l)
+  box-shadow: inset 9px 9px 18px var(--sh-d)
 }
 
 .flame-orb svg.i {
@@ -39,10 +39,25 @@
   height: 84px;
   color: var(--warn);
   fill: var(--warn);
-  stroke: #B87400;
   stroke-width: 1.6;
-  animation: flame 1.8s ease-in-out infinite;
+  animation: flame 0.9s ease-in-out infinite,
+             breathe 1s ease-in-out infinite alternate,
+             jitter max(calc(2s / var(--current-streak)), 0.15s) linear infinite;
   transform-origin: 50% 90%
+}
+
+@keyframes breathe {
+  0% { filter: drop-shadow(0 0 4px #FFB000); }
+  100% { filter: drop-shadow(0 0 10px #FFB000); }
+}
+
+@keyframes jitter {
+  0%   { translate: 0 0; }
+  20%  { translate: -1px 1px; }
+  40%  { translate: 1px -1px; }
+  60%  { translate: -1px 0.5px; }
+  80%  { translate: 1px 1px; }
+  100% { translate: 0 0; }
 }
 
 .flame-orb.cold svg.i {
@@ -109,9 +124,10 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--bg);
+  align-content: center;
+  background: var(--d-color);
   color: var(--text-2);
-  box-shadow: inset 4px 4px 9px var(--sh-d), inset -4px -4px 9px var(--sh-l)
+  box-shadow: inset 4px 4px 9px #0000005b
 }
 
 .dy svg.i {
@@ -137,7 +153,7 @@
 }
 
 .dy.today {
-  outline: 3px solid var(--cta);
+  outline: 3px solid var(--ok);
   outline-offset: 3px
 }
 
@@ -186,8 +202,8 @@
 }
 
 .freeze-ico {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border-radius: 22px;
   display: grid;
   place-items: center;
