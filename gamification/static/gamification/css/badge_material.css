@@ -1,0 +1,75 @@
+.badges {
+    display: flex;
+    flex-direction: row;
+}
+
+.bronze {
+    --shine: rgba(250, 153, 50, 1);
+    --base: rgba(199, 128, 52, 1);
+    --col: linear-gradient(-45deg,
+    var(--base) 30%, var(--shine) 35%, var(--shine) 35%, var(--base) 40%,
+    var(--base) 45%, var(--shine) 50%, var(--shine) 60%, var(--base) 65%,
+    var(--base) 70%, var(--shine) 72%, var(--shine) 73%, var(--base) 75%
+    );
+    --edge: rgb(143, 82, 17);
+}
+
+.silver {
+    --shine: rgba(240, 240, 240, 1);
+    --base: rgba(190, 190, 190, 1);
+    --col: linear-gradient(-45deg,
+    var(--base) 30%, var(--shine) 35%, var(--shine) 35%, var(--base) 40%,
+    var(--base) 45%, var(--shine) 50%, var(--shine) 60%, var(--base) 65%,
+    var(--base) 70%, var(--shine) 72%, var(--shine) 73%, var(--base) 75%
+    );
+    --edge: rgb(125, 125, 125);
+}
+
+.gold {
+    --shine: rgba(232, 249, 1, 1);
+    --base: rgba(209, 195, 0, 1);
+    --col: linear-gradient(-45deg,
+    var(--base) 30%, var(--shine) 35%, var(--shine) 35%, var(--base) 40%,
+    var(--base) 45%, var(--shine) 50%, var(--shine) 60%, var(--base) 65%,
+    var(--base) 70%, var(--shine) 72%, var(--shine) 73%, var(--base) 75%
+    );
+    --edge: rgb(169, 123, 17);
+}
+
+.shine {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease;
+}
+
+.shine:hover {
+    transform: scale(1.0625);
+}
+
+.shine::before {
+    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, var(--shine) 100%);
+    content: "";
+    display: block;
+    height: 100%;
+    left: -75%;
+    position: absolute;
+    top: 0;
+    transform: skewX(-45deg);
+    width: 50%;
+    z-index: 2;
+}
+
+.shine:hover::before,
+.shine:focus::before {
+    animation: shine 0.85s;
+}
+
+@keyframes shine {
+    100% {
+        left: 125%;
+    }
+}
+
+.badge-icon {
+    color: var(--edge)
+}

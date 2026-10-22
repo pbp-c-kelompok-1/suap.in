@@ -1,12 +1,14 @@
+from django.http import JsonResponse
 from django.shortcuts import render
 
 from scanner.models import CarbonBudget, FoodLog
 from scanner.services import calculate_carbon_analogy, get_carbon_status
 
-from .services import MAX_LEVEL, TIERS, get_profile, tier_from_level, xp_needed, xp_progress, check_badges
+from .services import *
 
-from gamification.models import GameProfile
+from gamification.models import GameProfile, UserBadge, Badge
 from datetime import timedelta
+import json
 from django.utils import timezone
 from scanner.models import FoodLog
 from .models import GameProfile
@@ -41,7 +43,7 @@ def dashboard_view(request):
     return render(request, 'gamification/dashboard.html', context)
 
 
-MILESTONES = [3, 7, 14, 30, 180, 360]
+
 DAY_ABBR = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
 STATE_LABEL = {'done': 'ada scan', 'missed': 'terlewat', 'freeze': 'freeze', 'empty_day': 'belum'}
 
@@ -61,7 +63,7 @@ def streak_view(request):
                          'state_label': STATE_LABEL[state], 'is_today': d == today})
         
         # To mark freeze days, store used freeze dates and set state='freeze' for them.
-        next_goal = next((m for m in MILESTONES if m > (gp.current_streak % 360)), MILESTONES[-1])
+        next_goal = next((m for m in STREAK_MILESTONES if m > (gp.current_streak % 360)), STREAK_MILESTONES[-1])
         context = {
             'streak': gp.current_streak, 
             'record': gp.record_streak, 
@@ -72,8 +74,8 @@ def streak_view(request):
             'next_goal': next_goal,
             'goal_percent': min(100, round(gp.current_streak / next_goal * 100)),
             'days_left': max(0, next_goal - gp.current_streak),
-            'milestones': [{'days': m, 'reached': gp.record_streak >= m} for m in MILESTONES],
-            'reached_count': sum(1 for m in MILESTONES if gp.record_streak >= m),
+            'milestones': [{'days': m, 'reached': gp.record_streak >= m} for m in STREAK_MILESTONES],
+            'reached_count': sum(1 for m in STREAK_MILESTONES if gp.record_streak >= m),
         }
         check_badges(request.user)
     return render(request, 'gamification/streak.html', context)
@@ -115,6 +117,35 @@ def level_view(request):
         }
     return render(request, 'gamification/level.html', context)
 
+def get_badge_json(request):
+    seedBadges()
+    check_badges(request.user)
+    user_badges = UserBadge.objects.filter(user=request.user)
+
+    data = []
+    for user_badge in user_badges:
+        badge = user_badge.badge
+        data.append({
+            'code': badge.code,
+            'fields': {
+                'name': badge.name,
+                'description': badge.description,
+                'icon': badge.icon,
+                'earned_at': user_badge.earned_at.strftime("%d %b %Y"),
+                'material': badge_material_from_threshold(badge.criteria_type, badge.threshold)
+            }
+        })
+
+    return JsonResponse(data, safe=False)
+
+def badges_view(request):
+    context = {}
+    if request.user.is_authenticated:
+        check_badges(request.user)
+        context = {
+            'badge_count': len(json.loads(get_badge_json(request).content))
+        }
+    return render(request, 'gamification/badges.html', context)
 
 def story_view(request):
     return render(request, 'coming_soon.html', {

@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lencana — Suap.in{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'gamification/css/badge_material.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="topbar">
+    <h1>Lencana</h1>
+    {% if user.is_authenticated %}
+    <span class="chip lvl"><svg class="i">
+            <use href="#i-trophy" />
+        </svg>{{ badge_count }} terbuka</span>
+    {% endif %}
+    {% include 'partials/auth_status.html' %}
+</div>
+
+{% if user.is_authenticated %}
+<div class="raise card">
+    <div class="sec-head">
+        <h2>Koleksi lencana</h2><span>{{ badge_count }} dimiliki</span>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading" class="empty-state" style="display: none;">
+        <p>Memuat Lencana...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error" class="empty-state" style="display: none;">
+        <p>Gagal memuat data lencana. Silakan coba lagi.</p>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty" class="empty-state" style="display: none;">
+        <p>Belum ada lencana.</p>
+    </div>
+
+    <div id="grid" class="badges" style="display: none;"></div>
+
+</div>
+
+{% else %}
+<div class="raise card" style="text-align:center">
+    <div class="mascot-wrap" id="mascotBadges" style="margin:0 auto 12px"></div>
+    <h2>Masuk untuk melihat lencana</h2>
+    <p class="authsub">Lencanamu tersimpan di akunmu.</p>
+    <a href="{% url 'authentication:login' %}" class="btn ok">Masuk</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const BASE_BADGE_ENDPOINT = "{% url 'gamification:get_badges_json' %}";
+    const gridContainer = document.getElementById('grid');
+    const loadingState = document.getElementById('loading');
+    const errorState = document.getElementById('error');
+    const emptyState = document.getElementById('empty');
+    let badgeAbortController;
+
+    (function () {
+        var slot = document.getElementById('mascotBadges');
+        var tpl = document.getElementById('mascot-tpl');
+        if (slot && tpl) slot.appendChild(tpl.content.cloneNode(true));
+    })();
+
+    function createBadge(item) {
+        const badgeCode = item.code;
+        const badge = item.fields;
+
+        const divElement = document.createElement('div');
+        divElement.classList.add('badge-i');
+        divElement.title = `${badge.description}\nDiperoleh pada tanggal: ${badge.earned_at}`;
+        divElement.style.setProperty("--col", "var(--green-500)");
+        divElement.style.setProperty("--edge", "var(--green-700)");
+
+        divElement.innerHTML = `<div class="bi shine ${badge.material}"><svg class="i badge-icon"><use href="#i-${badge.icon}" /></svg></div>${badge.name}`;
+
+        return divElement;
+    }
+
+    async function fetchBadges() {
+        if (badgeAbortController) badgeAbortController.abort();
+        badgeAbortController = new AbortController();
+
+        const url = BASE_BADGE_ENDPOINT;
+        displayPageSection({ showLoading: true });
+
+        fetch(url, {
+            headers: { 'Accept': 'application/json' },
+            signal: badgeAbortController.signal,
+        })
+            .then((response) => {
+                if (response.ok) return response.json();
+                else throw new Error('Failed to fetch data');
+            })
+            .then((data) => {
+                if (data.length === 0) displayPageSection({ showEmpty: true });
+                else {
+                    displayPageSection({ showGrid: true });
+                    data.forEach((item) => { gridContainer.appendChild(createBadge(item)); })
+                }
+            })
+            .catch((error) => {
+                displayPageSection({ showError: true });
+            })
+    }
+
+    function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false }) {
+        loadingState.style.display = showLoading ? 'block' : 'none';
+        errorState.style.display = showError ? 'block' : 'none';
+        emptyState.style.display = showEmpty ? 'block' : 'none';
+        gridContainer.style.display = showGrid ? 'flex' : 'none';
+    }
+
+    fetchBadges()
+</script>
+{% endblock %}
