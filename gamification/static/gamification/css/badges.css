@@ -1,3 +1,92 @@
+/* Search Bar */
+.badge-actions {
+    display: flex;
+    flex-direction: row;
+    column-gap: 10px;
+}
+
+/* Dropdown (Sort & Filter) */
+.dd {
+    position: relative;
+}
+
+.dd-btn {
+    height: 50px;
+    width: 50px;
+    padding: 0;
+}
+
+.dd-btn[aria-expanded="true"],
+.dd-btn.active {
+    color: var(--teal-600);
+    box-shadow: inset 3px 3px 7px var(--sh-d), inset -3px -3px 7px var(--sh-l);
+}
+
+:root[data-theme="dark"] .dd-btn[aria-expanded="true"],
+:root[data-theme="dark"] .dd-btn.active {
+    color: var(--teal-300);
+}
+
+.dd-panel {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 10px);
+    min-width: 190px;
+    padding: 8px;
+    border-radius: 18px;
+    background: var(--surface);
+    z-index: 60;
+    box-shadow: 8px 8px 18px var(--sh-d), -8px -8px 18px var(--sh-l);
+}
+
+.dd-panel[hidden] {
+    display: none;
+}
+
+.dd-label {
+    display: block;
+    padding: 6px 12px 4px;
+    font-size: .7rem;
+    font-weight: 800;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.dd-panel button[role="menuitemradio"] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: .9rem;
+    text-align: left;
+    color: var(--text-2);
+}
+
+.dd-panel button[role="menuitemradio"]:hover {
+    color: var(--text);
+    background: var(--bg);
+}
+
+.dd-panel button[aria-checked="true"] {
+    color: var(--teal-600);
+    background: var(--bg);
+}
+
+:root[data-theme="dark"] .dd-panel button[aria-checked="true"] {
+    color: var(--teal-300);
+}
+
+.dd-panel button[aria-checked="true"]::after {
+    content: "✓";
+    font-weight: 800;
+}
+
+/* Badge Material */
 .badges {
     display: flex;
     flex-direction: row;

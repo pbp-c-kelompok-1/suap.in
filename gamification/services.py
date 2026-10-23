@@ -171,7 +171,7 @@ def check_badges(user):
     profile = get_profile(user)
     values = {
         'scan_amount': FoodLog.objects.filter(user=user).count(),
-        'streak_duration': profile.current_streak,
+        'streak_duration': profile.record_streak,
         # Bisa tambahin kriteria badge lain
     }
     owned = UserBadge.objects.filter(user=user).values_list('badge_id', flat=True)
@@ -182,6 +182,10 @@ def check_badges(user):
             if created:
                 new_badges.append(badge)
     return new_badges
+
+def grant_badge(user, badge):
+    owned = UserBadge.objects.filter(user=user).values_list('badge_id', flat=True)
+    if badge in Badge.objects.exclude(id__in=owned): UserBadge.objects.get_or_create(user=user, badge=badge)
 
 def badge_material_from_threshold(criteria_type, n):
     if criteria_type == 'scan_amount':
@@ -203,6 +207,27 @@ def badge_material_from_threshold(criteria_type, n):
                 return 'gold'
 
     return ''
+
+def badge_rarity(criteria_type, n):
+    if criteria_type == 'scan_amount':
+            match n:
+                case x if x <= 25:
+                    return 0
+                case x if x <= 100:
+                    return 1
+                case _:
+                    return 2
+    
+    if criteria_type == 'streak_duration':
+        match n:
+            case x if x <= 14:
+                return 0
+            case x if x <= 30:
+                return 1
+            case _:
+                return 2
+    
+        return 0
 
 
 # ==== Scanner ==========================================================================

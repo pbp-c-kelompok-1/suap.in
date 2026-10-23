@@ -6,12 +6,13 @@ from scanner.services import calculate_carbon_analogy, get_carbon_status
 
 from .services import *
 
-from gamification.models import GameProfile, UserBadge, Badge
-from datetime import timedelta
-import json
+from gamification.models import GameProfile, UserBadge
 from django.utils import timezone
 from scanner.models import FoodLog
 from .models import GameProfile
+
+from datetime import timedelta
+import json
 
 
 def dashboard_view(request):
@@ -132,7 +133,10 @@ def get_badge_json(request):
                 'description': badge.description,
                 'icon': badge.icon,
                 'earned_at': user_badge.earned_at.strftime("%d %b %Y"),
-                'material': badge_material_from_threshold(badge.criteria_type, badge.threshold)
+                'material': badge_material_from_threshold(badge.criteria_type, badge.threshold),
+                'earned_at_raw': user_badge.earned_at,
+                'type': badge.criteria_type,
+                'rarity': badge_rarity(badge.criteria_type, badge.threshold)
             }
         })
 
