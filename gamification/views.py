@@ -51,34 +51,52 @@ STATE_LABEL = {'done': 'ada scan', 'missed': 'terlewat', 'freeze': 'freeze', 'em
 def streak_view(request):
     context = {}
     if request.user.is_authenticated:
-        gp, _ = GameProfile.objects.get_or_create(user=request.user)
+        gp = get_profile(request.user)
         today = timezone.localdate()
+        streak = effective_streak(gp, today)
+ 
         start = today - timedelta(days=today.weekday())
-        scanned = {timezone.localtime(l.scanned_at).date()
-                   for l in FoodLog.objects.filter(user=request.user, scanned_at__date__gte=start)}
+        scanned = {
+            timezone.localtime(log.scanned_at).date()
+            for log in FoodLog.objects.filter(user=request.user, scanned_at__date__gte=start)
+        }
+ 
+        # Hari yang dilindungi freeze: streak = rangkaian hari berurutan yang berakhir
+        # di last_activity_date (hari freeze ikut dihitung di update_streak),
+        # jadi hari tanpa scan di dalam rangkaian itu pasti hari freeze.
+        covered = set()
+        last = gp.last_activity_date
+        if streak and last:
+            covered = {last - timedelta(days=i) for i in range(gp.current_streak)}
+            # Hari yang terlewat sejak scan terakhir akan ditutup freeze saat scan berikutnya
+            covered |= {last + timedelta(days=i) for i in range(1, (today - last).days)}
+ 
         week = []
         for i in range(7):
             d = start + timedelta(days=i)
-            state = 'done' if d in scanned else ('missed' if d < today else 'empty_day')
+            if d in scanned:
+                state = 'done'
+            elif d in covered:
+                state = 'freeze'
+            elif d < today:
+                state = 'missed'
+            else:
+                state = 'empty_day'
             week.append({'label': DAY_ABBR[d.weekday()], 'state': state,
                          'state_label': STATE_LABEL[state], 'is_today': d == today})
-        
-        # To mark freeze days, store used freeze dates and set state='freeze' for them.
-        next_goal = next((m for m in STREAK_MILESTONES if m > (gp.current_streak % 360)), STREAK_MILESTONES[-1])
+ 
+        next_goal = next((m for m in STREAK_MILESTONES if m > streak), STREAK_MILESTONES[-1])
         context = {
-            'streak': gp.current_streak, 
-            'record': gp.record_streak, 
+            'streak': streak,
+            'record': gp.record_streak,
             'freezes': gp.streak_freezes,
             'scanned_today': today in scanned,
             'week': week,
             'week_done': sum(1 for w in week if w['state'] == 'done'),
             'next_goal': next_goal,
-            'goal_percent': min(100, round(gp.current_streak / next_goal * 100)),
-            'days_left': max(0, next_goal - gp.current_streak),
-            'milestones': [{'days': m, 'reached': gp.record_streak >= m} for m in STREAK_MILESTONES],
-            'reached_count': sum(1 for m in STREAK_MILESTONES if gp.record_streak >= m),
+            'goal_percent': min(100, round(streak / next_goal * 100)),
+            'days_left': max(0, next_goal - streak)
         }
-        check_badges(request.user)
     return render(request, 'gamification/streak.html', context)
 
 
@@ -163,19 +181,10 @@ def get_badge_json(request):
     return JsonResponse(data)
 
 def badges_view(request):
-    context = {}
     if request.user.is_authenticated:
         check_badges(request.user)
-        data = json.loads(get_badge_json(request).content)
 
-        unlocked_count = len(data['unlocked'])
-        total = unlocked_count + len(data['locked'])
-
-        context = {
-            'badge_total': total,
-            'badge_count': unlocked_count
-        }
-    return render(request, 'gamification/badges.html', context)
+    return render(request, 'gamification/badges.html')
 
 def story_view(request):
     return render(request, 'coming_soon.html', {

@@ -19,7 +19,7 @@
     <h1>Lencana</h1>
     {% if user.is_authenticated %}
     <span class="chip lvl">
-        <svg class="i"><use href="#i-badge"/></svg>{{ badge_count }} dimiliki
+        <svg class="i"><use href="#i-badge"/></svg><span id="badge-count">0</span> Dimiliki
     </span>
     {% endif %}
     {% include 'partials/auth_status.html' %}
@@ -28,7 +28,7 @@
 {% if user.is_authenticated %}
 <div class="raise card">
     <div class="sec-head">
-        <h2>Koleksi lencana</h2><span>{{ badge_count }}/{{ badge_total }} dimiliki</span>
+        <h2>Koleksi lencana</h2><span id="badge-ratio">0/0</span>
     </div>
 
     <form id="badgeForm">
@@ -85,7 +85,7 @@
 
     <!-- Empty State -->
     <div id="empty" class="empty-state" style="display: none;">
-        <p>Belum ada lencana.</p>
+        <p>Tidak ada lencana yang sesuai penelusuran anda.</p>
     </div>
 
     <!-- Unlocked Badges -->
@@ -247,11 +247,11 @@
         lockedItems.forEach((item) => lockedGridContainer.appendChild(createBadge(item, false)));
         
         displayPageSection({ showGrid: items.length, showLockedGrid: lockedItems.length });
+        document.getElementById('badge-count').innerText = `${unlockedBadges.length}`;
+        document.getElementById('badge-ratio').innerText = `${unlockedBadges.length}/${unlockedBadges.length + lockedBadges.length}`;
+
         // Empty state
         if (!items.length && !lockedItems.length) {
-            emptyState.querySelector('p').textContent = unlockedBadges.length
-                ? 'Tidak ada lencana yang sesuai penelusuran anda.'
-                : 'Belum ada lencana.';
             displayPageSection({ showEmpty: true });
             return;
         }
