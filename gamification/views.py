@@ -119,14 +119,18 @@ def level_view(request):
     return render(request, 'gamification/level.html', context)
 
 def get_badge_json(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
     seedBadges()
     check_badges(request.user)
+
     user_badges = UserBadge.objects.filter(user=request.user)
 
-    data = []
+    data = {'unlocked':[], 'locked': []}
     for user_badge in user_badges:
         badge = user_badge.badge
-        data.append({
+        data['unlocked'].append({
             'code': badge.code,
             'fields': {
                 'name': badge.name,
@@ -140,14 +144,36 @@ def get_badge_json(request):
             }
         })
 
-    return JsonResponse(data, safe=False)
+
+    locked_badges = Badge.objects.exclude(id__in=user_badges.values_list('badge_id', flat=True))
+
+    for badge in locked_badges:
+        data['locked'].append({
+            'code': badge.code,
+            'fields': {
+                'name': badge.name,
+                'description': badge.description,
+                'icon': badge.icon,
+                'type': badge.criteria_type,
+                'material': badge_material_from_threshold(badge.criteria_type, badge.threshold),
+                'rarity': badge_rarity(badge.criteria_type, badge.threshold)
+            }
+        })
+
+    return JsonResponse(data)
 
 def badges_view(request):
     context = {}
     if request.user.is_authenticated:
         check_badges(request.user)
+        data = json.loads(get_badge_json(request).content)
+
+        unlocked_count = len(data['unlocked'])
+        total = unlocked_count + len(data['locked'])
+
         context = {
-            'badge_count': len(json.loads(get_badge_json(request).content))
+            'badge_total': total,
+            'badge_count': unlocked_count
         }
     return render(request, 'gamification/badges.html', context)
 

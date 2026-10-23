@@ -1,8 +1,15 @@
+/* Grids */
+.badges {
+    display: flex;
+    flex-direction: row;
+}
+
 /* Search Bar */
 .badge-actions {
     display: flex;
     flex-direction: row;
     column-gap: 10px;
+    margin-bottom: 25px;
 }
 
 /* Dropdown (Sort & Filter) */
@@ -87,10 +94,6 @@
 }
 
 /* Badge Material */
-.badges {
-    display: flex;
-    flex-direction: row;
-}
 
 .bronze {
     --shine: rgba(250, 153, 50, 1);
@@ -123,6 +126,11 @@
     var(--base) 70%, var(--shine) 72%, var(--shine) 73%, var(--base) 75%
     );
     --edge: rgb(169, 123, 17);
+}
+
+.grayscaled {
+    opacity: 50%;
+    filter: grayscale(100%);
 }
 
 .shine {
