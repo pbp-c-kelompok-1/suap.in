@@ -223,10 +223,6 @@
         width: 100%
     }
 
-    .tier:not(:last-child)::after {
-        left: 49px
-    }
-
     .howxp {
         grid-template-columns: 1fr
     }

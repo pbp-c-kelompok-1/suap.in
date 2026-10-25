@@ -9,10 +9,8 @@ from .services import *
 from gamification.models import GameProfile, UserBadge
 from django.utils import timezone
 from scanner.models import FoodLog
-from .models import GameProfile
 
 from datetime import timedelta
-import json
 
 
 def dashboard_view(request):

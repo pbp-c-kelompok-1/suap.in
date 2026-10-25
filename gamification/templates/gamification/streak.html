@@ -76,7 +76,7 @@
       </div>
       <b>{{ streak }}/{{ next_goal }}</b>
     </div>
-    <p class="authsub" style="margin:10px 0 0">Tinggal {{ days_left }} hari lagi untuk lencana: <strong id="next-badge"></strong>.</p>
+    <p id="next-badge-text" class="authsub" style="margin:10px 0 0">Tinggal {{ days_left }} hari lagi untuk lencana: <strong></strong>.</p>
   </div>
 </div>
 
@@ -157,7 +157,10 @@
       .sort((a, b) => a.fields.rarity - b.fields.rarity)
     
     document.getElementById('badge-ratio').innerText = `${items.length}/${items.length + lockedItems.length}`;
-    document.getElementById('next-badge').innerText = `${lockedItems[0].fields.name}`
+
+    document.getElementById('next-badge-text').innerText = lockedItems.length 
+    ? `Tinggal {{ days_left }} hari lagi untuk lencana: <strong>${lockedItems[0].fields.name}</strong>.'}`
+    : 'Semua lencana streak telah dikoleksi. Selamat!';
     
     items.forEach((item) => gridContainer.appendChild(createBadge(item, true)));
     lockedItems.forEach((item) => gridContainer.appendChild(createBadge(item, false)));

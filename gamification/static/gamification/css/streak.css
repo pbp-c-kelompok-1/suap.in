@@ -135,28 +135,6 @@
   height: 22px
 }
 
-.dy.done {
-  background: var(--warn);
-  color: #fff;
-  box-shadow: 0 4px 0 #B87400
-}
-
-.dy.freeze {
-  background: var(--blue-500);
-  color: #fff;
-  box-shadow: 0 4px 0 var(--blue-700);
-  font-size: 1.2rem
-}
-
-.dy.missed {
-  color: var(--danger)
-}
-
-.dy.today {
-  outline: 3px solid var(--ok);
-  outline-offset: 3px
-}
-
 .wk-legend {
   display: flex;
   gap: 16px;
