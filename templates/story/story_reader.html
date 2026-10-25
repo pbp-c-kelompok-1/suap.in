@@ -1,38 +1,33 @@
-{% extends 'base.html' %}
-
-{% block title %}Bab {{ comic.bab }} — Suap.in{% endblock %}
-
-{% block content %}
-<div class="topbar"><h1>Bab {{ comic.bab }}: {{ comic.title }}</h1>{% include 'partials/auth_status.html' %}</div>
-<a href="{% url 'story:story_list' %}" class="link-sm" style="display:inline-block;margin-bottom:18px">← Kembali ke daftar bab</a>
-<p class="ref-note">{{ comic.description }}</p>
-
-<div class="empty raise" style="margin-bottom:24px">
-  <div class="mascot-wrap" id="mascotReader" style="width:120px;height:120px;margin:0 auto"></div>
-  <h3>Halaman {{ current_page }}</h3>
-  <p>Panel komik segera hadir</p>
+{% extends 'story/base_story.html' %}
+{% block title %}{{ page.title }} · Bab {{ comic.bab }} — Suap.in{% endblock %}
+{% block story_content %}
+<div class="topbar"><div><p class="story-eyebrow">BAB {{ comic.bab }}</p><h1>{{ comic.title }}</h1></div>{% include 'partials/auth_status.html' %}</div>
+<div class="story-reader-tools"><a href="{% url 'story:story_list' %}" class="link-sm">← Semua cerita</a><span class="story-meta">Halaman {{ current_page }} dari {{ page_count }}</span></div>
+<div class="xp-track story-reading-track" role="progressbar" aria-label="Posisi halaman bacaan" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ reading_percent }}"><div class="xp-fill" style="width:{{ reading_percent }}%"></div></div>
+<div class="row g-4" id="reader">
+  <div class="col-12 col-lg-8">
+    <article class="raise story-comic-page">
+      <div class="story-page-heading"><p class="story-eyebrow">{{ page.get_scene_display }} · {{ current_page|stringformat:'02d' }}</p><h2>{{ page.title }}</h2><p>{{ page.narration }}</p></div>
+      <div class="story-stage" aria-label="Ilustrasi {{ page.get_scene_display }} bersama Alya dan Tunas" role="img">
+        <svg viewBox="0 0 640 320" class="story-scene" aria-hidden="true"><use href="#story-scene-{{ page.scene }}"></use></svg>
+        <svg viewBox="0 0 120 160" class="story-character-alya" aria-hidden="true"><use href="#story-alya"></use></svg>
+        <div class="story-character-tunas" data-story-mascot aria-hidden="true"></div>
+      </div>
+      <div class="story-dialogues"><div class="story-bubble"><span class="story-speaker">{{ page.speaker_one }}</span><p>{{ page.dialogue_one }}</p></div><div class="story-bubble story-bubble-tunas"><span class="story-speaker">{{ page.speaker_two }}</span><p>{{ page.dialogue_two }}</p></div></div>
+    </article>
+    <nav class="story-pagination" aria-label="Navigasi halaman komik">
+      {% if has_prev %}<a class="btn ghost" id="story-prev" href="?page={{ prev_page }}#reader">← Sebelumnya</a>{% else %}<a class="btn ghost" href="{% url 'story:story_list' %}">← Daftar bab</a>{% endif %}
+      <span class="chip">{{ current_page }} / {{ page_count }}</span>
+      {% if has_next %}<a class="btn ok" id="story-next" href="?page={{ next_page }}#reader">Selanjutnya →</a>{% else %}<a class="btn ok" href="{% url 'story:story_list' %}">Selesai ✓</a>{% endif %}
+    </nav>
+  </div>
+  <aside class="col-12 col-lg-4">
+    <div class="story-sidebar">
+      <section class="raise card story-takeaway"><p class="story-eyebrow">BAWA PULANG IDE INI</p><h2>Satu hal untuk diingat</h2><p>{{ page.takeaway }}</p><div class="story-action"><span class="story-eyebrow">COBA LANGKAH KECIL</span><p>{{ page.action }}</p></div></section>
+      <details class="raise card story-contents"><summary>Daftar halaman</summary><ol>{% for content in contents %}<li><a href="?page={{ forloop.counter }}#reader" {% if forloop.counter == current_page %}aria-current="page"{% endif %}>{{ content.title }}</a></li>{% endfor %}</ol></details>
+      {% if not has_next and next_comic %}<section class="raise card"><p class="story-eyebrow">BAB BERIKUTNYA</p><h3>{{ next_comic.title }}</h3>{% if next_comic_unlocked %}<a class="btn ghost" href="{% url 'story:story_reader' next_comic.bab %}">Lanjut Bab {{ next_comic.bab }} →</a>{% else %}<p class="authsub">Terbuka di Level {{ next_comic.unlock_level }}. Lanjutkan perjalananmu lewat aktivitas di Suap.in.</p>{% endif %}</section>{% endif %}
+      <p class="story-source">Tokoh dan percakapan adalah rekaan untuk cerita edukatif.{% if page.source_url %}<br>Referensi: <a href="{{ page.source_url }}" target="_blank" rel="noopener noreferrer">{{ page.source_label }}</a>.{% endif %}</p>
+    </div>
+  </aside>
 </div>
-
-<div class="topbar">
-  {% if has_prev %}
-  <a href="?page={{ prev_page }}" class="btn ghost">
-    <svg class="i"><use href="#i2-chevron-left"/></svg>Sebelumnya</a>
-  {% else %}<span></span>{% endif %}
-  <span class="chip">{{ current_page }} / {{ comic.total_pages }}</span>
-  {% if has_next %}
-  <a href="?page={{ next_page }}" class="btn ok">Selanjutnya<svg class="i"><use href="#i2-arrow-right"/></svg></a>
-  {% else %}
-  <a href="{% url 'story:story_list' %}" class="btn ok">Selesai</a>
-  {% endif %}
-</div>
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-(function () {
-  var slot = document.getElementById('mascotReader');
-  var tpl = document.getElementById('mascot-tpl');
-  if (slot && tpl) slot.appendChild(tpl.content.cloneNode(true));
-})();
-</script>
 {% endblock %}

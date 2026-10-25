@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'story/vendor/bootstrap-grid.min.css' %}">
+<link rel="stylesheet" href="{% static 'story/css/story.css' %}">
+{% endblock %}
+{% block content %}
+<section class="story-module">
+  {% include 'story/_scenes.html' %}
+  {% if messages %}<div class="story-messages" role="status">{% for message in messages %}<p class="raise-sm">{{ message }}</p>{% endfor %}</div>{% endif %}
+  {% block story_content %}{% endblock %}
+</section>
+{% endblock %}
+{% block extra_scripts %}<script src="{% static 'story/js/story.js' %}" defer></script>{% endblock %}

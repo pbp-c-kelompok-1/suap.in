@@ -5,7 +5,7 @@ from django.urls import reverse
 from gamification.models import GameProfile
 from gamification.services import award_xp
 
-from .models import StoryComic
+from .models import StoryComic, StoryPage
 
 
 class StoryProgressionTests(TestCase):
@@ -21,6 +21,13 @@ class StoryProgressionTests(TestCase):
         cls.locked_comic = StoryComic.objects.create(
             bab=2, title="Jejak yang Tak Terlihat", unlock_level=5, total_pages=3,
         )
+
+        for comic in [cls.first_comic, cls.locked_comic]:
+            StoryPage.objects.create(
+                comic=comic, position=1, title='Halaman uji', narration='Narasi uji.',
+                dialogue_one='Pertanyaan uji.', dialogue_two='Jawaban uji.',
+                takeaway='Pelajaran uji.', action='Aksi uji.',
+            )
 
     def test_guest_must_log_in_to_view_story_list(self):
         response = self.client.get(reverse("story:story_list"))
@@ -74,7 +81,7 @@ class StoryProgressionTests(TestCase):
         before = self.client.get(reverse("story:story_list"))
         self.assertFalse(before.context["comics"][1]["is_unlocked"])
 
-        # Cek batas level: tambahan 1 XP harus membuka bab tanpa ubah view.
+        # Posisi awal kurang 1 XP dari Level 5. Setelah ditambah, babnya harus kebuka.
         award_xp(self.beginner, 1)
         after = self.client.get(reverse("story:story_list"))
         self.assertEqual(after.context["user_level"], 5)
