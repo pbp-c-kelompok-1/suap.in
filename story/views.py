@@ -5,10 +5,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from gamification.services import MAX_LEVEL, get_profile, tier_from_level, xp_progress
+
 from .forms import FriendChallengeForm
 from .models import FriendChallenge, StoryComic
 
 
+@login_required
 def story_list(request):
     # data default bab komik as placeholder (coming soon)
     if not StoryComic.objects.exists():
@@ -23,7 +26,10 @@ def story_list(request):
         for c in initial_comics:
             StoryComic.objects.create(**c)
 
-    user_level = 12
+    # Pakai profil milik akun yang login, supaya progres tiap user berbeda.
+    profile = get_profile(request.user)
+    progress = xp_progress(profile)
+    user_level = profile.level
     comics = StoryComic.objects.all()
 
     comic_list = []
@@ -35,17 +41,28 @@ def story_list(request):
 
     context = {
         "user_level": user_level,
-        "user_title": "Pejuang Hijau",
-        "xp_needed": 3,
-        "next_level": 13,
-        "xp_percentage": 75,
+        "user_title": tier_from_level(user_level),
+        "xp_current": progress["current"],
+        "xp_required": progress["needed"],
+        "xp_remaining": max(0, progress["needed"] - progress["current"]),
+        "next_level": user_level + 1 if user_level < MAX_LEVEL else None,
+        "xp_percentage": progress["percent"],
         "comics": comic_list,
     }
     return render(request, "story/story_list.html", context)
 
 
+@login_required
 def story_reader(request, bab):
     comic = get_object_or_404(StoryComic, bab=bab)
+    profile = get_profile(request.user)
+
+    # URL bab juga harus dicek di server
+    if profile.level < comic.unlock_level:
+        messages.error(request, f"Bab ini baru terbuka di Level {comic.unlock_level}.")
+        return redirect("story:story_list")
+
+
     page = int(request.GET.get('page', 1))
 
     context = {
