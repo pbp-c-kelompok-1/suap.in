@@ -1,16 +1,18 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Max
+from django.db import transaction
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.core.paginator import Paginator
 from django.http import Http404, JsonResponse
 from django.template.loader import render_to_string
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 
 from gamification.services import MAX_LEVEL, get_profile, tier_from_level, xp_progress
 
-from .forms import FriendChallengeForm
-from .models import FriendChallenge, StoryComic
+from .forms import FriendChallengeForm, StoryComicForm, StoryPageForm
+from .models import FriendChallenge, StoryComic, StoryPage
 
 
 @login_required
@@ -55,11 +57,11 @@ def story_list(request):
 
 @login_required
 def story_reader(request, bab):
-    # Admin boleh pratinjau draft. Pembaca biasa cuma dapat bab yang udah terbit.
+    # Admin boleh review draft. Pembaca biasa cuma dapet bab yg udh terbit
     comics = StoryComic.objects.all() if request.user.is_staff else StoryComic.objects.filter(is_published=True)
     comic = get_object_or_404(comics, bab=bab)
     profile = get_profile(request.user)
-    # Cek level di server juga, soalnya URL bab bisa dibuka langsung.
+    # Cek level di server juga, soalnya URL bab bisa dibuka langsung
     if profile.level < comic.unlock_level and not request.user.is_staff:
         messages.error(request, f'Bab ini baru terbuka di Level {comic.unlock_level}.')
         return redirect('story:story_list')
@@ -67,16 +69,16 @@ def story_reader(request, bab):
     pages = comic.pages.all()
     if not pages.exists():
         raise Http404('Bab ini belum memiliki halaman terbit.')
-    # Pakai jumlah halaman yang beneran ada di database buat navigasinya.
+    # pake jumlah halaman yg beneran ada di database buat navigasinya
     paginator = Paginator(pages, 1)
-    # Input yang bukan angka atau kurang dari 1 dibalikin ke awal.
-    # Kalau nomornya kebesaran, get_page ngarahin ke halaman terakhir.
+    # Input yang bukan angka atau kurang dari 1 = dibalikin ke awal
+    # klo nomornya too big, get_page ngarahin ke halaman terakhir
     try:
         requested_page = max(1, int(request.GET.get('page', 1)))
     except (ValueError, TypeError):
         requested_page = 1
     selected = paginator.get_page(requested_page)
-    # Siapkan bab selanjutnya buat ditampilkan di akhir bacaan.
+    # Siapkan bab selanjutnya buat ditampilkan di akhir bacaan
     next_comic = (StoryComic.objects.filter(is_published=True, bab__gt=comic.bab)
                   .annotate(page_count=Count('pages')).filter(page_count__gt=0).first())
     context = {
@@ -122,3 +124,95 @@ def cancel_challenge(request, pk):
     challenge.delete()
     messages.success(request, "Tantangan dibatalkan.")
     return redirect("story:challenge_list")
+
+
+# Cuma atmin yg boleh edit isi cerita
+def _check_story_editor(user):
+    if not user.is_staff:
+        raise PermissionDenied('Hanya admin yang dapat mengelola cerita.')
+
+
+def _sync_page_count(comic):
+    # Hitung ulang setelah halaman berubah. klo habis, bab dibalikin jadi draft
+    comic.total_pages = comic.pages.count()
+    if not comic.total_pages:
+        comic.is_published = False
+    comic.save(update_fields=['total_pages', 'is_published'])
+
+
+@login_required
+def story_manage(request):
+    _check_story_editor(request.user)
+    return render(request, 'story/manage.html', {
+        'comics': StoryComic.objects.prefetch_related('pages'),
+    })
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def comic_edit(request, pk=None):
+    _check_story_editor(request.user)
+    comic = get_object_or_404(StoryComic, pk=pk) if pk else None
+    form = StoryComicForm(request.POST if request.method == 'POST' else None, instance=comic)
+    if request.method == 'POST' and form.is_valid():
+        with transaction.atomic():
+            saved = form.save()
+            _sync_page_count(saved)
+        messages.success(request, 'Bab berhasil disimpan.')
+        return redirect('story:manage')
+    return render(request, 'story/editor_form.html', {
+        'form': form, 'heading': 'Edit bab' if comic else 'Tambah bab',
+        'explanation': 'Simpan bab baru sebagai draft, tambahkan halaman, lalu terbitkan saat isinya siap.',
+    })
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def comic_delete(request, pk):
+    _check_story_editor(request.user)
+    comic = get_object_or_404(StoryComic, pk=pk)
+    if request.method == 'POST':
+        comic.delete()
+        messages.success(request, 'Bab beserta seluruh halamannya berhasil dihapus.')
+        return redirect('story:manage')
+    return render(request, 'story/editor_delete.html', {
+        'item': comic, 'explanation': 'Seluruh halaman di dalam bab ini juga akan dihapus.',
+    })
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def page_edit(request, comic_pk, pk=None):
+    _check_story_editor(request.user)
+    comic = get_object_or_404(StoryComic, pk=comic_pk)
+    page = get_object_or_404(StoryPage, pk=pk, comic=comic) if pk else None
+    initial = {'position': (comic.pages.aggregate(last=Max('position'))['last'] or 0) + 1}
+    form = StoryPageForm(request.POST if request.method == 'POST' else None,
+                         instance=page, comic=comic, initial=initial)
+    if request.method == 'POST' and form.is_valid():
+        with transaction.atomic():
+            form.save()
+            _sync_page_count(comic)
+        messages.success(request, 'Halaman berhasil disimpan.')
+        return redirect('story:manage')
+    return render(request, 'story/editor_form.html', {
+        'form': form, 'heading': 'Edit halaman' if page else 'Tambah halaman',
+        'explanation': f'Bab {comic.bab}: {comic.title}. Urutan menentukan posisi bacaan dalam bab ini.',
+    })
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def page_delete(request, comic_pk, pk):
+    _check_story_editor(request.user)
+    comic = get_object_or_404(StoryComic, pk=comic_pk)
+    page = get_object_or_404(StoryPage, pk=pk, comic=comic)
+    if request.method == 'POST':
+        with transaction.atomic():
+            page.delete()
+            _sync_page_count(comic)
+        messages.success(request, 'Halaman berhasil dihapus.')
+        return redirect('story:manage')
+    return render(request, 'story/editor_delete.html', {
+        'item': page, 'explanation': 'Halaman lain tetap tersimpan. Bab tanpa halaman otomatis menjadi draft.',
+    })

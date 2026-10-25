@@ -2,11 +2,31 @@
 {% for item in comics %}
   <div class="col-12 col-md-6 col-xl-4">
     <article class="raise card story-book {% if not item.is_unlocked %}story-book-locked{% endif %}">
-      <div class="story-cover" aria-hidden="true"><svg viewBox="0 0 640 320"><use href="#story-scene-{% if item.comic.bab == 1 %}farm{% elif item.comic.bab == 2 %}kitchen{% elif item.comic.bab == 3 %}journey{% elif item.comic.bab == 4 %}garden{% elif item.comic.bab == 5 %}market{% else %}canteen{% endif %}"></use></svg><span class="story-cover-number">{{ item.comic.bab|stringformat:'02d' }}</span></div>
-      <div class="story-spread"><span class="story-eyebrow">BAB {{ item.comic.bab }}</span><span class="chip">{% if item.is_unlocked %}Terbuka{% else %}<svg class="i" aria-hidden="true"><use href="#i-lock"></use></svg>Lv {{ item.comic.unlock_level }}{% endif %}</span></div>
-      <h2>{{ item.comic.title }}</h2><p class="authsub story-book-description">{{ item.comic.description }}</p>
+      <div class="story-cover" aria-hidden="true">
+        <svg viewBox="0 0 640 320">
+          <use href="#story-scene-{% if item.comic.bab == 1 %}farm{% elif item.comic.bab == 2 %}kitchen{% elif item.comic.bab == 3 %}journey{% elif item.comic.bab == 4 %}garden{% elif item.comic.bab == 5 %}market{% else %}canteen{% endif %}"></use>
+        </svg>
+        <span class="story-cover-number">{{ item.comic.bab|stringformat:'02d' }}</span>
+      </div>
+
+      <div class="story-spread">
+        <span class="story-eyebrow">BAB {{ item.comic.bab }}</span>
+        <span class="chip">{% if item.is_unlocked %}Terbuka{% else %}
+          <svg class="i" aria-hidden="true">
+          <use href="#i-lock"></use>
+        </svg>Lv {{ item.comic.unlock_level }}{% endif %}</span>
+      </div>
+      <h2>{{ item.comic.title }}</h2>
+      <p class="authsub story-book-description">{{ item.comic.description }}</p>
       <p class="story-meta">{{ item.comic.page_count }} halaman · Cerita fiksi edukatif</p>
-      {% if item.is_unlocked %}<a href="{% url 'story:story_reader' item.comic.bab %}" class="btn ok wide">Baca cerita <span aria-hidden="true">→</span></a>{% else %}<button class="btn wide" disabled>Terbuka di Level {{ item.comic.unlock_level }}</button>{% endif %}
+      {% if item.is_unlocked %}
+      <a href="{% url 'story:story_reader' item.comic.bab %}" class="btn ok wide">Baca cerita 
+        <span aria-hidden="true">→</span>
+      </a>
+      {% else %}
+      <button class="btn wide" disabled>Terbuka di Level {{ item.comic.unlock_level }}
+      </button>
+      {% endif %}
     </article>
   </div>
 {% empty %}

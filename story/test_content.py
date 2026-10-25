@@ -25,10 +25,10 @@ class StoryContentTests(TestCase):
     def test_repeat_seed_preserves_content_edits_and_does_not_duplicate(self):
         self.seed()
         page = StoryPage.objects.first()
-        page.dialogue_one = 'Suntingan asli dari editor.'
+        page.dialogue_one = 'Editan asli dari editor.'
         page.save()
         self.seed()
         page.refresh_from_db()
-        self.assertEqual(page.dialogue_one, 'Suntingan asli dari editor.')
+        self.assertEqual(page.dialogue_one, 'Editan asli dari editor.')
         self.assertEqual(StoryPage.objects.count(), 25)
         self.assertEqual(StoryComic.objects.count(), 6)
