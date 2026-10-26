@@ -17,4 +17,6 @@ urlpatterns = [
     path('<int:bab>/', views.story_reader, name='story_reader'),
     path('challenges/', views.challenge_list, name='challenge_list'),
     path('challenges/<uuid:pk>/cancel/', views.cancel_challenge, name='cancel_challenge'),
+    path('challenges/<uuid:pk>/accept/', views.challenge_accept, name='challenge_accept'),
+    path('challenges/<uuid:pk>/refresh/', views.challenge_refresh, name='challenge_refresh'),
 ]

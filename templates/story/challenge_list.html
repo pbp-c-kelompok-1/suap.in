@@ -1,55 +1,93 @@
-{% extends 'base.html' %}
+{% extends 'story/base_story.html' %}
+{% load static %}
 
 {% block title %}Tantangan 1v1 — Suap.in{% endblock %}
 
-{% block content %}
-<div class="topbar"><h1>Tantangan 1v1</h1>{% include 'partials/auth_status.html' %}</div>
-<p class="ref-note">Tantang temanmu, siapa yang paling hijau minggu ini?</p>
+{% block extra_head %}
+    {{ block.super }}
+    <link
+        rel="stylesheet"
+        href="{% static 'story/css/challenges.css' %}"
+    >
+{% endblock %}
 
-{% include 'story/_subnav.html' with active='challenge' %}
-
-<div class="grid-2" style="grid-template-columns:1fr 1.6fr;align-items:start">
-  <div class="raise card">
-    <h2 style="font-size:1.2rem;margin-bottom:18px">Buat Tantangan</h2>
-    <form method="post">
-      {% csrf_token %}
-      {% for field in form %}
-      <div class="field" style="margin-bottom:16px">
-        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-        {{ field }}
-        {% for error in field.errors %}<small class="strength-lbl" style="color:var(--danger)">{{ error }}</small>{% endfor %}
-      </div>
-      {% endfor %}
-      <button type="submit" class="btn ok wide">Kirim Tantangan</button>
-    </form>
-  </div>
-
-  <div style="display:grid;gap:14px">
-    <h2 style="font-size:1.2rem">Tantangan Saya</h2>
-    {% for c in challenges %}
-    <div class="raise-sm log-item">
-      <span class="li-txt"><b>{{ c.challenger.username }} vs {{ c.opponent.username }}</b><small>{{ c.get_metric_display }} · {{ c.get_duration_days_display }}</small></span>
-      {% if c.status == 'pending' %}
-        <span class="chip" style="color:var(--warn)">Menunggu</span>
-        {% if c.challenger == user %}
-        <form method="post" action="{% url 'story:cancel_challenge' c.pk %}">
-          {% csrf_token %}
-          <button type="submit" class="btn ghost sm">Batalkan</button>
-        </form>
-        {% endif %}
-      {% elif c.status == 'active' %}
-        <span class="chip">Berlangsung</span>
-      {% elif c.winner == user %}
-        <span class="chip" style="color:var(--green-700)">Menang</span>
-      {% elif c.winner %}
-        <span class="chip" style="color:var(--danger)">Kalah</span>
-      {% else %}
-        <span class="chip">Seri</span>
-      {% endif %}
+{% block story_content %}
+    <div class="topbar">
+        <h1>Tantangan 1v1</h1>
+        {% include 'partials/auth_status.html' %}
     </div>
-    {% empty %}
-    <p class="authsub">Belum ada tantangan. Tantang temanmu duluan!</p>
-    {% endfor %}
-  </div>
-</div>
+
+    <p class="ref-note">
+        Ajak lawanmu mencatat makanan dengan lebih sadar
+        selama 3 atau 7 hari.
+    </p>
+
+    {% include 'story/_subnav.html' with active='challenge' %}
+
+    <div class="challenge-layout">
+        <section class="raise card challenge-create">
+            <p class="story-eyebrow">
+                MULAI DARI TANTANGAN KECIL
+            </p>
+            <h2>Buat tantangan</h2>
+
+            <form
+                method="post"
+                action="{% url 'story:challenge_list' %}"
+            >
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+
+                {% for field in form %}
+                    <div class="story-field">
+                        <label for="{{ field.id_for_label }}">
+                            {{ field.label }}
+                        </label>
+
+                        {{ field }}
+
+                        {% for error in field.errors %}
+                            <p class="story-error">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+
+                <button type="submit" class="btn ok">
+                    Kirim tantangan
+                </button>
+            </form>
+
+            <p class="challenge-note">
+                Waktu main dimulai setelah penerima menekan Terima.
+            </p>
+
+            <p class="challenge-note">
+                Pilihan scan menghitung catatan makanan:
+                satu item tersimpan = satu catatan.
+                Emisi memakai total gram CO₂.
+                Peserta tanpa catatan tidak otomatis menang
+                melawan peserta yang mencatat makanan.
+            </p>
+        </section>
+
+        <section aria-label="Daftar tantangan">
+            <p
+                id="challenge-feedback"
+                role="status"
+                aria-live="polite"
+            ></p>
+
+            <div id="challenge-content">
+                {% include 'story/_challenge_cards.html' %}
+            </div>
+        </section>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    {{ block.super }}
+    <script
+        src="{% static 'story/js/challenges.js' %}"
+        defer
+    ></script>
 {% endblock %}

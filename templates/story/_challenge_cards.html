@@ -1,0 +1,161 @@
+<div class="challenge-summary">
+    <span class="chip">{{ pending_count }} menunggu</span>
+    <span class="chip">{{ active_count }} berlangsung</span>
+    <span class="chip">{{ finished_count }} selesai</span>
+</div>
+
+<div class="challenge-cards">
+    {% for card in cards %}
+        {% with c=card.challenge %}
+            <article class="raise card challenge-card">
+                <div class="story-spread">
+                    <p class="story-eyebrow">
+                        {{ c.get_duration_days_display }} ·
+                        {% if c.metric == 'most_scans' %}
+                            CATATAN TERBANYAK
+                        {% else %}
+                            EMISI TERENDAH
+                        {% endif %}
+                    </p>
+
+                    <span class="chip">
+                        {{ c.get_status_display }}
+                    </span>
+                </div>
+
+                <h2>
+                    {{ c.challenger.username }}
+                    <span class="challenge-versus">vs</span>
+                    {{ c.opponent.username }}
+                </h2>
+
+                {% if c.status == 'pending' %}
+                    <p class="challenge-note">
+                        Menunggu {{ c.opponent.username }}
+                        menerima tantangan.
+                    </p>
+
+                    <div class="challenge-actions">
+                        {% if c.opponent_id == user.pk %}
+                            <form
+                                method="post"
+                                action="{% url 'story:challenge_accept' c.pk %}"
+                                class="challenge-action-form"
+                            >
+                                {% csrf_token %}
+                                <button type="submit" class="btn ok">
+                                    Terima tantangan
+                                </button>
+                            </form>
+                        {% else %}
+                            <form
+                                method="post"
+                                action="{% url 'story:cancel_challenge' c.pk %}"
+                                class="challenge-action-form"
+                            >
+                                {% csrf_token %}
+                                <button type="submit" class="btn ghost">
+                                    Batalkan
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+
+                {% else %}
+                    {% if card.error %}
+                        <p class="story-error" role="alert">
+                            {{ card.error }}
+                        </p>
+                    {% else %}
+                        <div class="challenge-scores">
+                            <div>
+                                <h3>{{ c.challenger.username }}</h3>
+
+                                <strong>
+                                    {% if c.metric == 'most_scans' %}
+                                        {{ card.scores.challenger.count }}
+                                    {% else %}
+                                        {{ card.scores.challenger.co2|floatformat:1 }}
+                                    {% endif %}
+                                </strong>
+
+                                <p>
+                                    {% if c.metric == 'most_scans' %}
+                                        catatan makanan
+                                    {% else %}
+                                        gram CO₂
+                                    {% endif %}
+                                </p>
+                            </div>
+
+                            <div>
+                                <h3>{{ c.opponent.username }}</h3>
+
+                                <strong>
+                                    {% if c.metric == 'most_scans' %}
+                                        {{ card.scores.opponent.count }}
+                                    {% else %}
+                                        {{ card.scores.opponent.co2|floatformat:1 }}
+                                    {% endif %}
+                                </strong>
+
+                                <p>
+                                    {% if c.metric == 'most_scans' %}
+                                        catatan makanan
+                                    {% else %}
+                                        gram CO₂
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <p class="challenge-note">
+                        Mulai {{ c.started_at|date:"d M Y, H:i" }}
+                        · Batas akhir {{ c.ends_at|date:"d M Y, H:i" }}
+                    </p>
+
+                    {% if c.status == 'active' %}
+                        <form
+                            method="post"
+                            action="{% url 'story:challenge_refresh' c.pk %}"
+                            class="challenge-action-form"
+                        >
+                            {% csrf_token %}
+                            <button type="submit" class="btn ghost">
+                                Perbarui progres / hasil
+                            </button>
+                        </form>
+
+                    {% else %}
+                        <div class="challenge-result">
+                            {% if c.winner_id == user.pk %}
+                                <strong>Kamu menang! 🎉</strong>
+                            {% elif c.winner_id %}
+                                <strong>
+                                    {{ c.winner.username }}
+                                    memenangkan tantangan ini.
+                                </strong>
+                            {% else %}
+                                <strong>Hasil seri 🤝</strong>
+                            {% endif %}
+
+                            <p>
+                                Hasil akhir disimpan
+                                {{ c.finished_at|date:"d M Y, H:i" }}.
+                            </p>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </article>
+        {% endwith %}
+
+    {% empty %}
+        <div class="raise card challenge-card">
+            <h2>Belum ada tantangan</h2>
+            <p class="challenge-note">
+                Kirim tantangan pertamamu lewat form di samping.
+            </p>
+        </div>
+    {% endfor %}
+</div>
