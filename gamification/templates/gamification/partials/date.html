@@ -1,0 +1,28 @@
+{% if d.state == 'done' %}
+<div class="dy {{ d.state }} {% if d.is_today %}today{% endif %}" aria-label="{{ d.label }}: {{ d.state_label }}"
+    style="--d-color: var(--ok);">
+    <svg width="32" height="32" aria-hidden="true">
+        <use href="#i-gcheck"></use>
+    </svg>
+</div>
+{% elif d.state == 'freeze' %}
+<div class="dy {{ d.state }} {% if d.is_today %}today{% endif %}" aria-label="{{ d.label }}: {{ d.state_label }}"
+    style="--d-color: var(--blue-500);">
+    <svg width="32" height="32" aria-hidden="true">
+        <use href="#i-snowflake"></use>
+    </svg>
+</div>
+{% elif d.state == 'missed' %}
+<div class="dy {{ d.state }} {% if d.is_today %}today{% endif %}" aria-label="{{ d.label }}: {{ d.state_label }}"
+    style="--d-color: var(--danger);">
+    <svg width="32" height="32" aria-hidden="true">
+        <use href="#i-cross"></use>
+    </svg>
+</div>
+{% else %}
+<div class="dy {{ d.state }} {% if d.is_today %}today{% endif %}" aria-label="{{ d.label }}: {{ d.state_label }}"
+    style="--d-color: var(--bg);">
+    <use href="#i-x" />
+    </svg>
+</div>
+{% endif %}

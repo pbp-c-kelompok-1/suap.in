@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Level & XP — Suap.in{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'gamification/css/level.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include 'gamification/partials/tier_icons.html' %}
+<div class="topbar">
+  <h1>Level &amp; XP</h1>
+  <span class="chip lvl"><svg class="i">
+      <use href="#i-leaf" />
+    </svg>Lv {{ level }}</span>
+  {% include 'partials/auth_status.html' %}
+</div>
+
+{% if user.is_authenticated %}
+<div class="raise lvl-hero">
+  <div class="lvl-orb"><small>Level</small><b>{{ level }}</b></div>
+  <div>
+    <h2>{{ tier_name }}</h2>
+    {% if is_max_level %}
+    <p>Kamu sudah mencapai level tertinggi. Terima kasih sudah menjaga bumi!</p>
+    {% else %}
+    <p>{{ xp_to_next }} XP lagi menuju level {{ next_level }}.</p>
+    {% endif %}
+    <div class="xp-row">
+      <div class="xp-track" role="progressbar" aria-label="Progres XP" aria-valuenow="{{ progress.percent }}"
+        aria-valuemin="0" aria-valuemax="100">
+        <div class="xp-fill" style="width:{{ progress.percent }}%"></div>
+      </div>
+      <span class="xp-num">{% if is_max_level %}MAX{% else %}{{ progress.current }} / {{ progress.needed }} XP{% endif %}</span>
+    </div>
+  </div>
+</div>
+
+<div class="sec-head">
+  <h2>Jalur tier</h2><span>{{ reached_count }}/{{ tiers|length }} tercapai</span>
+</div>
+<div class="tier-list">
+  {% for t in tiers %}
+  <article class="raise tier tone-{{ t.tone }} {{ t.state }}">
+    <div class="tier-ico"><svg class="i">
+        <use href="#i-{% if t.state == 'locked' %}lock{% else %}{{ t.icon }}{% endif %}" />
+      </svg></div>
+    <div class="tier-body">
+      <h3>{{ t.name }}</h3>
+      <p>Level {{ t.min_level }}{% if t.max_level %}–{{ t.max_level }}{% else %}+{% endif %}</p>
+      {% if t.state != 'reached' or t.max_level %}
+      <div class="prog">
+        <div class="inset">
+          <div class="bar" style="width:{{ t.percent }}%"></div>
+        </div>
+        <b>{{ t.percent }}%</b>
+      </div>
+      {% endif %}
+    </div>
+    <div class="tier-status">
+      {% if t.state == 'reached' %}<span class="chip lvl"><svg class="i">
+          <use href="#i-check" />
+        </svg>Tercapai</span>
+      {% elif t.state == 'current' %}<span class="chip streak"><svg class="i">
+          <use href="#i-flame" />
+        </svg>Sekarang</span>
+      {% else %}<span class="chip">Terkunci</span><small>{{ t.levels_left }} level lagi</small>{% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>
+
+<div class="raise card" style="margin-top:26px">
+  <div class="sec-head">
+    <h2>Dapatkan XP!</h2><span>{{ total_xp }} XP total</span>
+  </div>
+  <div class="howxp">
+    <div class="stat"><b>+10</b><span>Tiap simpan scan</span></div>
+    <div class="stat"><b>+1</b><span>Per item makanan</span></div>
+    <div class="stat"><b>+{{ mission_xp }}</b><span>Selesaikan misi harian</span></div>
+  </div>
+  <div class="rep-actions" style="margin-top:20px">
+    <a href="{% url 'scanner:scan' %}" class="btn ok"><svg class="i">
+        <use href="#i-camera" />
+      </svg>Scan Makanan</a>
+    <a href="{% url 'challenge:list' %}#/misi" class="btn ghost">Lihat misi</a>
+  </div>
+</div>
+
+{% else %}
+<div class="raise card" style="text-align:center">
+  <div class="mascot-wrap" id="mascotLevel" style="margin:0 auto 12px"></div>
+  <h2>Masuk untuk melihat level</h2>
+  <p class="authsub">Level dan XP tersimpan di akunmu.</p>
+  <a href="{% url 'authentication:login' %}" class="btn ok">Masuk</a>
+</div>
+{% endif %}
+<div class="mascot-wrap" id="mascotLevel" style="margin:0 auto 12px; transform: translate(256px, -50px);"></div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    var slot = document.getElementById('mascotLevel');
+    var tpl = document.getElementById('mascot-tpl');
+    if (slot && tpl) slot.appendChild(tpl.content.cloneNode(true));
+  })();
+</script>
+{% endblock %}

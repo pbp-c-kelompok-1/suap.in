@@ -1,10 +1,12 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
+import math
 
 from django.db import transaction
 from django.utils import timezone
 
 from scanner.models import FoodLog
 from .models import Badge, GameProfile, UserBadge
+from django.contrib.auth.models import User
 
 MAX_LEVEL = 50
 # Level + 1 = BASE_XP + STEP_XP * Current Level
@@ -20,6 +22,9 @@ TIERS = [
     (20, 'Guardian Bumi'),
     (35, 'Legenda Lestari'),
 ]
+# Badges
+SCAN_MILESTONES = [5, 10, 25, 50, 100, 250, 500]
+STREAK_MILESTONES = [7, 14, 30, 180, 365]
 
 
 # ==== Level dan pangkat ============================================
@@ -136,6 +141,31 @@ def claim_streak_freeze(user, today=None):
 
 
 # ==== Badge/Lencana ====================================================================
+def seedBadges():
+    if Badge.objects.exists():
+        return
+
+    for m in STREAK_MILESTONES:
+        badge = {
+            'code':f"{m}-streak",
+            'name': f"{m} Day Streak",
+            'description': f"Mempertahankan streak selama {m} hari",
+            'icon': 'flame',
+            'criteria_type':'streak_duration',
+            'threshold': m
+        }
+        Badge.objects.create(**badge)
+
+    for m in SCAN_MILESTONES:
+        badge = {
+            'code':f"{m}-scans",
+            'name': f"{m} Scans",
+            'description': f"Melakukan scan sebanyak {m}x",
+            'icon': 'camera',
+            'criteria_type':'scan_amount',
+            'threshold': m
+        }
+        Badge.objects.create(**badge)
 
 def check_badges(user):
     profile = get_profile(user)
@@ -152,6 +182,52 @@ def check_badges(user):
             if created:
                 new_badges.append(badge)
     return new_badges
+
+def grant_badge(user, badge):
+    owned = UserBadge.objects.filter(user=user).values_list('badge_id', flat=True)
+    if badge in Badge.objects.exclude(id__in=owned): UserBadge.objects.get_or_create(user=user, badge=badge)
+
+def badge_material_from_threshold(criteria_type, n):
+    if criteria_type == 'scan_amount':
+        match n:
+            case x if x <= 25:
+                return 'bronze'
+            case x if x <= 100:
+                return 'silver'
+            case _:
+                return 'gold'
+
+    if criteria_type == 'streak_duration':
+        match n:
+            case x if x <= 14:
+                return 'bronze'
+            case x if x <= 30:
+                return 'silver'
+            case _:
+                return 'gold'
+
+    return ''
+
+def badge_rarity(criteria_type, n):
+    if criteria_type == 'scan_amount':
+            match n:
+                case x if x <= 25:
+                    return 0
+                case x if x <= 100:
+                    return 1
+                case _:
+                    return 2
+    
+    if criteria_type == 'streak_duration':
+        match n:
+            case x if x <= 14:
+                return 0
+            case x if x <= 30:
+                return 1
+            case _:
+                return 2
+    
+        return 0
 
 
 # ==== Scanner ==========================================================================

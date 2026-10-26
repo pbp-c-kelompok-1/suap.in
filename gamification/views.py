@@ -1,16 +1,13 @@
 from datetime import timedelta
 
+from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
 
-from gamification.models import GameProfile
+from gamification.models import Badge, GameProfile, UserBadge
 from scanner.models import CarbonBudget, FoodLog
 from scanner.services import calculate_carbon_analogy, get_carbon_status
-
-
-MILESTONES = [3, 7, 14, 30]
-DAY_ABBR = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
-STATE_LABEL = {'done': 'ada scan', 'missed': 'terlewat', 'freeze': 'freeze', 'empty_day': 'belum'}
+from .services import *
 
 
 def dashboard_view(request):
@@ -42,45 +39,150 @@ def dashboard_view(request):
     return render(request, 'gamification/dashboard.html', context)
 
 
+DAY_ABBR = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
+STATE_LABEL = {'done': 'ada scan', 'missed': 'terlewat', 'freeze': 'freeze', 'empty_day': 'belum'}
+
+
 def streak_view(request):
     context = {}
     if request.user.is_authenticated:
-        gp, _ = GameProfile.objects.get_or_create(user=request.user)
+        gp = get_profile(request.user)
         today = timezone.localdate()
-        start = today - timedelta(days=6)
-        scanned = {timezone.localtime(l.scanned_at).date()
-                   for l in FoodLog.objects.filter(user=request.user, scanned_at__date__gte=start)}
+        streak = effective_streak(gp, today)
+
+        start = today - timedelta(days=today.weekday())
+        scanned = {
+            timezone.localtime(log.scanned_at).date()
+            for log in FoodLog.objects.filter(user=request.user, scanned_at__date__gte=start)
+        }
+
+        # Hari yang dilindungi freeze: streak = rangkaian hari berurutan yang berakhir
+        # di last_activity_date (hari freeze ikut dihitung di update_streak),
+        # jadi hari tanpa scan di dalam rangkaian itu pasti hari freeze.
+        covered = set()
+        last = gp.last_activity_date
+        if streak and last:
+            covered = {last - timedelta(days=i) for i in range(gp.current_streak)}
+            # Hari yang terlewat sejak scan terakhir akan ditutup freeze saat scan berikutnya
+            covered |= {last + timedelta(days=i) for i in range(1, (today - last).days)}
+
         week = []
         for i in range(7):
             d = start + timedelta(days=i)
-            state = 'done' if d in scanned else ('missed' if d < today else 'empty_day')
+            if d in scanned:
+                state = 'done'
+            elif d in covered:
+                state = 'freeze'
+            elif d < today:
+                state = 'missed'
+            else:
+                state = 'empty_day'
             week.append({'label': DAY_ABBR[d.weekday()], 'state': state,
                          'state_label': STATE_LABEL[state], 'is_today': d == today})
 
-        next_goal = next((m for m in MILESTONES if m > gp.current_streak), MILESTONES[-1])
+        next_goal = next((m for m in STREAK_MILESTONES if m > streak), STREAK_MILESTONES[-1])
         context = {
-            'streak': gp.current_streak,
+            'streak': streak,
             'record': gp.record_streak,
             'freezes': gp.streak_freezes,
             'scanned_today': today in scanned,
             'week': week,
             'week_done': sum(1 for w in week if w['state'] == 'done'),
             'next_goal': next_goal,
-            'goal_percent': min(100, round(gp.current_streak / next_goal * 100)),
-            'days_left': max(0, next_goal - gp.current_streak),
-            'milestones': [{'days': m, 'reached': gp.record_streak >= m} for m in MILESTONES],
-            'reached_count': sum(1 for m in MILESTONES if gp.record_streak >= m),
+            'goal_percent': min(100, round(streak / next_goal * 100)),
+            'days_left': max(0, next_goal - streak)
         }
     return render(request, 'gamification/streak.html', context)
 
 
+TIER_STYLE = [('teal', 'leaf'), ('green', 'sprout'), ('greenish-yellow', 'tree'), ('amber', 'globe')]
+MISSION_XP = 25  # rata-rata XP misi harian (misi.js: 20-30)
+
 def level_view(request):
-    context = {
-        'title': 'Level & XP',
-        'icon': 'sparkle',
-        'description': 'Lihat progres XP, tier level, dan koleksi lencanamu.',
-    }
+    context = {}
     if request.user.is_authenticated:
-        profile, _ = GameProfile.objects.get_or_create(user=request.user)
-        context['profile'] = profile
-    return render(request, 'coming_soon.html', context)
+        profile = get_profile(request.user)
+        level = profile.level
+        tiers = []
+        for i, (min_level, name) in enumerate(TIERS):
+            max_level = TIERS[i + 1][0] - 1 if i + 1 < len(TIERS) else None
+            span_end = (max_level or MAX_LEVEL) + 1
+            if max_level is not None and level > max_level:
+                state, percent = 'reached', 100
+            elif level >= min_level:
+                state = 'current'
+                percent = min(100, round((level - min_level) / (span_end - min_level) * 100))
+            else:
+                state, percent = 'locked', 0
+            tone, icon = TIER_STYLE[i % len(TIER_STYLE)]
+            tiers.append({
+                'name': name, 'min_level': min_level, 'max_level': max_level,
+                'state': state, 'percent': percent, 'tone': tone, 'icon': icon,
+                'levels_left': max(0, min_level - level),
+            })
+        is_max = level >= MAX_LEVEL
+        progress = xp_progress(profile)
+        context = {
+            'level': level, 'tier_name': tier_from_level(level), 'total_xp': profile.total_xp,
+            'progress': progress, 'is_max_level': is_max, 'next_level': level + 1,
+            'xp_to_next': 0 if is_max else progress['needed'] - progress['current'],
+            'tiers': tiers, 'reached_count': sum(1 for t in tiers if t['state'] != 'locked'),
+            'mission_xp': MISSION_XP,
+        }
+    return render(request, 'gamification/level.html', context)
+
+def get_badge_json(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    seedBadges()
+    check_badges(request.user)
+
+    user_badges = UserBadge.objects.filter(user=request.user)
+
+    data = {'unlocked':[], 'locked': []}
+    for user_badge in user_badges:
+        badge = user_badge.badge
+        data['unlocked'].append({
+            'code': badge.code,
+            'fields': {
+                'name': badge.name,
+                'description': badge.description,
+                'icon': badge.icon,
+                'earned_at': user_badge.earned_at.strftime("%d %b %Y"),
+                'material': badge_material_from_threshold(badge.criteria_type, badge.threshold),
+                'earned_at_raw': user_badge.earned_at,
+                'type': badge.criteria_type,
+                'rarity': badge_rarity(badge.criteria_type, badge.threshold)
+            }
+        })
+
+    locked_badges = Badge.objects.exclude(id__in=user_badges.values_list('badge_id', flat=True))
+
+    for badge in locked_badges:
+        data['locked'].append({
+            'code': badge.code,
+            'fields': {
+                'name': badge.name,
+                'description': badge.description,
+                'icon': badge.icon,
+                'type': badge.criteria_type,
+                'material': badge_material_from_threshold(badge.criteria_type, badge.threshold),
+                'rarity': badge_rarity(badge.criteria_type, badge.threshold)
+            }
+        })
+
+    return JsonResponse(data)
+
+def badges_view(request):
+    if request.user.is_authenticated:
+        check_badges(request.user)
+
+    return render(request, 'gamification/badges.html')
+
+def story_view(request):
+    return render(request, 'coming_soon.html', {
+        'title': 'Story',
+        'icon': 'leaf',
+        'description': 'Episode komik digital akan terbuka seiring naiknya levelmu.',
+    })
