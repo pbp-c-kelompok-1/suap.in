@@ -42,7 +42,10 @@ class Canteen(models.Model):
 
 class CommunityPost(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='community_posts')
-    photo = models.ImageField(upload_to='community/%Y/%m/')
+    photo = models.ImageField(upload_to='community/%Y/%m/', blank=True)
+    # Foto data awal (showcase) disimpan sebagai file static di repo, bukan di media/,
+    # supaya selalu ikut ter-deploy. Isinya path relatif static, contoh 'social/seed/kancil_1.jpg'.
+    seed_image = models.CharField(max_length=200, blank=True)
     food_logs = models.ManyToManyField('scanner.FoodLog', blank=True, related_name='community_posts')
     total_co2_grams = models.FloatField(default=0)
     canteen = models.ForeignKey(Canteen, on_delete=models.SET_NULL, null=True, blank=True, related_name='posts')

@@ -1,4 +1,6 @@
 import io
+import os
+from pathlib import Path
 import shutil
 import tempfile
 from datetime import timedelta
@@ -235,3 +237,55 @@ class ShareFromScanTests(TestCase):
         self.assertEqual(post.custom_location, 'Warung dekat kos')
         self.assertEqual(post.food_name, 'Nasi putih, Ayam goreng')
         self.assertIsNone(post.price)
+
+
+@override_settings(MEDIA_ROOT=TEST_MEDIA)
+class SeedShowcaseTests(TestCase):
+    """Data awal showcase: foto dari static, aman dijalankan berkali-kali."""
+
+    def setUp(self):
+        import json
+        from unittest import mock
+        from social import seed
+
+        self.tmp = tempfile.mkdtemp()
+        photos = os.path.join(self.tmp, 'photos')
+        os.makedirs(photos)
+        Image.new('RGB', (10, 10), 'red').save(os.path.join(photos, 'kancil_1.jpg'))
+        entries = [
+            {'photo': 'kancil_1.jpg', 'canteen': 'Kancil', 'food_name': 'Gado-gado', 'price': 12000, 'co2_grams': 320},
+            {'photo': 'kancil_1.jpg', 'canteen': 'Kantek', 'food_name': 'Gado-gado', 'price': 12000, 'co2_grams': 320},
+            {'photo': 'tidak_ada.jpg', 'canteen': 'Kancil', 'food_name': 'Hilang'},
+        ]
+        json_path = os.path.join(self.tmp, 'seed.json')
+        with open(json_path, 'w') as f:
+            json.dump(entries, f)
+        self.patches = [mock.patch.object(seed, 'STATIC_SEED_DIR', Path(photos)),
+                        mock.patch.object(seed, 'SEED_JSON', Path(json_path))]
+        for p in self.patches:
+            p.start()
+        seed.ensure_canteens(University, Canteen, log=lambda *a: None)
+        self.seed = seed
+
+    def tearDown(self):
+        for p in self.patches:
+            p.stop()
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def run_seed(self):
+        return self.seed.seed_community_posts(User, Canteen, CommunityPost, log=lambda *a: None)
+
+    def test_fixtures_loaded_and_seed_is_idempotent(self):
+        self.assertEqual(Canteen.objects.count(), 6)
+        self.assertEqual(self.run_seed(), 2)  # foto yang sama dipakai di 2 kantin
+        self.assertEqual(self.run_seed(), 0)
+        post = CommunityPost.objects.get(canteen__name='Kancil')
+        self.assertEqual(post.user.username, 'tim.suapin')
+        self.assertFalse(post.user.has_usable_password())
+        self.assertTrue(post.is_shared)
+
+    def test_seed_photo_served_from_static(self):
+        self.run_seed()
+        kancil = Canteen.objects.get(name='Kancil')
+        data = self.client.get(reverse('social:api_canteen_posts', args=[kancil.pk]), {'range': 'all'}).json()
+        self.assertEqual(data['posts'][0]['photo_url'], '/static/social/seed/kancil_1.jpg')

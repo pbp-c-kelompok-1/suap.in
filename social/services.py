@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.db.models import Avg, Count, F, Q
+from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.timesince import timesince
 
@@ -125,7 +126,7 @@ def canteen_posts(canteen, range_key='today', page=1):
         'posts': [
             {
                 'id': p.id,
-                'photo_url': p.photo.url if p.photo else '',
+                'photo_url': static(p.seed_image) if p.seed_image else (p.photo.url if p.photo else ''),
                 'food_name': p.food_name,
                 'price': p.price,
                 'co2': round(p.total_co2_grams),
