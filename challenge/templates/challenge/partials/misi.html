@@ -2,8 +2,8 @@
 <section class="page" id="page-misi" aria-labelledby="h-misi">
   <div class="topbar">
     <h1 id="h-misi">Misi hari ini</h1>
-    <span class="chip streak" title="Streak aktif"><svg class="i"><use href="#i-flame"/></svg><span id="streakNum">7</span> hari</span>
-    <span class="chip lvl"><svg class="i"><use href="#i-leaf"/></svg>Lv <span id="lvlNum">12</span></span>
+    <span class="chip streak" title="Streak aktif"><svg class="i"><use href="#i-flame"/></svg><span id="streakNum">0</span> hari</span>
+    <span class="chip lvl"><svg class="i"><use href="#i-leaf"/></svg>Lv <span id="lvlNum">1</span></span>
   </div>
 
   <div class="raise hero">
@@ -14,15 +14,17 @@
         <circle class="tr" cx="60" cy="60" r="50" fill="none" stroke-width="14"/>
         <circle class="fg" id="ringFg" cx="60" cy="60" r="50" fill="none" stroke-width="14" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
       </svg>
-      <div class="ring-c"><b id="ringVal">2,1</b><span>dari 3,5 kg CO₂</span></div>
+      <div class="ring-c"><b id="ringVal">0,0</b><span id="ringMax">dari 2,0 kg CO₂</span></div>
     </div>
   </div>
 
   <div class="xp-row">
-    <span class="lbl display" id="tierName">Pejuang Hijau</span>
+    <span class="lbl display" id="tierName">Pemula Sadar</span>
     <div class="xp-track" role="progressbar" aria-label="Progres XP" id="xpTrack"><div class="xp-fill" id="xpFill"></div></div>
-    <span class="xp-num" id="xpNum">340 / 500 XP</span>
+    <span class="xp-num" id="xpNum">0 / 0 XP</span>
   </div>
+
+  <div id="misiEmpty"></div>
 
   <div class="sec-head"><h2>3 misi untukmu</h2><span id="questCount">0/3 selesai</span></div>
   <div class="quests" id="quests"></div>
