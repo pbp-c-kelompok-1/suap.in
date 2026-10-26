@@ -72,6 +72,13 @@ class FriendChallenge(models.Model):
     winner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='challenges_won')
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # durasi baru dihitung setelah lawan menerima tantangan, jadi waktu menunggu respons gk mengurangi waktu main
+    started_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+
+    # nanti diisi setelah hasil tantangannya disimpan
+    finished_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         ordering = ['-created_at']
 
