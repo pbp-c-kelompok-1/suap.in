@@ -18,6 +18,7 @@ from .services import (
     get_carbon_status,
     match_food_items_to_db,
 )
+from gamification.services import record_scan
 
 SESSION_KEYS = ['scan_result', 'scan_raw', 'scan_photo', 'scan_photo_type']
 BOX_COLORS = ['#ec4899', '#3b82f6', '#eab308', '#a855f7', '#f97316', '#22c55e']
@@ -187,10 +188,14 @@ def save_log_view(request):
     budget.used_grams += total_co2
     budget.save()
 
+    outcome = record_scan(request.user, xp=10 + len(items))
+
     for key in SESSION_KEYS:
         request.session.pop(key, None)
 
     messages.success(request, f'Log tersimpan! Total {total_co2:.0f}g CO₂ ditambahkan ke hari ini.')
+    if outcome['leveled_up']: messages.success(request, f'Level naik menjadi level {outcome['level']}!')
+    for badge in outcome['new_badges']: messages.success(request, f'Lencana {badge.name} telah ditambahkan ke koleksi.')
     return redirect('scanner:daily_log')
 
 
