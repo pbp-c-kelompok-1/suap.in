@@ -1,7 +1,8 @@
-// Halaman Notifikasi: filter + tandai dibaca
+// Halaman Notifikasi: dari data server; status baca/hapus disimpan di browser.
 import { $, $$, ico } from './utils.js';
 import { avatarSvg } from './avatar.js';
-import { state } from './state.js';
+import { markGone, saveNotifLocal, state } from './state.js';
+import { ACT, emptyCard } from './empty.js';
 
 export function renderNotifs() {
   $$('#filters .fchip').forEach(c => c.setAttribute('aria-pressed', c.dataset.f === state.filter));
@@ -10,7 +11,11 @@ export function renderNotifs() {
   const nb = $('#navBadge'); nb.textContent = unread; nb.hidden = unread === 0;
   $('#readAll').disabled = unread === 0;
   if (!list.length) {
-    $('#notifs').innerHTML = `<div class="raise empty"><div class="mascot-wrap" id="mascotEmpty"></div><h3>Tidak ada notifikasi</h3><p>Semua bersih. Foto makananmu untuk memancing kabar baru.</p></div>`;
+    const none = state.notifs.length === 0;
+    $('#notifs').innerHTML = emptyCard(none
+      ? { title: 'Belum ada notifikasi', text: 'Kabar baru muncul setelah kamu scan makanan atau punya teman.',
+          actions: [ACT.scan(true), ACT.friends(false)], mascotId: 'mascotEmpty' }
+      : { title: 'Tidak ada notifikasi di kategori ini', text: 'Coba pilih kategori lain.', mascotId: 'mascotEmpty' });
     $('#mascotEmpty').innerHTML = avatarSvg(state.avatar, 'mascot');
     return;
   }
@@ -28,15 +33,15 @@ export function renderNotifs() {
 $('#notifs').addEventListener('click', e => {
   const open = e.target.closest('[data-open]');
   const del = e.target.closest('[data-del]');
-  if (open) { const n = state.notifs.find(x => x.id == open.dataset.open); n.read = true; renderNotifs(); }
+  if (open) { const n = state.notifs.find(x => x.id === open.dataset.open); n.read = true; saveNotifLocal(); renderNotifs(); }
   if (del) {
     const id = del.dataset.del; const row = del.closest('.n-wrap');
     row.querySelector('.notif').classList.add('gone');
-    setTimeout(() => { state.notifs = state.notifs.filter(x => x.id != id); renderNotifs(); }, 240);
+    setTimeout(() => { markGone(id); state.notifs = state.notifs.filter(x => x.id !== id); saveNotifLocal(); renderNotifs(); }, 240);
   }
 });
 $('#filters').addEventListener('click', e => {
   const c = e.target.closest('[data-f]'); if (!c) return;
   state.filter = c.dataset.f; renderNotifs();
 });
-$('#readAll').addEventListener('click', () => { state.notifs.forEach(n => n.read = true); renderNotifs(); });
+$('#readAll').addEventListener('click', () => { state.notifs.forEach(n => n.read = true); saveNotifLocal(); renderNotifs(); });

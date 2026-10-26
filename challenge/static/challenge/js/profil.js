@@ -5,9 +5,31 @@ import { TOTAL, avName, avatarIcon, avatarSvg, isLocked, isSp, levelReq, tabKey 
 import { confetti, toast } from './fx.js';
 import { mountMascots } from './mascot.js';
 import { renderRank } from './laporan.js';
-import { state } from './state.js';
+import { fmt, state } from './state.js';
+
+const BADGE_STYLE = {
+  scan_amount: { icon: 'camera', col: 'var(--green-500)', edge: 'var(--green-700)' },
+  streak_duration: { icon: 'flame', col: 'var(--warn)', edge: '#B87400' },
+};
+function renderStats() {
+  const s = state.stats;
+  $('#statsRow').innerHTML = `
+    <div class="stat"><b>${s.scans}</b><span>Total scan</span></div>
+    <div class="stat"><b>${s.recordStreak}</b><span>Streak terbaik (hari)</span></div>
+    <div class="stat"><b>${fmt(s.avoidedKg).replace('.', ',')}</b><span>kg CO₂ di bawah budget</span></div>
+    <div class="stat"><b>${s.campusRank ? '#' + s.campusRank : '–'}</b><span>Peringkat kampus</span></div>`;
+  $('#badgeRow').innerHTML = state.badges.length
+    ? state.badges.map(b => {
+        const st = BADGE_STYLE[b.type] || BADGE_STYLE.scan_amount;
+        return b.earned
+          ? `<div class="badge-i" title="${b.desc}" style="--col:${st.col};--edge:${st.edge}"><div class="bi">${ico(st.icon)}</div>${b.name}</div>`
+          : `<div class="badge-i lock" title="${b.desc}"><div class="bi">${ico('lock')}</div>${b.name}</div>`;
+      }).join('')
+    : '<p class="muted">Belum ada lencana yang tersedia.</p>';
+}
 
 export function renderProfile() {
+  renderStats();
   $('#pStreak').textContent = state.streak; $('#pLvl').textContent = state.level;
   const id = state.pending, locked = isLocked(id), sp = isSp(id);
   $('#avBig').innerHTML = avatarSvg(id, 'mascot');
