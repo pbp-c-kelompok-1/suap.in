@@ -77,3 +77,46 @@ class FriendChallenge(models.Model):
 
     def __str__(self):
         return f"{self.challenger.username} vs {self.opponent.username}"
+
+
+class MilestoneReward(models.Model):
+    user = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='milestone_rewards',
+    )
+
+    # Kode buat ngenalin milestone, misalnya streak-3 atau level-10.
+    code = models.SlugField(max_length=40)
+    title = models.CharField(max_length=100)
+
+    milestone_type = models.CharField(
+        max_length=10,
+        choices=[
+            ('level', 'Level'),
+            ('streak', 'Streak'),
+        ],
+    )
+    threshold = models.PositiveIntegerField(
+        validators=[MinValueValidator(1)],
+    )
+
+    # Nilai hadiah disimpan saat reward didapat, perubahan bonus nanti gk mengubah reward yang udah dimiliki
+    xp_amount = models.PositiveIntegerField()
+    earned_at = models.DateTimeField(auto_now_add=True)
+
+    # Kosong berarti belum diklaim, terisi berarti udah
+    claimed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-earned_at', '-pk']
+        constraints = [
+            # Akun yg sama gk boleh dapat reward milestone yg sama dua kali
+            models.UniqueConstraint(
+                fields=['user', 'code'],
+                name='story_unique_user_milestone',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.user}: {self.title}'
