@@ -79,6 +79,9 @@ class FriendChallenge(models.Model):
     # nanti diisi setelah hasil tantangannya disimpan
     finished_at = models.DateTimeField(null=True, blank=True)
 
+    # simpan skor akhir supaya hasil ga berubah klo catatan makanan dihapus setelah tantangan selesai
+    result_snapshot = models.JSONField(default=dict, blank=True)
+
     class Meta:
         ordering = ['-created_at']
 
