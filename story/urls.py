@@ -1,9 +1,11 @@
 from django.urls import path
-from . import views
+from . import views, reward_views
 
 app_name = 'story'
 
 urlpatterns = [
+    path('rewards/', reward_views.reward_list, name='reward_list'),
+    path('rewards/<int:pk>/claim/', reward_views.reward_claim, name='reward_claim'),
     path('manage/', views.story_manage, name='manage'),
     path('manage/comics/new/', views.comic_edit, name='comic_create'),
     path('manage/comics/<uuid:pk>/edit/', views.comic_edit, name='comic_edit'),

@@ -1,0 +1,122 @@
+<section class="raise card reward-summary" aria-label="Ringkasan reward">
+    <div>
+        <p class="story-eyebrow">SETIAP LANGKAH BERARTI</p>
+        <h2>Perjalananmu, pencapaianmu.</h2>
+        <p>
+            Hadiah yang terbuka tetap tersimpan,
+            meskipun streak-mu terputus.
+        </p>
+    </div>
+
+    <dl class="reward-stats">
+        <div>
+            <dt>Level</dt>
+            <dd>{{ profile.level }}</dd>
+        </div>
+        <div>
+            <dt>Siap diklaim</dt>
+            <dd>{{ available_count }}</dd>
+        </div>
+        <div>
+            <dt>Sudah diklaim</dt>
+            <dd>{{ claimed_count }}</dd>
+        </div>
+        <div>
+            <dt>Total XP</dt>
+            <dd>{{ profile.total_xp }}</dd>
+        </div>
+    </dl>
+</section>
+
+<div class="reward-section-heading">
+    <h2>Koleksi milestone</h2>
+    <p>
+        {{ earned_count }} dari {{ cards|length }} milestone tercapai
+    </p>
+</div>
+
+<div class="reward-grid">
+    {% for card in cards %}
+        <article class="raise card reward-card reward-card--{{ card.status }}">
+            <div class="reward-card-top">
+                <span class="reward-symbol" aria-hidden="true">
+                    {% if card.kind == 'streak' %}🔥{% else %}🌱{% endif %}
+                </span>
+
+                <span class="chip">
+                    {% if card.status == 'claimed' %}
+                        Sudah diklaim
+                    {% elif card.status == 'available' %}
+                        Siap diklaim
+                    {% else %}
+                        Belum terbuka
+                    {% endif %}
+                </span>
+            </div>
+
+            <p class="story-eyebrow">
+                {% if card.kind == 'streak' %}
+                    STREAK {{ card.target }} HARI
+                {% else %}
+                    LEVEL {{ card.target }}
+                {% endif %}
+            </p>
+
+            <h3>{{ card.title }}</h3>
+
+            <p class="reward-description">
+                {% if card.kind == 'streak' %}
+                    Raih rekor streak {{ card.target }} hari
+                    untuk membuka hadiah ini.
+                {% else %}
+                    Capai level {{ card.target }}
+                    dan rayakan pangkat barumu.
+                {% endif %}
+            </p>
+
+            <p class="reward-xp">+{{ card.xp }} XP</p>
+
+            <div
+                class="xp-track"
+                role="progressbar"
+                aria-label="{{ card.label }} menuju {{ card.title }}"
+                aria-valuenow="{{ card.current }}"
+                aria-valuemin="0"
+                aria-valuemax="{{ card.target }}"
+            >
+                <div
+                    class="xp-fill"
+                    style="width: {{ card.percent }}%"
+                ></div>
+            </div>
+
+            <p class="reward-progress">
+                {{ card.label }}: {{ card.current }} / {{ card.target }}
+            </p>
+
+            {% if card.status == 'available' %}
+                <!-- ID reward dikirim lewat URL, pemiliknya dicek lagi di server -->
+                <form
+                    method="post"
+                    action="{% url 'story:reward_claim' card.reward.pk %}"
+                    class="reward-claim-form"
+                >
+                    {% csrf_token %}
+                    <button type="submit" class="btn">
+                        Klaim {{ card.xp }} XP
+                    </button>
+                </form>
+
+            {% elif card.status == 'claimed' %}
+                <p class="reward-claimed">
+                    Diklaim {{ card.reward.claimed_at|date:"d M Y, H:i" }}
+                </p>
+
+            {% else %}
+                <p class="reward-locked">
+                    Teruskan progresmu untuk membuka hadiah.
+                </p>
+            {% endif %}
+        </article>
+    {% endfor %}
+</div>
