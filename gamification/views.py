@@ -1,19 +1,19 @@
 import json
 
 from django.http import JsonResponse
-from django.shortcuts import render
-from django.utils import timezone
+from django.shortcuts import get_object_or_404, render
+from django.views.decorators.http import require_POST
 
 from gamification.models import Badge, GameProfile, UserBadge
+from gamification.services import *
+from gamification.forms import BadgeForm
+
 from scanner.models import CarbonBudget, FoodLog
 from scanner.services import calculate_carbon_analogy, get_carbon_status
-from .services import *
+
 from challenge.views import DEFAULT_BUDGET_GRAMS, week_totals_by_day
 
-from gamification.models import GameProfile, UserBadge
 from django.utils import timezone
-from scanner.models import FoodLog
-
 from datetime import timedelta
 
 
@@ -217,7 +217,34 @@ def badges_view(request):
     if request.user.is_authenticated:
         check_badges(request.user)
 
-    return render(request, 'gamification/badges.html')
+    return render(request, 'gamification/badges.html', {'badge_form': BadgeForm(None)})
+
+@require_POST
+def create_badge_ajax(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    form = BadgeForm(request.POST)
+    if form.is_valid():
+        convert_to_slug = lambda s: s.lower().replace(" ", "-")
+        badge = form.save(commit=False)
+        badge.code = convert_to_slug(badge.name)
+        badge.save()
+        return JsonResponse(
+            {"message": "Lencana berhasil ditambahkan.", "code": badge.code}, status=201
+        )
+
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+
+@require_POST
+def delete_badge(request, code):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    badge = get_object_or_404(Badge, code=code)
+    badge.delete()
+
+    return JsonResponse({"success": True, "message": "Lencana berhasil dihapus."})
 
 def story_view(request):
     return render(request, 'coming_soon.html', {
