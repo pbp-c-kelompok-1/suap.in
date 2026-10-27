@@ -36,8 +36,41 @@
 .av-cell:active{transform:translateY(1px)}
 .av-cell svg{width:100%;height:100%;display:block}
 .av-cell[aria-selected="true"]{box-shadow:inset 4px 4px 9px var(--sh-d),inset -4px -4px 9px var(--sh-l),0 0 0 3px var(--cta);background:var(--bg)}
-.av-cell.locked svg{filter:grayscale(1);opacity:.32}
-.av-cell .lk{position:absolute;inset:0;display:grid;place-items:center;color:var(--text-2)}
+/* =========================
+   LOCKED AVATAR
+   ========================= */
+
+.av-cell.locked svg {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.av-cell .lk {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-2);
+  opacity: 0.55;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.av-cell .lk svg {
+  width: 28px;
+  height: 28px;
+  opacity: 0.65;
+  filter: none;
+}
+
+.av-cell .lk small {
+  position: absolute;
+  bottom: 5px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  opacity: 0.85;
+}
+
 .av-cell .lk small{position:absolute;bottom:4px;font-size:.62rem;font-weight:800}
 .av-cell .cur{position:absolute;top:-7px;right:-7px;width:24px;height:24px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center;
   box-shadow:0 2px 0 var(--ok-edge)}
