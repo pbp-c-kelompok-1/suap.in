@@ -37,8 +37,9 @@ def week_totals_by_day(user, start_date, end_date):
     return totals
 
 
+
 def todays_quests(user, today):
-    """Ambil statistik scan hari ini dari database."""
+    """Hitung progres tiga misi harian dari data database."""
     logs = FoodLog.objects.filter(
         user=user,
         scanned_at__date=today,
@@ -56,11 +57,46 @@ def todays_quests(user, today):
         budget.budget_grams if budget else DEFAULT_BUDGET_GRAMS
     )
 
-    # Misi belum dihubungkan ke model tersendiri.
-    # Kosong lebih baik daripada menampilkan progres rekaan.
-    quests = []
+    over_budget = used_grams > budget_grams
+
+    quests = [
+        {
+            'id': 'scan_once',
+            'title': 'Scan makanan pertama',
+            'desc': 'Simpan minimal satu hasil scan hari ini.',
+            'val': min(scans_today, 1),
+            'goal': 1,
+            'tone': 'green',
+            'icon': 'camera',
+            'failed': False,
+            'why': 'Mulai catat jejak karbon makananmu.',
+        },
+        {
+            'id': 'scan_three',
+            'title': 'Scan 3 makanan',
+            'desc': 'Simpan minimal tiga hasil scan hari ini.',
+            'val': min(scans_today, 3),
+            'goal': 3,
+            'tone': 'blue',
+            'icon': 'target',
+            'failed': False,
+            'why': 'Kenali dampak pilihan makananmu.',
+        },
+        {
+            'id': 'carbon_budget',
+            'title': 'Jaga budget karbon',
+            'desc': 'Jaga total emisi hari ini agar tidak melebihi budget.',
+            'val': int(scans_today > 0 and not over_budget),
+            'goal': 1,
+            'tone': 'green',
+            'icon': 'leaf',
+            'failed': over_budget,
+            'why': 'Budget karbon terlampaui.' if over_budget else 'Total emisi masih dalam budget.',
+        },
+    ]
 
     return quests, scans_today, used_grams, budget_grams
+
 
 def build_rankings(user):
     # Nasional: hanya pengguna yang sudah pernah scan.
@@ -185,7 +221,9 @@ def build_challenge_data(user, claimed_today=False):
         "totalScans": total_scans,
         "quests": quests,
         "chest": {
-            "ready": False,
+            "ready": bool(quests) and all(
+                q["val"] >= q["goal"] for q in quests
+            ),
             "claimed": claimed_today,
         },
         "weekly": weekly,
