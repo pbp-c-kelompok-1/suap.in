@@ -1,3 +1,4 @@
+import json
 from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
@@ -8,6 +9,7 @@ from django.views.decorators.http import require_POST
 
 from scanner.models import FoodLog, CarbonBudget
 
+from .models import ChallengeProfile
 from .services import (
     build_challenge_data,
     todays_quests,
@@ -143,3 +145,35 @@ def api_challenge_data(request):
             for i in range(7)
         ],
     })
+
+
+AVATAR_COUNT = 140  # 100 avatar spesies + 40 avatar spesial (lihat avatar-data.js)
+
+
+@login_required
+@require_POST
+def save_profile_view(request):
+    """Simpan avatar, nama tampilan, dan bio dalam satu request."""
+    try:
+        data = json.loads(request.body or b'{}')
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({'ok': False, 'message': 'Data tidak valid.'}, status=400)
+
+    name = str(data.get('name', '')).strip()
+    bio = str(data.get('bio', '')).strip()
+    avatar = data.get('avatar')
+
+    if isinstance(avatar, bool) or not isinstance(avatar, int) or not 0 <= avatar < AVATAR_COUNT:
+        return JsonResponse({'ok': False, 'message': 'Avatar tidak valid.'}, status=400)
+    if len(name) > 24:
+        return JsonResponse({'ok': False, 'message': 'Nama maksimal 24 karakter.'}, status=400)
+    if len(bio) > 80:
+        return JsonResponse({'ok': False, 'message': 'Bio maksimal 80 karakter.'}, status=400)
+
+    profile, _ = ChallengeProfile.objects.get_or_create(user=request.user)
+    profile.display_name = name
+    profile.bio = bio
+    profile.avatar_id = avatar
+    profile.save()
+
+    return JsonResponse({'ok': True, 'name': name, 'bio': bio, 'avatar': avatar})
