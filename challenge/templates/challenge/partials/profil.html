@@ -3,7 +3,10 @@
   <div class="topbar">
     <h1 id="h-prof">Profil</h1>
     <span class="chip streak"><svg class="i"><use href="#i-flame"/></svg><span id="pStreak">0</span> hari</span>
-    <span class="chip lvl"><svg class="i"><use href="#i-leaf"/></svg>Lv <span id="pLvl">1</span></span>
+    <span class="chip lvl">
+      <svg class="i"><use href="#i-leaf"/></svg>
+      Lv <span id="pLvl">1</span>
+    </span>
   </div>
 
   <div class="prof-grid">
@@ -11,6 +14,16 @@
       <div class="pedestal"><div class="avw big" id="avBig"></div></div>
       <div class="av-name display" id="avName"></div>
       <div class="av-meta" id="avMeta">Dipakai sekarang</div>
+      
+      <div class="xp-progress">
+        <div class="xp-head">
+          <span id="xpLabel">0/0 XP</span>
+          <span id="xpNext">0 XP lagi untuk ke level berikutnya</span>
+        </div>
+        <div class="xp-track" aria-label="Progress XP">
+          <div class="xp-fill" id="xpFill"></div>
+        </div>
+      </div>
 
       <div class="field"><label for="pName">Nama</label><input id="pName" maxlength="24" autocomplete="off" disabled></div>
       <div class="field"><label for="pBio">Bio <small id="bioCount"></small></label><textarea id="pBio" maxlength="80" rows="2" disabled></textarea></div>

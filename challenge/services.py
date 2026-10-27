@@ -5,6 +5,8 @@ from django.utils import timezone
 
 from scanner.models import FoodLog, CarbonBudget
 
+from gamification import services as game
+
 
 DAY_ABBR = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
 DEFAULT_BUDGET_GRAMS = 2000.0
@@ -80,6 +82,9 @@ def build_challenge_data(user, claimed_today=False):
     from .models import ChallengeProfile
     profile = ChallengeProfile.objects.filter(user=user).first()
 
+    game_profile = game.get_profile(user)
+    prog = game.xp_progress(game_profile)
+
     return {
         "user": {
             "id": user.id,
@@ -89,10 +94,12 @@ def build_challenge_data(user, claimed_today=False):
             "avatar": profile.avatar_id if profile else 0,
         },
         "game": {
-            "level": 1,
-            "tier": "Pemula Sadar",
-            "xp": 0,
-            "cap": 0,
+            "level": game_profile.level,
+            "tier": game.tier_from_level(game_profile.level),
+            "xp": prog["current"],
+            "cap": prog["needed"],
+            "totalXp": game_profile.total_xp,
+            "percent": prog["percent"],
             "streak": 0,
             "freezes": 0,
         },

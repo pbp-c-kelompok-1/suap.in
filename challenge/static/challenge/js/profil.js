@@ -52,7 +52,20 @@ function renderStats() {
 
 export function renderProfile() {
   renderStats();
-  $('#pStreak').textContent = state.streak; $('#pLvl').textContent = state.level;
+
+  $('#pStreak').textContent = state.streak;
+  $('#pLvl').textContent = state.level;
+
+  const xp = state.xp || 0;
+  const cap = state.cap || 0;
+  const percent = cap > 0 ? Math.min(100, Math.round((xp / cap) * 100)) : 100;
+  const remaining = Math.max(0, cap - xp);
+
+  $('#xpLabel').textContent = `${xp}/${cap} XP`;
+  $('#xpNext').textContent = cap > 0
+    ? `${remaining} XP lagi untuk ke level ${state.level + 1}`
+    : 'Level maksimum tercapai';
+  $('#xpFill').style.width = `${percent}%`;
   const id = state.pending, locked = isLocked(id), sp = isSp(id);
   $('#avBig').innerHTML = avatarSvg(id, 'mascot');
   $('#avName').innerHTML = avName(id) + (sp ? ` <span class="sp-tag">${ico('star')}Spesial</span>` : '');
@@ -162,8 +175,19 @@ $('#pBio').addEventListener('input', () => { $('#bioCount').textContent = `${$('
 $('#spTabs').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (!b) return; state.pTab = b.dataset.t; renderProfile(); });
 $('#avGrid').addEventListener('click', e => {
   if (!editingProfile) return;
-  const b = e.target.closest('[data-av]'); if (!b) return;
-  state.pending = +b.dataset.av; renderProfile();
+
+  const b = e.target.closest('[data-av]');
+  if (!b) return;
+
+  const id = +b.dataset.av;
+
+  if (isLocked(id)) {
+    toast(`Avatar ini terbuka di level ${levelReq(id)}`, 'alert');
+    return;
+  }
+
+  state.pending = id;
+  renderProfile();
 });
 $('#avShuffle').addEventListener('click', () => {
   if (!editingProfile) return;
