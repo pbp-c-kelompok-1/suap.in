@@ -11,6 +11,7 @@ const doneCount = () => state.quests.filter(done).length;
 export function renderHeader() {
   $('#streakNum').textContent = state.streak;
   $('#lvlNum').textContent = state.level;
+  $('#freezeNum').textContent = state.freeze;
   $('#tierName').textContent = state.tier;
   const maxed = state.cap === 0;
   const pct = maxed ? 100 : Math.min(100, state.xp / state.cap * 100);
@@ -83,7 +84,9 @@ $('#chestBtn').addEventListener('click', async () => {
     const res = await fetch(urls.claim, { method: 'POST', headers: { 'X-CSRFToken': urls.csrf }, credentials: 'same-origin' });
     const body = await res.json().catch(() => ({}));
     if (res.ok && body.ok) {
-      state.chest.claimed = true; state.freeze = body.freezes;
+      state.chest.claimed = true;
+      state.freeze = body.freezes;
+      $('#freezeNum').textContent = state.freeze;
       confetti(80, btn); toast('Streak freeze +1', 'flame'); cheer();
     } else {
       toast(body.message || 'Gagal membuka peti.', 'alert');

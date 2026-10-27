@@ -68,14 +68,47 @@ def challenge_list_view(request):
 
 
 
+
 @login_required
 @require_POST
 def claim_freeze_view(request):
-    """Klaim streak freeze belum tersedia."""
+    """Klaim streak freeze setelah semua misi selesai."""
+    today = timezone.localdate()
+
+    quests, _, _, _ = todays_quests(request.user, today)
+
+    # Jangan izinkan klaim jika misi belum tersedia atau belum selesai.
+    if not quests or not all(q['val'] >= q['goal'] for q in quests):
+        return JsonResponse({
+            'ok': False,
+            'message': 'Selesaikan semua misi terlebih dahulu.',
+        }, status=400)
+
+    if _claimed_today(request):
+        return JsonResponse({
+            'ok': False,
+            'message': 'Hadiah hari ini sudah diklaim.',
+        }, status=400)
+
+    from gamification import services as game
+
+    ok, message = game.claim_streak_freeze(request.user, today=today)
+
+    if not ok:
+        return JsonResponse({
+            'ok': False,
+            'message': message,
+        }, status=400)
+
+    request.session[FREEZE_SESSION_KEY] = today.isoformat()
+
+    profile = game.get_profile(request.user)
+
     return JsonResponse({
-        'ok': False,
-        'message': 'Fitur streak freeze belum tersedia.',
-    }, status=501)
+        'ok': True,
+        'freezes': profile.streak_freezes,
+    })
+
 
 
 

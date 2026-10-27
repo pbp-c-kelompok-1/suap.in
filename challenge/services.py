@@ -4,8 +4,13 @@ from datetime import timedelta
 from django.utils import timezone
 
 from scanner.models import FoodLog, CarbonBudget
+from gamification.models import GameProfile
 
 from gamification import services as game
+
+from django.contrib.auth.models import User
+from django.db.models import Count, Sum
+from social.models import CampusMembership
 
 
 DAY_ABBR = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
@@ -57,6 +62,74 @@ def todays_quests(user, today):
 
     return quests, scans_today, used_grams, budget_grams
 
+def build_rankings(user):
+    # Nasional: hanya pengguna yang sudah pernah scan.
+    national_users = (
+        User.objects
+        .annotate(scan_count=Count("food_logs"))
+        .filter(scan_count__gt=0)
+        .order_by("username")
+    )
+
+    national_items = [
+        {
+            "name": u.username,
+            "scans": u.scan_count,
+        }
+        for u in national_users[:10]
+    ]
+
+    # Kampus: ranking pengguna yang terdaftar di kampus yang sama.
+    membership = (
+        CampusMembership.objects
+        .filter(user=user)
+        .select_related("university")
+        .first()
+    )
+
+    campus_items = []
+    campus_rank = None
+
+    if membership:
+        campus_users = (
+            User.objects
+            .filter(campus__university=membership.university)
+            .annotate(total_carbon=Sum("food_logs__co2_grams"))
+            .filter(total_carbon__isnull=False)
+            .order_by("total_carbon", "username")
+        )
+
+        campus_rows = list(campus_users)
+
+        campus_items = [
+            {
+                "name": u.username,
+                "carbon": u.total_carbon or 0,
+            }
+            for u in campus_rows[:10]
+        ]
+
+        for position, u in enumerate(campus_rows, start=1):
+            if u.pk == user.pk:
+                campus_rank = position
+                break
+
+    return {
+        "rank": {
+            "teman": {"items": [], "empty": "no_friends"},
+            "kampus": {
+                "items": campus_items,
+                "empty": "no_campus" if not membership else (
+                    "" if campus_items else "no_data"
+                ),
+            },
+            "nasional": {
+                "items": national_items,
+                "empty": "" if national_items else "no_data",
+            },
+        },
+        "campusRank": campus_rank,
+    }
 
 def build_challenge_data(user, claimed_today=False):
     """Susun data halaman Challenge dari database yang tersedia."""
@@ -84,6 +157,7 @@ def build_challenge_data(user, claimed_today=False):
 
     game_profile = game.get_profile(user)
     prog = game.xp_progress(game_profile)
+    rank_data = build_rankings(user)
 
     return {
         "user": {
@@ -100,8 +174,8 @@ def build_challenge_data(user, claimed_today=False):
             "cap": prog["needed"],
             "totalXp": game_profile.total_xp,
             "percent": prog["percent"],
-            "streak": 0,
-            "freezes": 0,
+            "streak": game_profile.current_streak,
+            "freezes": game_profile.streak_freezes,
         },
         "budget": {
             "usedKg": kg(used_grams),
@@ -116,17 +190,13 @@ def build_challenge_data(user, claimed_today=False):
         },
         "weekly": weekly,
         "hasWeekData": bool(by_day),
-        "rank": {
-            "teman": {"items": [], "empty": "no_friends"},
-            "kampus": {"items": [], "empty": "no_campus"},
-            "nasional": {"items": [], "empty": "no_data"},
-        },
+        "rank": rank_data["rank"],
         "notifs": [],
         "stats": {
             "scans": total_scans,
             "recordStreak": 0,
             "avoidedKg": 0,
-            "campusRank": None,
+            "campusRank": rank_data["campusRank"],
         },
         "badges": [],
     }
