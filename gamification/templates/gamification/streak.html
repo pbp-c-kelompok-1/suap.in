@@ -28,8 +28,8 @@
   </div>
   <div>
     {% if scanned_today %}
-    <h2>Streak hari ini aman</h2>
-    <p>Kamu sudah scan makanan hari ini. Lanjut besok untuk menambah satu hari.</p>
+    <h2>Streak berhasil diamankan!</h2>
+    <p>Kamu sudah scan makanan hari ini, scan lagi besok untuk mempertahankan streak! Bisakah anda mencapai <strong>{{ next_goal }} hari</strong>?</p>
     {% elif streak %}
     <h2>Scan satu makanan untuk menjaga streak</h2>
     <p>Masih ada <span id="liveclock"></span> untuk scan dan menyelamatkan streak {{ streak }} harimu!</p>
@@ -158,8 +158,8 @@
     
     document.getElementById('badge-ratio').innerText = `${items.length}/${items.length + lockedItems.length}`;
 
-    document.getElementById('next-badge-text').innerText = lockedItems.length 
-    ? `Tinggal {{ days_left }} hari lagi untuk lencana: <strong>${lockedItems[0].fields.name}</strong>.'}`
+    document.getElementById('next-badge-text').innerHTML = lockedItems.length 
+    ? `Tinggal {{ days_left }} hari lagi untuk lencana <strong>${lockedItems[0].fields.name}</strong>.`
     : 'Semua lencana streak telah dikoleksi. Selamat!';
     
     items.forEach((item) => gridContainer.appendChild(createBadge(item, true)));
