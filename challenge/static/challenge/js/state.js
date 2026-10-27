@@ -47,8 +47,8 @@ export const state = {
   badges: d.badges || [],
   filter: 'all',
   rankTab: rank.kampus.empty === 'no_campus' ? 'nasional' : 'kampus',
-  avatar: 0, pending: 0, pTab: 'all', demoUnlock: false,
-  profile: { name: (d.user || {}).name || '', bio: '' },
+  avatar: (d.user || {}).avatar || 0, pending: (d.user || {}).avatar || 0, pTab: 'all', demoUnlock: false,
+  profile: { name: (d.user || {}).name || '', bio: (d.user || {}).bio || '' },
 };
 export const fmt = n => n.toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 

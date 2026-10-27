@@ -77,11 +77,16 @@ def build_challenge_data(user, claimed_today=False):
     ]
 
     total_scans = FoodLog.objects.filter(user=user).count()
+    from .models import ChallengeProfile
+    profile = ChallengeProfile.objects.filter(user=user).first()
 
     return {
         "user": {
             "id": user.id,
-            "name": user.username,
+            "name": (profile.display_name if profile and profile.display_name else user.username),
+            "username": user.username,
+            "bio": profile.bio if profile else "",
+            "avatar": profile.avatar_id if profile else 0,
         },
         "game": {
             "level": 1,
