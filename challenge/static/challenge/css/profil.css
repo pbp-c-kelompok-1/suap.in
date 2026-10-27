@@ -66,3 +66,20 @@
 .sp-tag svg{width:12px;height:12px}
 :root[data-theme="dark"] .sp-tag{background:rgba(245,166,35,.25);color:var(--warn)}
 .sptab.sp-t .mini{filter:none}
+
+/* =========================
+   EDIT PROFIL
+========================= */
+
+/* .btn memakai display:inline-flex sehingga atribut [hidden] tidak berfungsi. */
+[hidden] { display: none !important; }
+
+.profile-actions { display: flex; gap: 10px; align-items: center; margin-top: 4px; width: 100%; }
+/* mengalahkan .prof-card .btn { width:100% } supaya Batal & Simpan sejajar */
+.profile-actions .btn { margin: 0; width: auto; flex: 1 1 0; }
+.profile-hint { margin: 0; font-size: 13px; line-height: 1.45; }
+#pName:disabled, #pBio:disabled { cursor: default; opacity: .8; }
+
+/* Pemilih avatar hanya bisa dipakai saat mode edit */
+.pick-card.readonly .av-grid,
+.pick-card.readonly .pick-actions { opacity: .55; pointer-events: none; }
