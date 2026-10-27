@@ -18,4 +18,6 @@ export function route() {
   if (page === 'profil') { state.pending = state.avatar; renderProfile(); }
   if (page === 'scanner' && $('.tab[data-sub="budget"]').getAttribute('aria-selected') === 'true') animateBudgetRing();
 }
+
 window.addEventListener('hashchange', route);
+route();

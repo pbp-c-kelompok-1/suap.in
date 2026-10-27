@@ -42,7 +42,6 @@ def week_totals_by_day(user, start_date, end_date):
 
 
 def todays_quests(user, today):
-    """Hitung progres tiga misi harian dari data database."""
     logs = FoodLog.objects.filter(
         user=user,
         scanned_at__date=today,
@@ -62,41 +61,138 @@ def todays_quests(user, today):
 
     over_budget = used_grams > budget_grams
 
-    quests = [
-        {
-            'id': 'scan_once',
-            'title': 'Scan makanan pertama',
-            'desc': 'Simpan minimal satu hasil scan hari ini.',
-            'val': min(scans_today, 1),
+    # Data kebiasaan user untuk menentukan variasi misi.
+    recent_start = today - timedelta(days=6)
+    recent_logs = FoodLog.objects.filter(
+        user=user,
+        scanned_at__date__gte=recent_start,
+        scanned_at__date__lt=today,
+    )
+
+    recent_scan_days = set()
+    recent_grams = 0
+
+    for log in recent_logs:
+        recent_scan_days.add(
+            timezone.localtime(log.scanned_at).date()
+        )
+        recent_grams += log.co2_grams or 0
+
+    # Seed dibuat dari user + tanggal supaya misi tetap sama
+    # selama satu hari, tetapi bisa berubah di hari berikutnya.
+    import random
+
+    rng = random.Random(
+        f"{user.pk}-{today.isoformat()}"
+    )
+
+    quest_pool = []
+
+    # Misi scan tetap tersedia, tetapi tidak selalu semuanya dipilih.
+    quest_pool.append({
+        'id': 'scan_once',
+        'title': 'Scan makanan pertama',
+        'desc': 'Simpan minimal satu hasil scan hari ini.',
+        'val': min(scans_today, 1),
+        'goal': 1,
+        'tone': 'green',
+        'icon': 'camera',
+        'failed': False,
+        'why': 'Mulai catat jejak karbon makananmu.',
+    })
+
+    quest_pool.append({
+        'id': 'scan_three',
+        'title': 'Scan 3 makanan',
+        'desc': 'Simpan minimal tiga hasil scan hari ini.',
+        'val': min(scans_today, 3),
+        'goal': 3,
+        'tone': 'blue',
+        'icon': 'target',
+        'failed': False,
+        'why': 'Kenali dampak pilihan makananmu.',
+    })
+
+    # Misi berdasarkan jumlah CO2 hari ini.
+    quest_pool.append({
+        'id': 'carbon_budget',
+        'title': 'Jaga budget karbon',
+        'desc': 'Jaga total emisi hari ini agar tidak melebihi budget.',
+        'val': int(scans_today > 0 and not over_budget),
+        'goal': 1,
+        'tone': 'green',
+        'icon': 'leaf',
+        'failed': over_budget,
+        'why': (
+            'Budget karbon terlampaui.'
+            if over_budget
+            else 'Total emisi masih dalam budget.'
+        ),
+    })
+
+    # Misi untuk menjaga emisi tetap rendah.
+    low_carbon_goal = 500
+
+    quest_pool.append({
+        'id': 'low_carbon',
+        'title': 'Pilih makanan rendah karbon',
+        'desc': f'Jaga total emisi hari ini di bawah {low_carbon_goal}g CO2.',
+        'val': int(
+            scans_today > 0
+            and used_grams <= low_carbon_goal
+        ),
+        'goal': 1,
+        'tone': 'green',
+        'icon': 'leaf',
+        'failed': used_grams > low_carbon_goal,
+        'why': 'Coba pilih makanan dengan jejak karbon lebih rendah.',
+    })
+
+    # Misi menjaga konsistensi selama beberapa hari.
+    active_days_goal = 3
+
+    quest_pool.append({
+        'id': 'consistent_scanner',
+        'title': 'Tetap konsisten',
+        'desc': f'Scan makanan setidaknya {active_days_goal} hari minggu ini.',
+        'val': min(
+            len(recent_scan_days) + (1 if scans_today > 0 else 0),
+            active_days_goal,
+        ),
+        'goal': active_days_goal,
+        'tone': 'blue',
+        'icon': 'target',
+        'failed': False,
+        'why': 'Kebiasaan kecil yang konsisten lebih mudah dipertahankan.',
+    })
+
+    # Misi mengurangi rata-rata emisi dibanding minggu berjalan.
+    if recent_scan_days:
+        average_goal = 400
+
+        quest_pool.append({
+            'id': 'average_carbon',
+            'title': 'Jaga rata-rata emisi',
+            'desc': f'Usahakan rata-rata scan di bawah {average_goal}g CO2.',
+            'val': int(
+                scans_today > 0
+                and (used_grams / scans_today) <= average_goal
+            ),
             'goal': 1,
-            'tone': 'green',
-            'icon': 'camera',
-            'failed': False,
-            'why': 'Mulai catat jejak karbon makananmu.',
-        },
-        {
-            'id': 'scan_three',
-            'title': 'Scan 3 makanan',
-            'desc': 'Simpan minimal tiga hasil scan hari ini.',
-            'val': min(scans_today, 3),
-            'goal': 3,
-            'tone': 'blue',
-            'icon': 'target',
-            'failed': False,
-            'why': 'Kenali dampak pilihan makananmu.',
-        },
-        {
-            'id': 'carbon_budget',
-            'title': 'Jaga budget karbon',
-            'desc': 'Jaga total emisi hari ini agar tidak melebihi budget.',
-            'val': int(scans_today > 0 and not over_budget),
-            'goal': 1,
-            'tone': 'green',
+            'tone': 'teal',
             'icon': 'leaf',
-            'failed': over_budget,
-            'why': 'Budget karbon terlampaui.' if over_budget else 'Total emisi masih dalam budget.',
-        },
-    ]
+            'failed': (
+                scans_today > 0
+                and (used_grams / scans_today) > average_goal
+            ),
+            'why': 'Bandingkan pilihan makananmu dan coba turunkan emisinya.',
+        })
+
+    # Acak pilihan berdasarkan user dan tanggal.
+    rng.shuffle(quest_pool)
+
+    # Ambil maksimal tiga misi.
+    quests = quest_pool[:3]
 
     return quests, scans_today, used_grams, budget_grams
 
@@ -118,8 +214,11 @@ def build_rankings(user):
             "name": u.username,
             "scans": u.scan_count,
             "carbon": u.total_carbon or 0,
+            "kg": round((u.total_carbon or 0) / 1000, 2),
+            "pos": i,
+            "is_me": u.pk == user.pk,
         }
-        for u in national_users[:10]
+        for i, u in enumerate(national_users[:10], start=1)
     ]
 
     # Kampus: user yang terdaftar di kampus yang sama.
@@ -151,8 +250,11 @@ def build_rankings(user):
                 "name": u.username,
                 "scans": u.scan_count,
                 "carbon": u.total_carbon or 0,
+                "kg": round((u.total_carbon or 0) / 1000, 2),
+                "pos": i,
+                "is_me": u.pk == user.pk,
             }
-            for u in campus_rows[:10]
+            for i, u in enumerate(campus_rows[:10], start=1)
         ]
 
         for position, u in enumerate(campus_rows, start=1):
@@ -174,7 +276,7 @@ def build_rankings(user):
             },
             "nasional": {
                 "items": national_items,
-                "empty": "" if national_items else "no_data",
+                "empty": "",
             },
         },
         "campusRank": campus_rank,
@@ -290,7 +392,7 @@ def build_challenge_data(user, claimed_today=False):
     prog = game.xp_progress(game_profile)
     rank_data = build_rankings(user)
 
-    # Tampilkan statistik profil dari data tersimpan, bukan placeholder.
+    # Tampilkan statistik profil dari data tersimpan
     budget_rows = CarbonBudget.objects.filter(user=user, used_grams__gt=0)
     below_budget_grams = sum(
         max(0, row.budget_grams - row.used_grams)
