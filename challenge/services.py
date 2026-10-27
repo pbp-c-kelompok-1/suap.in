@@ -10,7 +10,10 @@ from gamification import services as game
 
 from django.contrib.auth.models import User
 from django.db.models import Count, Sum
+
 from social.models import CampusMembership
+from social.services import time_ago
+from story.models import FriendChallenge
 
 
 DAY_ABBR = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
@@ -99,23 +102,27 @@ def todays_quests(user, today):
 
 
 def build_rankings(user):
-    # Nasional: hanya pengguna yang sudah pernah scan.
+    # Nasional: semua user yang sudah terdaftar.
+    # User tanpa scan tetap ditampilkan dengan nilai 0.
     national_users = (
         User.objects
-        .annotate(scan_count=Count("food_logs"))
-        .filter(scan_count__gt=0)
-        .order_by("username")
+        .annotate(
+            total_carbon=Sum("food_logs__co2_grams"),
+            scan_count=Count("food_logs"),
+        )
+        .order_by("total_carbon", "username")
     )
 
     national_items = [
         {
             "name": u.username,
             "scans": u.scan_count,
+            "carbon": u.total_carbon or 0,
         }
         for u in national_users[:10]
     ]
 
-    # Kampus: ranking pengguna yang terdaftar di kampus yang sama.
+    # Kampus: user yang terdaftar di kampus yang sama.
     membership = (
         CampusMembership.objects
         .filter(user=user)
@@ -130,8 +137,10 @@ def build_rankings(user):
         campus_users = (
             User.objects
             .filter(campus__university=membership.university)
-            .annotate(total_carbon=Sum("food_logs__co2_grams"))
-            .filter(total_carbon__isnull=False)
+            .annotate(
+                total_carbon=Sum("food_logs__co2_grams"),
+                scan_count=Count("food_logs"),
+            )
             .order_by("total_carbon", "username")
         )
 
@@ -140,6 +149,7 @@ def build_rankings(user):
         campus_items = [
             {
                 "name": u.username,
+                "scans": u.scan_count,
                 "carbon": u.total_carbon or 0,
             }
             for u in campus_rows[:10]
@@ -152,7 +162,10 @@ def build_rankings(user):
 
     return {
         "rank": {
-            "teman": {"items": [], "empty": "no_friends"},
+            "teman": {
+                "items": [],
+                "empty": "no_friends",
+            },
             "kampus": {
                 "items": campus_items,
                 "empty": "no_campus" if not membership else (
@@ -166,6 +179,87 @@ def build_rankings(user):
         },
         "campusRank": campus_rank,
     }
+
+def build_notifications(user, profile, scans_today, all_quests_done):
+    """Bangun notifikasi dari data server yang memang sudah ada."""
+    notifs = []
+    today = timezone.localdate()
+
+    # Streak
+    streak = game.effective_streak(profile)
+
+    if streak > 0 and scans_today == 0:
+        notifs.append({
+            "id": f"streak-risk-{today.isoformat()}",
+            "type": "streak",
+            "ico": "flame",
+            "tone": "red",
+            "t": "Streakmu terancam hilang",
+            "p": "Belum ada foto makanan hari ini. Foto sebelum 23.59.",
+            "time": "Hari ini",
+        })
+    elif streak > 0:
+        notifs.append({
+            "id": f"streak-{today.isoformat()}-{streak}",
+            "type": "streak",
+            "ico": "flame",
+            "tone": "amber",
+            "t": f"Streak {streak} hari!",
+            "p": "Pertahankan terus ritmemu.",
+            "time": "Hari ini",
+        })
+
+    # Semua misi selesai
+    if all_quests_done:
+        notifs.append({
+            "id": f"misi-done-{today.isoformat()}",
+            "type": "misi",
+            "ico": "check",
+            "tone": "teal",
+            "t": "Semua misi hari ini selesai",
+            "p": "Buka peti bonusmu untuk dapat streak freeze.",
+            "time": "Hari ini",
+        })
+
+    # Lencana yang sudah benar-benar dimiliki user
+    for ub in (
+        UserBadge.objects
+        .filter(user=user)
+        .select_related("badge")
+        .order_by("-earned_at")[:5]
+    ):
+        notifs.append({
+            "id": f"badge-{ub.badge_id}",
+            "type": "lencana",
+            "ico": "trophy",
+            "tone": "blue",
+            "t": f"Lencana baru: {ub.badge.name}",
+            "p": ub.badge.description or "Kamu membuka lencana baru.",
+            "time": time_ago(ub.earned_at),
+        })
+
+    # Friend Challenge yang masih pending
+    pending = (
+        FriendChallenge.objects
+        .filter(opponent=user, status="pending")
+        .select_related("challenger")
+        .order_by("-created_at")[:5]
+    )
+
+    for challenge in pending:
+        challenger_name = challenge.challenger.username
+
+        notifs.append({
+            "id": f"challenge-{challenge.pk}",
+            "type": "teman",
+            "ico": "users",
+            "tone": "purple",
+            "t": f"{challenger_name} menantangmu!",
+            "p": "Ada challenge baru yang menunggumu.",
+            "time": time_ago(challenge.created_at),
+        })
+
+    return notifs
 
 def build_challenge_data(user, claimed_today=False):
     """Susun data halaman Challenge dari database yang tersedia."""
@@ -250,7 +344,14 @@ def build_challenge_data(user, claimed_today=False):
         "weekly": weekly,
         "hasWeekData": bool(by_day),
         "rank": rank_data["rank"],
-        "notifs": [],
+        "notifs": build_notifications(
+            user,
+            game_profile,
+            scans_today,
+            all_quests_done=all(
+                q["val"] >= q["goal"] for q in quests
+            ),
+        ),
         "stats": {
             "scans": total_scans,
             "recordStreak": game_profile.record_streak,

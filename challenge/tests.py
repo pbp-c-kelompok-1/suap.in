@@ -42,15 +42,23 @@ class ChallengeDataTests(TestCase):
         self.assertEqual(d['notifs'], [])
         self.assertEqual(d['rank']['teman']['empty'], 'no_friends')
         self.assertEqual(d['rank']['kampus']['empty'], 'no_campus')
-        self.assertEqual(d['rank']['nasional']['empty'], 'no_data')
+        self.assertEqual(d['rank']['nasional']['empty'], '')
+
+        self.assertEqual(d['rank']['nasional']['items'][0]['name'], 'nami')
+        self.assertEqual(d['rank']['nasional']['items'][0]['scans'], 0)
+        self.assertEqual(d['rank']['nasional']['items'][0]['carbon'], 0)
+
         self.assertEqual(d['stats']['campusRank'], None)
         self.assertTrue(all(q['val'] == 0 for q in d['quests']))
-
+        
     def test_rank_uses_real_users_and_excludes_unscanned_me(self):
         other = User.objects.create_user('sinta', password='x12345678')
         FoodLog.objects.create(user=other, custom_name='Nasi', co2_grams=1500)
         rows = self.data()['rank']['nasional']['items']
-        self.assertEqual([r['name'] for r in rows], ['sinta'])  # aku belum scan -> tidak ikut
+        self.assertEqual(
+            [r['name'] for r in rows],
+            ['nami', 'sinta'],
+        )  
 
     def test_campus_rank_and_my_position(self):
         uni = University.objects.create(name='Universitas Indonesia', short_name='UI')
