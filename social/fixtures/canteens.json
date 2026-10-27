@@ -1,0 +1,80 @@
+[
+  {
+    "model": "social.canteen",
+    "pk": 1,
+    "fields": {
+      "name": "Kancil",
+      "faculty": "Fasilkom",
+      "university": 1,
+      "latitude": "-6.370254",
+      "longitude": "106.827638",
+      "radius_m": 150,
+      "is_active": true
+    }
+  },
+  {
+    "model": "social.canteen",
+    "pk": 2,
+    "fields": {
+      "name": "Dallas",
+      "faculty": "FMIPA",
+      "university": 1,
+      "latitude": "-6.369713",
+      "longitude": "106.827477",
+      "radius_m": 150,
+      "is_active": true
+    }
+  },
+  {
+    "model": "social.canteen",
+    "pk": 3,
+    "fields": {
+      "name": "Takor",
+      "faculty": "FISIP",
+      "university": 1,
+      "latitude": "-6.363230",
+      "longitude": "106.829748",
+      "radius_m": 150,
+      "is_active": true
+    }
+  },
+  {
+    "model": "social.canteen",
+    "pk": 4,
+    "fields": {
+      "name": "Kanjiw",
+      "faculty": "Psikologi",
+      "university": 1,
+      "latitude": "-6.363568",
+      "longitude": "106.830156",
+      "radius_m": 150,
+      "is_active": true
+    }
+  },
+  {
+    "model": "social.canteen",
+    "pk": 5,
+    "fields": {
+      "name": "Kansas",
+      "faculty": "FIB",
+      "university": 1,
+      "latitude": "-6.363878",
+      "longitude": "106.827082",
+      "radius_m": 150,
+      "is_active": true
+    }
+  },
+  {
+    "model": "social.canteen",
+    "pk": 6,
+    "fields": {
+      "name": "Kantek",
+      "faculty": "Teknik",
+      "university": 1,
+      "latitude": "-6.363214",
+      "longitude": "106.824636",
+      "radius_m": 150,
+      "is_active": true
+    }
+  }
+]

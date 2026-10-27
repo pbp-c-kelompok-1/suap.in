@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load social_tags %}
 
 {% block title %}Hasil Scan — Suap.in{% endblock %}
 
@@ -65,6 +66,8 @@
 
     {% if analogy %}<p class="authsub" id="analogy-tile">{{ analogy }}</p>{% endif %}
     {% if notes %}<p class="authsub">{{ notes }}</p>{% endif %}
+
+    {% community_share_form %}
 
     <div class="hasil-actions">
       <button type="submit" class="btn ok wide" id="save-btn"><svg class="i"><use href="#i-check"/></svg>Simpan ke Log</button>

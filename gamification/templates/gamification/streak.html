@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Streak — Suap.in{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'gamification/css/streak.css' %}">
+<link rel="stylesheet" href="{% static 'gamification/css/badges.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include 'gamification/partials/streak_icons.html' %}
+<div class="topbar">
+  <h1>Streak</h1>
+  <span class="chip streak"><svg class="i">
+      <use href="#i-flame" />
+    </svg>{{ streak }} Hari</span>
+  {% include 'partials/auth_status.html' %}
+</div>
+
+{% if user.is_authenticated %}
+<div class="raise streak-hero">
+  <div class="flame-orb {% if not streak %}cold{% endif %}">
+    <svg class="i" style="--current-streak: {{ streak }};">
+      <use href="#i-flame" />
+    </svg>
+    <span class="flame-num">{{ streak }}</span>
+  </div>
+  <div>
+    {% if scanned_today %}
+    <h2>Streak hari ini aman</h2>
+    <p>Kamu sudah scan makanan hari ini. Lanjut besok untuk menambah satu hari.</p>
+    {% elif streak %}
+    <h2>Scan satu makanan untuk menjaga streak</h2>
+    <p>Masih ada <span id="liveclock"></span> untuk scan dan menyelamatkan streak {{ streak }} harimu!</p>
+    {% else %}
+    <h2>Mulai streak pertamamu</h2>
+    <p>Scan satu makanan hari ini, lalu ulangi setiap hari.</p>
+    {% endif %}
+    {% if not scanned_today %}
+    <a href="{% url 'scanner:scan' %}" class="btn ok"><svg class="i">
+        <use href="#i-camera" />
+      </svg>Scan Makanan</a>
+    {% else %}
+    <a href="{% url 'scanner:daily_log' %}" class="btn ghost">Lihat riwayat hari ini</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="raise card">
+    <div class="sec-head">
+      <h2>Aktivitas pekan ini</h2><span>{{ week_done }}/7 hari aktif</span>
+    </div>
+    <div class="wk">
+      {% for d in week %}
+      <div class="wk-day">
+        {% include 'gamification/partials/date.html' with d=d %}
+        <small>{{ d.label }}</small>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="raise card">
+    <div class="stats" style="grid-template-columns:1fr;margin-bottom:22px">
+      <div class="stat"><b>{{ record }}</b><span>Rekor streak (hari)</span></div>
+    </div>
+    <div class="sec-head">
+      <h2>Target berikutnya</h2><span>{{ next_goal }} hari</span>
+    </div>
+    <div class="goal-row">
+      <div class="xp-track" role="progressbar" aria-label="Progres menuju target" aria-valuenow="{{ goal_percent }}"
+        aria-valuemin="0" aria-valuemax="100">
+        <div class="xp-fill" style="width:{{ goal_percent }}%"></div>
+      </div>
+      <b>{{ streak }}/{{ next_goal }}</b>
+    </div>
+    <p id="next-badge-text" class="authsub" style="margin:10px 0 0">Tinggal {{ days_left }} hari lagi untuk lencana: <strong></strong>.</p>
+  </div>
+</div>
+
+<div class="raise freeze-card">
+  <div class="freeze-ico">
+    <svg width="32" height="32" aria-hidden="true">
+      <use href="#i-snowflake"></use>
+    </svg>
+  </div>
+  <div>
+    <h3>Streak Freeze</h3>
+    <p>Kamu punya <strong>{{ freezes }}</strong> freeze. Satu freeze menjaga streak saat kamu melewatkan satu hari.</p>
+  </div>
+  <a href="{% url 'challenge:list' %}#/misi" class="btn ghost">Dapatkan dari misi</a>
+</div>
+
+<div class="raise card" style="margin-top:26px">
+
+  <div class="sec-head">
+    <h2>Lencana streak</h2><span id="badge-ratio">0/0 terbuka</span>
+  </div>
+
+  <!-- Loading State -->
+  <div id="loading" class="empty-state" style="display: none;">
+      <p>Memuat Lencana...</p>
+  </div>
+
+  <!-- Error State -->
+  <div id="error" class="empty-state" style="display: none;">
+      <p>Gagal memuat data lencana. Silakan coba lagi.</p>
+  </div>
+
+    <!-- Empty State -->
+  <div id="empty" class="empty-state" style="display: none;">
+      <p>Belum ada lencana.</p>
+  </div>
+  
+  <!-- Badges -->
+  <div id="grid" class="badges"></div>
+</div>
+
+{% else %}
+<div class="raise card" style="text-align:center">
+  <div class="mascot-wrap" id="mascotStreak" style="margin:0 auto 12px"></div>
+  <h2>Masuk untuk melihat streak</h2>
+  <p class="authsub">Streak tersimpan di akunmu.</p>
+  <a href="{% url 'authentication:login' %}" class="btn ok">Masuk</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    var slot = document.getElementById('mascotStreak');
+    var tpl = document.getElementById('mascot-tpl');
+    if (slot && tpl) slot.appendChild(tpl.content.cloneNode(true));
+  })();
+
+  const BASE_BADGE_ENDPOINT = "{% url 'gamification:get_badges_json' %}";
+  const gridContainer = document.getElementById('grid');
+  const loadingState = document.getElementById('loading');
+  const errorState = document.getElementById('error');
+  const emptyState = document.getElementById('empty');
+  let badgeAbortController;
+  let unlockedBadges = [];
+  let lockedBadges = [];
+
+  /* Rendering */
+  function renderBadges() {
+    gridContainer.innerHTML = '';
+    const items = unlockedBadges
+      .filter((item) => item.fields.type == 'streak_duration')
+      .sort((a, b) => a.fields.rarity - b.fields.rarity)
+
+    const lockedItems = lockedBadges
+      .filter((item) => item.fields.type == 'streak_duration')
+      .sort((a, b) => a.fields.rarity - b.fields.rarity)
+    
+    document.getElementById('badge-ratio').innerText = `${items.length}/${items.length + lockedItems.length}`;
+
+    document.getElementById('next-badge-text').innerText = lockedItems.length 
+    ? `Tinggal {{ days_left }} hari lagi untuk lencana: <strong>${lockedItems[0].fields.name}</strong>.'}`
+    : 'Semua lencana streak telah dikoleksi. Selamat!';
+    
+    items.forEach((item) => gridContainer.appendChild(createBadge(item, true)));
+    lockedItems.forEach((item) => gridContainer.appendChild(createBadge(item, false)));
+    
+      displayPageSection({ showGrid: true });
+  }
+
+  function createBadge(item, isUnlocked) {
+        const badgeCode = item.code;
+        const badge = item.fields;
+
+        const divElement = document.createElement('div');
+        divElement.classList.add('badge-i');
+        
+        const dateObtained = isUnlocked ? `\nDiperoleh pada tanggal: ${badge.earned_at}` : '';
+        divElement.title = `${badge.description}${dateObtained}`;
+
+        divElement.style.setProperty("--col", "var(--green-500)");
+        divElement.style.setProperty("--edge", "var(--green-700)");
+
+        const overlay = isUnlocked ? 'shine' : 'grayscaled';
+        divElement.innerHTML = `<div class="bi ${overlay} ${badge.material}"><svg class="i badge-icon"><use href="#i-${badge.icon}" /></svg></div>${badge.name}`;
+
+        return divElement;
+    }
+
+    function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false}) {
+        loadingState.style.display = showLoading ? 'block' : 'none';
+        errorState.style.display = showError ? 'block' : 'none';
+        emptyState.style.display = showEmpty ? 'block' : 'none';
+        gridContainer.style.display = showGrid ? 'flex' : 'none';
+    }
+
+  /* Data Fetching */
+  async function fetchBadges() {
+    if (badgeAbortController) badgeAbortController.abort();
+    badgeAbortController = new AbortController();
+
+    displayPageSection({ showLoading: true });
+
+    fetch(BASE_BADGE_ENDPOINT, {
+      headers: { 'Accept': 'application/json' },
+      signal: badgeAbortController.signal,
+    })
+      .then((response) => {
+        if (response.ok) return response.json();
+        else throw new Error('Failed to fetch data');
+      })
+      .then((data) => {
+        unlockedBadges = data.unlocked;
+        lockedBadges = data.locked;
+        renderBadges();
+      })
+      .catch((error) => {
+        if (error.name === 'AbortError') return;
+        displayPageSection({ showError: true });
+      });
+  }
+
+  fetchBadges();
+</script>
+<script type="module" src="{% static 'gamification/js/liveclock.js' %}"></script>
+{% endblock %}

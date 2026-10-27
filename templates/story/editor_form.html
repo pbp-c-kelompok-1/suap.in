@@ -1,0 +1,12 @@
+{% extends 'story/base_story.html' %}
+{% block title %}{{ heading }} — Suap.in{% endblock %}
+{% block story_content %}
+<div class="topbar"><h1>{{ heading }}</h1>{% include 'partials/auth_status.html' %}</div>
+<div class="story-editor-heading"><a class="link-sm" href="{% url 'story:manage' %}">← Kelola cerita</a><p>{{ explanation }}</p></div>
+<form method="post" class="raise card story-editor-form">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="story-error-list" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="row g-4">{% for field in form %}<div class="col-12 {% if field.name == 'speaker_one' or field.name == 'speaker_two' or field.name == 'position' or field.name == 'scene' or field.name == 'bab' or field.name == 'unlock_level' %}col-md-6{% endif %}"><div class="story-field {% if field.field.widget.input_type == 'checkbox' %}story-checkbox{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>{{ field }}{% if field.help_text %}<p class="story-help">{{ field.help_text }}</p>{% endif %}{% for error in field.errors %}<p class="story-error" role="alert">{{ error }}</p>{% endfor %}</div></div>{% endfor %}</div>
+  <div class="story-editor-actions"><button type="submit" class="btn ok">Simpan</button><a href="{% url 'story:manage' %}" class="btn ghost">Batal</a></div>
+</form>
+{% endblock %}

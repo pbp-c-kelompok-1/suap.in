@@ -1,0 +1,20 @@
+{% extends 'story/base_story.html' %}
+{% block title %}Story — Suap.in{% endblock %}
+{% block story_content %}
+<div class="topbar"><h1>Story</h1>{% include 'partials/auth_status.html' %}</div>
+<p class="ref-note">Ikuti Alya dan Tunas menelusuri cerita di balik setiap suapan.</p>
+{% include 'story/_subnav.html' with active='story' %}
+<div class="raise card story-progress">
+  <div class="story-spread"><div><p class="story-eyebrow">PERJALANANMU</p><h2>{{ user_title }}</h2></div><span class="chip lvl">Lv {{ user_level }}</span></div>
+  <div class="xp-track" role="progressbar" aria-label="Progres XP" aria-valuenow="{{ xp_percentage }}" aria-valuemin="0" aria-valuemax="100"><div class="xp-fill" style="width:{{ xp_percentage }}%"></div></div>
+  <p class="authsub">{% if next_level %}{{ xp_current }} / {{ xp_required }} XP · {{ xp_remaining }} XP lagi ke Level {{ next_level }}{% else %}Level maksimum tercapai. Semua bab sesuai levelmu sudah terbuka!{% endif %}</p>
+</div>
+<form method="get" class="story-filters" id="story-filters" role="search">
+  <div class="story-field"><label for="story-search">Cari cerita</label><input id="story-search" name="q" type="search" value="{{ query }}" maxlength="120" placeholder="Judul atau topik cerita…"></div>
+  <div class="story-field"><label for="story-status">Tampilkan bab</label><select id="story-status" name="status"><option value="all" {% if filter_status == 'all' %}selected{% endif %}>Semua bab</option><option value="unlocked" {% if filter_status == 'unlocked' %}selected{% endif %}>Sudah terbuka</option><option value="locked" {% if filter_status == 'locked' %}selected{% endif %}>Masih terkunci</option></select></div>
+  <button class="btn ghost" type="submit">Terapkan</button>
+</form>
+<p class="story-results" id="story-results" role="status" aria-live="polite">{{ comics|length }} bab ditemukan</p>
+<p id="story-filter-error" role="alert" hidden>Filter belum berhasil dimuat. Coba lagi atau gunakan tombol Terapkan.</p>
+<div id="story-grid">{% include 'story/_comic_grid.html' %}</div>
+{% endblock %}

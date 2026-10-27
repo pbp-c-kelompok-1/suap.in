@@ -7,5 +7,6 @@ urlpatterns = [
     path('', views.dashboard_view, name='dashboard'),
     path('streak/', views.streak_view, name='streak'),
     path('level/', views.level_view, name='level'),
-    path('story/', views.story_view, name='story'),
+    path('badges/', views.badges_view, name='badges'),
+    path('badges/api/', views.get_badge_json, name='get_badges_json')
 ]

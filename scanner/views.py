@@ -8,6 +8,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from social.community import create_post_from_scan
+
 from .forms import FoodScanForm
 from .models import CarbonBudget, FoodLog
 from .services import (
@@ -18,6 +20,7 @@ from .services import (
     get_carbon_status,
     match_food_items_to_db,
 )
+from gamification.services import record_scan
 
 SESSION_KEYS = ['scan_result', 'scan_raw', 'scan_photo', 'scan_photo_type']
 BOX_COLORS = ['#ec4899', '#3b82f6', '#eab308', '#a855f7', '#f97316', '#22c55e']
@@ -172,8 +175,9 @@ def save_log_view(request):
     raw_response = request.session.get('scan_raw', '')
     notes = result.get('notes', '')
 
+    logs = []
     for item in items:
-        FoodLog.objects.create(
+        log = FoodLog.objects.create(
             user=request.user,
             food_item=find_food_item(item['name']),
             custom_name=item['name'],
@@ -181,16 +185,27 @@ def save_log_view(request):
             ai_raw_response=raw_response,
             notes=notes,
         )
+        logs.append(log)
+
+    shared_post = create_post_from_scan(request, logs)
 
     total_co2 = sum(item['co2_grams'] for item in items)
     budget = get_today_budget(request.user)
     budget.used_grams += total_co2
     budget.save()
 
+    outcome = record_scan(request.user, xp=10 + len(items))
+
     for key in SESSION_KEYS:
         request.session.pop(key, None)
 
     messages.success(request, f'Log tersimpan! Total {total_co2:.0f}g CO₂ ditambahkan ke hari ini.')
+    if shared_post:
+        messages.info(request, 'Foto juga dibagikan ke Community.')
+    if outcome['leveled_up']:
+        messages.success(request, f"Level naik menjadi level {outcome['level']}!")
+    for badge in outcome['new_badges']:
+        messages.success(request, f"Lencana {badge.name} telah ditambahkan ke koleksi.")
     return redirect('scanner:daily_log')
 
 

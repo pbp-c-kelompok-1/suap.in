@@ -1,0 +1,223 @@
+/* ==== STREAK PAGE ==== */
+.streak-hero {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 28px;
+  align-items: center;
+  padding: 28px 32px;
+  margin-bottom:
+    26px;
+  position: relative;
+  overflow: hidden
+}
+
+.streak-hero::before {
+  content: "";
+  position: absolute;
+  right: -70px;
+  top: -70px;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245, 166, 35, .28), transparent 70%);
+  pointer-events: none
+}
+
+.flame-orb {
+  width: 168px;
+  height: 168px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  position: relative;
+  box-shadow: inset 9px 9px 18px var(--sh-d)
+}
+
+.flame-orb svg.i {
+  width: 84px;
+  height: 84px;
+  color: var(--warn);
+  fill: var(--warn);
+  stroke-width: 1.6;
+  animation: flame 0.9s ease-in-out infinite,
+             breathe 1s ease-in-out infinite alternate,
+             jitter max(calc(2s / var(--current-streak)), 0.15s) linear infinite;
+  transform-origin: 50% 90%
+}
+
+@keyframes breathe {
+  0% { filter: drop-shadow(0 0 4px #FFB000); }
+  100% { filter: drop-shadow(0 0 10px #FFB000); }
+}
+
+@keyframes jitter {
+  0%   { translate: 0 0; }
+  20%  { translate: -1px 1px; }
+  40%  { translate: 1px -1px; }
+  60%  { translate: -1px 0.5px; }
+  80%  { translate: 1px 1px; }
+  100% { translate: 0 0; }
+}
+
+.flame-orb.cold svg.i {
+  color: var(--text-2);
+  fill: var(--bg);
+  stroke: var(--text-2);
+  animation: none;
+  opacity: .55
+}
+
+.flame-num {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 64px;
+  text-align: center;
+  padding: 4px 16px;
+  border-radius: 99px;
+  background: var(--warn);
+  color: #fff;
+  font-family: 'Fredoka';
+  font-weight: 700;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 0 #B87400
+}
+
+.streak-hero h2 {
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
+  margin-bottom: 6px
+}
+
+.streak-hero p {
+  color: var(--text-2);
+  font-weight: 700;
+  max-width: 46ch;
+  margin-bottom: 18px
+}
+
+.wk {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  margin-top: 6px
+}
+
+.wk-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px
+}
+
+.wk-day small {
+  font-weight: 800;
+  color: var(--text-2);
+  font-size: .82rem
+}
+
+.dy {
+  width: 100%;
+  max-width: 52px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  background: var(--d-color);
+  color: var(--text-2);
+  box-shadow: inset 4px 4px 9px #0000005b
+}
+
+.dy svg.i {
+  width: 22px;
+  height: 22px
+}
+
+.wk-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  font-size: .82rem;
+  font-weight: 800;
+  color: var(--text-2)
+}
+
+.wk-legend i {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: -1px
+}
+
+.goal-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 6px 0 4px
+}
+
+.goal-row .xp-fill {
+  box-shadow: 0 0 12px rgba(245, 166, 35, .5);
+  background: linear-gradient(90deg, #FFC24D, var(--warn))
+}
+
+.goal-row b {
+  font-family: 'Fredoka';
+  white-space: nowrap
+}
+
+.freeze-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 22px 26px;
+  margin-top: 26px
+}
+
+.freeze-ico {
+  width: 56px;
+  height: 56px;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  font-size: 1.9rem;
+  color: #fff;
+  flex: none;
+  background: var(--blue-500);
+  box-shadow: 0 5px 0 var(--blue-700), 0 12px 18px rgba(47, 128, 237, .3)
+}
+
+.freeze-card h3 {
+  font-size: 1.15rem
+}
+
+.freeze-card p {
+  color: var(--text-2)
+}
+
+.freeze-card .btn {
+  margin-left: auto
+}
+
+@media (max-width:680px) {
+  .streak-hero {
+    grid-template-columns: 1fr;
+    text-align: center;
+    justify-items: center;
+    padding: 24px 20px
+  }
+
+  .freeze-card {
+    flex-wrap: wrap
+  }
+
+  .freeze-card .btn {
+    margin-left: 0;
+    width: 100%
+  }
+}

@@ -1,0 +1,5 @@
+<div class="tabs" role="tablist" aria-label="Navigasi story">
+  <a href="{% url 'story:story_list' %}" class="tab" role="tab" aria-selected="{% if active == 'story' %}true{% else %}false{% endif %}">Story</a>
+  <a href="{% url 'story:challenge_list' %}" class="tab" role="tab" aria-selected="{% if active == 'challenge' %}true{% else %}false{% endif %}">Tantangan 1v1</a>
+  {% if user.is_staff %}<a href="{% url 'story:manage' %}" class="tab" role="tab" aria-selected="{% if active == 'manage' %}true{% else %}false{% endif %}">Kelola cerita</a>{% endif %}
+</div>

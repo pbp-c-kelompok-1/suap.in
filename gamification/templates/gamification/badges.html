@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Lencana — Suap.in{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'gamification/css/badges.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include 'gamification/partials/query_icons.html' %}
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+    <symbol id="i-badge" viewBox="0 0 640 640" fill="currentColor">
+        <!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+        <path d="M341.9 38.1C328.5 29.9 311.6 29.9 298.2 38.1C273.8 53 258.7 57 230.1 56.4C214.4 56 199.8 64.5 192.2 78.3C178.5 103.4 167.4 114.5 142.3 128.2C128.5 135.7 120.1 150.4 120.4 166.1C121.1 194.7 117 209.8 102.1 234.2C93.9 247.6 93.9 264.5 102.1 277.9C117 302.3 121 317.4 120.4 346C120 361.7 128.5 376.3 142.3 383.9C164.4 396 175.6 406 187.4 425.4L138.7 522.5C132.8 534.4 137.6 548.8 149.4 554.7L235.4 597.7C246.9 603.4 260.9 599.1 267.1 587.9L319.9 492.8L372.7 587.9C378.9 599.1 392.9 603.5 404.4 597.7L490.4 554.7C502.3 548.8 507.1 534.4 501.1 522.5L452.5 425.3C464.2 405.9 475.5 395.9 497.6 383.8C511.4 376.3 519.8 361.6 519.5 345.9C518.8 317.3 522.9 302.2 537.8 277.8C546 264.4 546 247.5 537.8 234.1C522.9 209.7 518.9 194.6 519.5 166C519.9 150.3 511.4 135.7 497.6 128.1C472.5 114.4 461.4 103.3 447.7 78.2C440.2 64.4 425.5 56 409.8 56.3C381.2 57 366.1 52.9 341.7 38zM320 160C373 160 416 203 416 256C416 309 373 352 320 352C267 352 224 309 224 256C224 203 267 160 320 160z"/>
+    </symbol>
+</svg>
+<div class="topbar">
+    <h1>Lencana</h1>
+    {% if user.is_authenticated %}
+    <span class="chip lvl">
+        <svg class="i"><use href="#i-badge"/></svg><span id="badge-count">0</span> Dimiliki
+    </span>
+    {% endif %}
+    {% include 'partials/auth_status.html' %}
+</div>
+
+{% if user.is_authenticated %}
+<div class="raise card">
+    <div class="sec-head">
+        <h2>Koleksi lencana</h2><span id="badge-ratio">0/0</span>
+    </div>
+
+    <form id="badgeForm">
+        <div class="badge-actions">
+            <div class="dd">
+                <button type="button" class="btn ghost dd-btn" id="sortBtn" title="Urutkan" aria-label="Urutkan lencana"
+                    aria-haspopup="true" aria-expanded="false" aria-controls="sortPanel">
+                    <svg class="i">
+                        <use href="#i-sort" />
+                    </svg>
+                </button>
+                <div class="dd-panel" id="sortPanel" role="menu" hidden>
+                    <span class="dd-label">Urutkan</span>
+                    <button type="button" role="menuitemradio" aria-checked="false" data-sort="newest">Terbaru</button>
+                    <button type="button" role="menuitemradio" aria-checked="false" data-sort="oldest">Terlama</button>
+                    <button type="button" role="menuitemradio" aria-checked="false" data-sort="name-asc">Nama A–Z</button>
+                    <button type="button" role="menuitemradio" aria-checked="false" data-sort="name-desc">Nama Z–A</button>
+                    <button type="button" role="menuitemradio" aria-checked="false" data-sort="rarity-asc">Terlangka</button>
+                    <button type="button" role="menuitemradio" aria-checked="true" data-sort="rarity-desc">Terumum</button>
+                </div>
+            </div>
+
+            <div class="dd">
+                <button type="button" class="btn ghost dd-btn" id="filterBtn" title="Filter" aria-label="Filter lencana"
+                    aria-haspopup="true" aria-expanded="false" aria-controls="filterPanel">
+                    <svg class="i">
+                        <use href="#i-filter" />
+                    </svg>
+                </button>
+                <div class="dd-panel" id="filterPanel" role="menu" hidden>
+                    <span class="dd-label">Filter</span>
+                    <button type="button" role="menuitemradio" aria-checked="true" data-filter="all">Semua</button>
+                    <button type="button" role="menuitemradio" aria-checked="false" data-filter="streak_duration">Streak</button>
+                    <button type="button" role="menuitemradio" aria-checked="false" data-filter="scan_amount">Scan</button>
+                </div>
+            </div>
+
+            <div class="field" style="margin-bottom: 20px;">
+                <input type="text" name="searchQuery" placeholder="Telusuri lencana..." id="badgeSearch"
+                    autocomplete="off">
+            </div>
+        </div>
+    </form>
+
+    <!-- Loading State -->
+    <div id="loading" class="empty-state" style="display: none;">
+        <p>Memuat Lencana...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error" class="empty-state" style="display: none;">
+        <p>Gagal memuat data lencana. Silakan coba lagi.</p>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty" class="empty-state" style="display: none;">
+        <p>Tidak ada lencana yang sesuai penelusuran anda.</p>
+    </div>
+
+    <!-- Unlocked Badges -->
+    <div id="grid" class="badges" style="display: none; margin-bottom: 50px;"></div>
+
+    <div id="locked-badges-header" class="sec-head">
+        <span>Lencana terkunci</span>
+    </div>
+    
+    <!-- Locked Badges -->
+    <div id="grid2" class="badges grayscaled" style="display: none;"></div>
+
+</div>
+
+{% else %}
+<div class="raise card" style="text-align:center">
+    <div class="mascot-wrap" id="mascotBadges" style="margin:0 auto 12px"></div>
+    <h2>Masuk untuk melihat lencana</h2>
+    <p class="authsub">Lencanamu tersimpan di akunmu.</p>
+    <a href="{% url 'authentication:login' %}" class="btn ok">Masuk</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const BASE_BADGE_ENDPOINT = "{% url 'gamification:get_badges_json' %}";
+    const gridContainer = document.getElementById('grid');
+    const lockedBadgesHeader = document.getElementById('locked-badges-header');
+    const lockedGridContainer = document.getElementById('grid2')
+    const loadingState = document.getElementById('loading');
+    const errorState = document.getElementById('error');
+    const emptyState = document.getElementById('empty');
+    let badgeAbortController;
+
+    (function () {
+        var slot = document.getElementById('mascotBadges');
+        var tpl = document.getElementById('mascot-tpl');
+        if (slot && tpl) slot.appendChild(tpl.content.cloneNode(true));
+    })();
+
+    function createBadge(item, isUnlocked) {
+        const badgeCode = item.code;
+        const badge = item.fields;
+
+        const divElement = document.createElement('div');
+        divElement.classList.add('badge-i');
+        
+        const dateObtained = isUnlocked ? `\nDiperoleh pada tanggal: ${badge.earned_at}` : '';
+        divElement.title = `${badge.description}${dateObtained}`;
+
+        divElement.style.setProperty("--col", "var(--green-500)");
+        divElement.style.setProperty("--edge", "var(--green-700)");
+
+        const overlay = isUnlocked ? 'shine' : '';
+        divElement.innerHTML = `<div class="bi ${overlay} ${badge.material}"><svg class="i badge-icon"><use href="#i-${badge.icon}" /></svg></div>${badge.name}`;
+
+        return divElement;
+    }
+
+    const view = { sort: 'rarity-desc', filter: 'all', query: '' };
+    let unlockedBadges = [];
+    let lockedBadges = [];
+
+    const sortBtn = document.getElementById('sortBtn');
+    const filterBtn = document.getElementById('filterBtn');
+    const sortPanel = document.getElementById('sortPanel');
+    const filterPanel = document.getElementById('filterPanel');
+    const searchInput = document.getElementById('badgeSearch');
+
+    /* Filter & Sort Dropdowns */
+    function closeMenus() {
+        [[sortBtn, sortPanel], [filterBtn, filterPanel]].forEach(([btn, panel]) => {
+            panel.hidden = true;
+            btn.setAttribute('aria-expanded', 'false');
+        });
+    }
+
+    function toggleMenu(btn, panel) {
+        const toggle = panel.hidden;
+        closeMenus();
+        panel.hidden = !toggle;
+        btn.setAttribute('aria-expanded', String(toggle));
+    }
+
+    sortBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(sortBtn, sortPanel); });
+    filterBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(filterBtn, filterPanel); });
+    document.addEventListener('click', closeMenus);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(); });
+
+    function selectOption(panel, clicked) {
+        panel.querySelectorAll('[role="menuitemradio"]').forEach((b) => {
+            b.setAttribute('aria-checked', String(b === clicked));
+        });
+    }
+
+    sortPanel.addEventListener('click', (e) => {
+        const item = e.target.closest('[data-sort]');
+        if (!item) return;
+        e.stopPropagation();
+        view.sort = item.dataset.sort;
+        selectOption(sortPanel, item);
+        closeMenus();
+        renderBadges();
+    });
+
+    filterPanel.addEventListener('click', (e) => {
+        const item = e.target.closest('[data-filter]');
+        if (!item) return;
+        e.stopPropagation();
+        view.filter = item.dataset.filter;
+        selectOption(filterPanel, item);
+        filterBtn.classList.toggle('active', view.filter !== 'all');
+        closeMenus();
+        renderBadges();
+    });
+
+    searchInput.addEventListener('input', () => { view.query = searchInput.value; renderBadges(); });
+    document.getElementById('badgeForm').addEventListener('submit', (e) => e.preventDefault());
+
+    /* Rendering */
+    function renderBadges() {
+        const q = view.query.trim().toLowerCase();
+        const time = (item) => Date.parse(item.fields.earned_at_raw) || 0;
+
+        const items = unlockedBadges
+            .filter((item) => view.filter === 'all' || item.fields.type === view.filter)
+            .filter((item) => !q || item.fields.name.toLowerCase().includes(q))
+            .sort((a, b) => {
+                switch (view.sort) {
+                    case 'newest': return time(b) - time(a);
+                    case 'oldest': return time(a) - time(b);
+                    case 'name-asc': return a.fields.name.localeCompare(b.fields.name, 'id');
+                    case 'name-desc': return b.fields.name.localeCompare(a.fields.name, 'id');
+                    case 'rarity-asc': return b.fields.rarity - a.fields.rarity;
+                    case 'rarity-desc': return a.fields.rarity - b.fields.rarity;
+                    default: return b.fields.rarity - a.fields.rarity;
+                }
+            });
+
+        gridContainer.innerHTML = '';
+        items.forEach((item) => gridContainer.appendChild(createBadge(item, true)));
+
+        // Locked Badges
+        const lockedItems = lockedBadges
+            .filter((item) => view.filter === 'all' || item.fields.type === view.filter)
+            .filter((item) => !q || item.fields.name.toLowerCase().includes(q))
+            .sort((a, b) => {
+                switch (view.sort) {
+                    case 'name-asc': return a.fields.name.localeCompare(b.fields.name, 'id');
+                    case 'name-desc': return b.fields.name.localeCompare(a.fields.name, 'id');
+                    case 'rarity-asc': return b.fields.rarity - a.fields.rarity;
+                    case 'rarity-desc': return a.fields.rarity - b.fields.rarity;
+                    default: return b.fields.rarity - a.fields.rarity;
+                }
+            });
+        
+        lockedGridContainer.innerHTML = '';
+        lockedItems.forEach((item) => lockedGridContainer.appendChild(createBadge(item, false)));
+        
+        displayPageSection({ showGrid: items.length, showLockedGrid: lockedItems.length });
+        document.getElementById('badge-count').innerText = `${unlockedBadges.length}`;
+        document.getElementById('badge-ratio').innerText = `${unlockedBadges.length}/${unlockedBadges.length + lockedBadges.length}`;
+
+        // Empty state
+        if (!items.length && !lockedItems.length) {
+            displayPageSection({ showEmpty: true });
+            return;
+        }
+    }
+
+    /* Data Fetching */
+    async function fetchBadges() {
+        if (badgeAbortController) badgeAbortController.abort();
+        badgeAbortController = new AbortController();
+
+        displayPageSection({ showLoading: true });
+
+        fetch(BASE_BADGE_ENDPOINT, {
+            headers: { 'Accept': 'application/json' },
+            signal: badgeAbortController.signal,
+        })
+            .then((response) => {
+                if (response.ok) return response.json();
+                else throw new Error('Failed to fetch data');
+            })
+            .then((data) => {
+                unlockedBadges = data.unlocked;
+                lockedBadges = data.locked;
+                renderBadges();
+            })
+            .catch((error) => {
+                if (error.name === 'AbortError') return;
+                displayPageSection({ showError: true });
+            });
+    }
+
+    function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false, showLockedGrid = false}) {
+        loadingState.style.display = showLoading ? 'block' : 'none';
+        errorState.style.display = showError ? 'block' : 'none';
+        emptyState.style.display = showEmpty ? 'block' : 'none';
+
+        gridContainer.style.display = showGrid ? 'flex' : 'none';
+        lockedBadgesHeader.style.display = showLockedGrid ? 'block' : 'none';
+        lockedGridContainer.style.display = showLockedGrid ? 'flex' : 'none';
+    }
+
+    fetchBadges();
+</script>
+{% endblock %}
