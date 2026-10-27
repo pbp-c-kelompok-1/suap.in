@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from django.test import TestCase
 from django.contrib.auth.models import User
 
@@ -12,7 +14,7 @@ def make_logs(user, count):
         FoodLog.objects.create(user=user, custom_name=f'Item {i}', co2_grams=100)
 
 
-class LevelCalculationTests(TestCase):
+class LevelServiceTests(TestCase):
     def test_xp_needed(self):
         self.assertEqual(services.xp_needed(1), 60)
         self.assertEqual(services.xp_needed(5), 100)
@@ -45,7 +47,7 @@ class LevelCalculationTests(TestCase):
         self.assertEqual(services.next_tier(10), (20, 'Guardian Bumi'))
         self.assertIsNone(services.next_tier(35))
 
-class XpTests(TestCase):
+class XpServiceTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('burhan', password='burunghantu123')
  
@@ -88,3 +90,100 @@ class XpTests(TestCase):
         services.award_xp(self.user, 50)
         services.award_xp(self.user, -30)
         self.assertEqual(services.get_profile(self.user).total_xp, 50)
+
+class StreakTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('burhan', password='burunghantu123')
+        self.today = date(2026, 6, 7)
+ 
+    def profile(self):
+        return GameProfile.objects.get(user=self.user)
+
+    # Updating Streaks
+    def test_update_streak_starts_streak(self):
+        profile = services.update_streak(self.user, self.today)
+        self.assertEqual(profile.current_streak, 1)
+        self.assertEqual(profile.record_streak, 1)
+        self.assertEqual(profile.last_activity_date, self.today)
+ 
+    def test_update_streak_twice_does_not_increments_streak(self):
+        services.update_streak(self.user, self.today)
+        services.update_streak(self.user, self.today)
+        self.assertEqual(self.profile().current_streak, 1)
+ 
+    def test_update_streak_on_consecutive_days_increments_streak(self):
+        services.update_streak(self.user, self.today)
+        services.update_streak(self.user, self.today + timedelta(days=1))
+        profile = services.update_streak(self.user, self.today + timedelta(days=2))
+        self.assertEqual(profile.current_streak, 3)
+        self.assertEqual(profile.record_streak, 3)
+
+    def test_streak_record(self):
+        services.update_streak(self.user, self.today)
+        services.update_streak(self.user, self.today + timedelta(days=1))
+        profile = services.update_streak(self.user, self.today + timedelta(days=4))
+        self.assertEqual(profile.current_streak, 1)
+        self.assertEqual(profile.record_streak, 2)
+
+    # Streak Freeze
+    def test_freeze_covers_one_day(self):
+        services.update_streak(self.user, self.today)
+        GameProfile.objects.filter(user=self.user).update(streak_freezes=1)
+        profile = services.update_streak(self.user, self.today + timedelta(days=2))
+        self.assertEqual(profile.streak_freezes, 0)
+        self.assertEqual(profile.current_streak, 3)
+ 
+    def test_not_enough_freezes_resets_streak(self):
+        services.update_streak(self.user, self.today)
+        GameProfile.objects.filter(user=self.user).update(streak_freezes=1)
+        profile = services.update_streak(self.user, self.today + timedelta(days=3))
+        self.assertEqual(profile.current_streak, 1)
+        self.assertEqual(profile.streak_freezes, 1)
+
+    # Effective Streak
+    def test_effective_streak_without_activity(self):
+        profile = services.get_profile(self.user)
+        self.assertEqual(services.effective_streak(profile, self.today), 0)
+ 
+    def test_effective_streak_when_alive_and_broken(self):
+        services.update_streak(self.user, self.today)
+        profile = self.profile()
+        self.assertEqual(services.effective_streak(profile, self.today), 1)
+        self.assertEqual(services.effective_streak(profile, self.today + timedelta(days=1)), 1)
+        self.assertEqual(services.effective_streak(profile, self.today + timedelta(days=3)), 0)
+ 
+    def test_effective_streak_protected_by_freezes(self):
+        services.update_streak(self.user, self.today)
+        GameProfile.objects.filter(user=self.user).update(streak_freezes=2)
+        profile = self.profile()
+        self.assertEqual(services.effective_streak(profile, self.today + timedelta(days=3)), 1)
+
+    # Streak Freeze Claiming
+    def test_claim_success(self):
+        success, message = services.claim_streak_freeze(self.user, self.today)
+        self.assertTrue(success)
+        self.assertEqual(message, '')
+        profile = services.get_profile(self.user)
+        self.assertEqual(profile.streak_freezes, 1)
+        self.assertEqual(profile.freezes_claimed_this_week, 1)
+ 
+    def test_claim_fail_due_to_weekly_limit(self):
+        services.claim_streak_freeze(self.user, self.today)
+        services.claim_streak_freeze(self.user, self.today)
+        success, message = services.claim_streak_freeze(self.user, self.today)
+        self.assertFalse(success)
+        self.assertIn('Batas klaim', message)
+ 
+    def test_claim_fail_due_to_max_freezes_in_inventory(self):
+        GameProfile.objects.create(user=self.user, streak_freezes=services.MAX_STORED_FREEZES)
+        success, message = services.claim_streak_freeze(self.user, self.today)
+        self.assertFalse(success)
+        self.assertIn('maksimal', message)
+ 
+    def test_weekly_limit_resets_next_week(self):
+        services.claim_streak_freeze(self.user, self.today)
+        services.claim_streak_freeze(self.user, self.today)
+        GameProfile.objects.filter(user=self.user).update(streak_freezes=0)
+        success, _ = services.claim_streak_freeze(self.user, self.today + timedelta(days=7))
+        self.assertTrue(success)
+        self.assertEqual(services.get_profile(self.user).freezes_claimed_this_week, 1)
