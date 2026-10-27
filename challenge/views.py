@@ -3,10 +3,10 @@ from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-
 from scanner.models import FoodLog, CarbonBudget
 
 from .models import ChallengeProfile
@@ -114,11 +114,7 @@ def claim_freeze_view(request):
 
 @login_required
 def weekly_report_view(request):
-    return render(request, 'coming_soon.html', {
-        'title': 'Ringkasan Mingguan',
-        'icon': 'log',
-        'description': 'Rekap CO₂, perbandingan minggu lalu, dan proyeksi tahunan.',
-    })
+    return redirect(f"{reverse('challenge:list')}#/laporan")
 
 
 @login_required
