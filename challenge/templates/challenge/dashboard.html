@@ -2,7 +2,7 @@
 
 {% block content %}
     {{ challenge_data|json_script:"suapin-data" }}
-    <div id="suapin-cfg" hidden
+    <div id="suapin-cfg" data-save-profile="{% url 'challenge:save_profile' %}" hidden
          data-scan="{% url 'scanner:scan' %}"
          data-friends="{% url 'social:friends' %}"
          data-campus="{% url 'social:choose_campus' %}"

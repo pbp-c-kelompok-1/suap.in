@@ -5,7 +5,7 @@ import { TOTAL, avName, avatarIcon, avatarSvg, isLocked, isSp, levelReq, tabKey 
 import { confetti, toast } from './fx.js';
 import { mountMascots } from './mascot.js';
 import { renderRank } from './laporan.js';
-import { fmt, state } from './state.js';
+import { fmt, state, urls } from './state.js';
 
 const BADGE_STYLE = {
   scan_amount: { icon: 'camera', col: 'var(--green-500)', edge: 'var(--green-700)' },
@@ -113,20 +113,47 @@ $('#cancelProfile').addEventListener('click', () => {
   renderProfile();                /* input diisi ulang dari state */
 });
 
-$('#saveProfile').addEventListener('click', () => {
+/* Kirim avatar + nama + bio ke server dalam satu request. */
+async function persistProfile(payload) {
+  const res = await fetch(urls.saveProfile, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': urls.csrf || '' },
+    credentials: 'same-origin',
+    body: JSON.stringify(payload),
+  });
+  let data = {};
+  try { data = await res.json(); } catch { /* respons bukan JSON */ }
+  if (!res.ok || !data.ok) throw new Error(data.message || 'Gagal menyimpan profil.');
+  return data;
+}
+
+$('#saveProfile').addEventListener('click', async () => {
   if (isLocked(state.pending)) return;
+  const btn = $('#saveProfile');
   const avatarChanged = state.pending !== state.avatar;
+  const payload = {
+    avatar: state.pending,
+    name: $('#pName').value.trim() || state.profile.name,
+    bio: $('#pBio').value.trim(),
+  };
 
-  /* Persistence ke database menunggu endpoint dari branch teman:
-     kirim avatar + nama + bio dalam SATU request di sini. */
-  state.profile.name = $('#pName').value.trim() || state.profile.name;
-  state.profile.bio = $('#pBio').value.trim();
-  state.avatar = state.pending;
+  btn.disabled = true;
+  try {
+    const saved = await persistProfile(payload);
+    state.profile.name = saved.name;
+    state.profile.bio = saved.bio;
+    state.avatar = saved.avatar;
 
-  setProfileEditing(false);
-  mountMascots(); renderProfile(); renderRank();
-  if (avatarChanged) confetti(50, $('#avBig'));
-  toast('Profil disimpan', 'check');
+    setProfileEditing(false);
+    mountMascots(); renderProfile(); renderRank();
+    if (avatarChanged) confetti(50, $('#avBig'));
+    toast('Profil disimpan', 'check');
+  } catch (err) {
+    /* tetap di mode edit supaya perubahan tidak hilang */
+    toast(err.message || 'Gagal menyimpan profil.', 'alert');
+  } finally {
+    btn.disabled = isLocked(state.pending);
+  }
 });
 
 $('#pBio').addEventListener('input', () => { $('#bioCount').textContent = `${$('#pBio').value.length}/80`; });
