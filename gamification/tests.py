@@ -3,6 +3,8 @@ from datetime import date, timedelta
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.contrib.auth.models import User
+from django.urls import reverse
+from django.utils import timezone
 
 from gamification.models import *
 from scanner.models import FoodLog
@@ -289,3 +291,154 @@ class ScannerInteractionTests(TestCase):
         self.assertTrue(output['leveled_up'])
         self.assertEqual(output['level'], 2)
 
+class DashboardViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('burhan', password='burunghantu123')
+        self.url = reverse('gamification:dashboard')
+ 
+    def test_guest_sees_landing(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Daftar gratis')
+ 
+    def test_authenticated_context_for_new_user(self):
+        self.client.login(username='burhan', password='burunghantu123')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['streak'], 0)
+        self.assertFalse(response.context['scanned_today'])
+        self.assertEqual(response.context['level'], 1)
+        self.assertEqual(response.context['tier_name'], 'Pemula Sadar')
+        self.assertEqual(response.context['used_grams'], 0.0)
+ 
+    def test_context_after_record_scan(self):
+        self.client.login(username='burhan', password='burunghantu123')
+        services.record_scan(self.user, xp=10)
+        response = self.client.get(self.url)
+        self.assertTrue(response.context['scanned_today'])
+        self.assertEqual(response.context['streak'], 1)
+
+class StreakViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('burhan', password='burunghantu123')
+        self.url = reverse('gamification:streak')
+ 
+    def test_guest_gets_page(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Masuk untuk melihat streak')
+ 
+    def test_week_widget(self):
+        self.client.login(username='burhan', password='burunghantu123')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['streak'], 0)
+        self.assertEqual(len(response.context['week']), 7)
+        self.assertEqual(response.context['next_goal'], services.STREAK_MILESTONES[0])
+        self.assertEqual(response.context['week_done'], 0)
+ 
+    def test_week_widget_done_mark_if_scanned_today(self):
+        self.client.login(username='burhan', password='burunghantu123')
+        make_logs(self.user, 1)
+        services.update_streak(self.user)
+        response = self.client.get(self.url)
+        self.assertEqual(response.context['streak'], 1)
+        self.assertTrue(response.context['scanned_today'])
+        self.assertEqual(response.context['week_done'], 1)
+        today_entry = next(d for d in response.context['week'] if d['is_today'])
+        self.assertEqual(today_entry['state'], 'done')
+        self.assertEqual(response.context['days_left'], services.STREAK_MILESTONES[0] - 1)
+ 
+    def test_next_goal(self):
+        self.client.login(username='burhan', password='burunghantu123')
+        today = timezone.localdate()
+        GameProfile.objects.create(user=self.user, current_streak=7, record_streak=7, last_activity_date=today)
+        response = self.client.get(self.url)
+        self.assertEqual(response.context['next_goal'], 14)
+        self.assertEqual(response.context['goal_percent'], 50)
+
+class LevelViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('burhan', password='burunghantu123')
+        self.url = reverse('gamification:level')
+ 
+    def test_guest_gets_page(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Masuk untuk melihat level')
+ 
+    def test_new_user_tiers(self):
+        self.client.login(username='burhan', password='burunghantu123')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+
+        tiers = response.context['tiers']
+
+        self.assertEqual(len(tiers), len(services.TIERS))
+        self.assertEqual(tiers[0]['state'], 'current')
+        self.assertEqual([t['state'] for t in tiers[1:]], ['locked'] * 3)
+        self.assertEqual(response.context['tier_name'], 'Pemula Sadar')
+        self.assertEqual(response.context['reached_count'], 1)
+        self.assertEqual(response.context['xp_to_next'], 60)
+ 
+    def test_high_level_marks_lower_tiers_reached(self):
+        self.client.login(username='burhan', password='burunghantu123')
+        GameProfile.objects.create(user=self.user, level=22, total_xp=services.xp_floor(22))
+        response = self.client.get(self.url)
+        states = [t['state'] for t in response.context['tiers']]
+
+        self.assertEqual(states, ['reached', 'reached', 'current', 'locked'])
+        self.assertEqual(response.context['tier_name'], 'Guardian Bumi')
+        self.assertEqual(response.context['tiers'][3]['levels_left'], 13)
+ 
+    def test_max_level(self):
+        self.client.login(username='burhan', password='burunghantu123')
+        GameProfile.objects.create(user=self.user, level=services.MAX_LEVEL)
+        response = self.client.get(self.url)
+        self.assertTrue(response.context['is_max_level'])
+        self.assertEqual(response.context['xp_to_next'], 0)
+
+
+class BadgeViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('burhan', password='burunghantu123')
+        self.api = reverse('gamification:get_badges_json')
+ 
+    def test_badges_page_opens_for_guest(self):
+        self.assertEqual(self.client.get(reverse('gamification:badges')).status_code, 200)
+ 
+    def test_api_requires_login(self):
+        response = self.client.get(self.api)
+        self.assertEqual(response.status_code, 401)
+        self.assertIn('error', response.json())
+ 
+    def test_api_all_badges_locked_for_new_user(self):
+        self.client.login(username='burhan', password='burunghantu123')
+        data = self.client.get(self.api).json()
+        total = len(services.STREAK_MILESTONES) + len(services.SCAN_MILESTONES)
+        self.assertEqual(data['unlocked'], [])
+        self.assertEqual(len(data['locked']), total)
+ 
+    def test_api_moves_earned_badge_to_unlocked(self):
+        self.client.login(username='burhan', password='burunghantu123')
+        make_logs(self.user, 5)
+
+        data = self.client.get(self.api).json()
+        unlocked = {badge['code']: badge for badge in data['unlocked']}
+
+        self.assertEqual(list(unlocked), ['5-scans'])
+        fields = unlocked['5-scans']['fields']
+        self.assertEqual(fields['type'], 'scan_amount')
+        self.assertEqual(fields['material'], 'bronze')
+        self.assertEqual(fields['rarity'], 0)
+        self.assertIn('earned_at', fields)
+
+        self.assertNotIn('5-scans', [b['code'] for b in data['locked']])
+ 
+    def test_badges_page_awards_pending_badges(self):
+        self.client.login(username='burhan', password='burunghantu123')
+        services.seedBadges()
+        make_logs(self.user, 5)
+        self.client.get(reverse('gamification:badges'))
+        
+        self.assertTrue(UserBadge.objects.filter(user=self.user, badge__code='5-scans').exists())
