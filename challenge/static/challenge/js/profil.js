@@ -24,7 +24,6 @@ function setProfileEditing(editing) {
   $('#pName').disabled = !editing;
   $('#pBio').disabled = !editing;
   $('#avShuffle').disabled = !editing;
-  $('#avDemo').disabled = !editing;
   $('#editProfile').hidden = editing;
   $('#cancelProfile').hidden = !editing;
   $('#saveProfile').hidden = !editing;
@@ -144,13 +143,6 @@ $('#avShuffle').addEventListener('click', () => {
   const pool = Array.from({ length: TOTAL }, (_, i) => i).filter(i => !isLocked(i) && i !== state.pending);
   if (!pool.length) return;
   state.pending = pool[Math.floor(Math.random() * pool.length)]; state.pTab = tabKey(state.pending); renderProfile();
-});
-$('#avDemo').addEventListener('click', e => {
-  if (!editingProfile) return;
-  state.demoUnlock = !state.demoUnlock;
-  const b = e.currentTarget; b.setAttribute('aria-pressed', state.demoUnlock);
-  b.querySelector('span').textContent = state.demoUnlock ? 'Mode demo: semua terbuka' : 'Buka semua (demo)';
-  renderProfile();
 });
 
 /* kondisi awal: mode lihat */
