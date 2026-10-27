@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.contrib.auth.models import User
 
@@ -13,6 +14,39 @@ def make_logs(user, count):
     for i in range(count):
         FoodLog.objects.create(user=user, custom_name=f'Item {i}', co2_grams=100)
 
+class GamificationModelTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('burhan', password='burunghantu123')
+
+    def test_defaults(self):
+        profile = GameProfile.objects.create(user=self.user)
+        self.assertEqual(profile.level, 1)
+        self.assertEqual(profile.total_xp, 0)
+        self.assertEqual(profile.streak_freezes, 0)
+        self.assertIn('Lvl 1', str(profile))
+    
+    def test_get_profile_creates_one_profile(self):
+        first = services.get_profile(self.user)
+        second = services.get_profile(self.user)
+
+        self.assertEqual(first.pk, second.pk)
+        self.assertEqual(GameProfile.objects.filter(user=self.user).count(), 1)
+
+    def test_level_check_constraints(self):
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                GameProfile.objects.create(user=self.user, level=0)
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                GameProfile.objects.create(user=self.user, level=67)
+
+    def test_unique_user_badges(self):
+        badge = Badge.objects.create(code='dummy', name='dummy', threshold=67)
+        UserBadge.objects.create(user=self.user, badge=badge)
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                UserBadge.objects.create(user=self.user, badge=badge)
 
 class LevelServiceTests(TestCase):
     def test_xp_needed(self):
@@ -50,14 +84,6 @@ class LevelServiceTests(TestCase):
 class XpServiceTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('burhan', password='burunghantu123')
- 
-    def test_get_profile_creates_one_profile(self):
-        first = services.get_profile(self.user)
-        second = services.get_profile(self.user)
-
-        self.assertEqual(first.pk, second.pk)
-        self.assertEqual(GameProfile.objects.filter(user=self.user).count(), 1)
-        self.assertEqual((first.level, first.total_xp), (1, 0))
  
     def test_xp_progress(self):
         profile = services.get_profile(self.user)
@@ -243,3 +269,23 @@ class BadgeTests(TestCase):
         services.check_badges(self.user)
         self.assertEqual(services.check_badges(self.user), [])
         self.assertEqual(UserBadge.objects.filter(user=self.user).count(), 1)
+
+class ScannerInteractionTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('burhan', password='burunghantu123')
+        services.seedBadges()
+
+    def test_record_scan_output(self):
+        make_logs(self.user, 5)
+        output = services.record_scan(self.user, 12)
+        self.assertEqual(output['xp_gained'], 12)
+        self.assertEqual(output['streak'], 1)
+        self.assertEqual(output['level'], 1)
+        self.assertFalse(output['leveled_up'])
+        self.assertEqual([badge.code for badge in output['new_badges']], ['5-scans'])
+
+    def test_record_scan_can_level_up(self):
+        output = services.record_scan(self.user, 60)
+        self.assertTrue(output['leveled_up'])
+        self.assertEqual(output['level'], 2)
+
