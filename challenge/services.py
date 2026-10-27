@@ -4,7 +4,7 @@ from datetime import timedelta
 from django.utils import timezone
 
 from scanner.models import FoodLog, CarbonBudget
-from gamification.models import GameProfile
+from gamification.models import Badge, GameProfile, UserBadge
 
 from gamification import services as game
 
@@ -187,13 +187,34 @@ def build_challenge_data(user, claimed_today=False):
         for i in range(7)
     ]
 
-    total_scans = FoodLog.objects.filter(user=user).count()
+    user_logs = FoodLog.objects.filter(user=user)
+    total_scans = user_logs.count()
     from .models import ChallengeProfile
     profile = ChallengeProfile.objects.filter(user=user).first()
 
     game_profile = game.get_profile(user)
     prog = game.xp_progress(game_profile)
     rank_data = build_rankings(user)
+
+    # Tampilkan statistik profil dari data tersimpan, bukan placeholder.
+    budget_rows = CarbonBudget.objects.filter(user=user, used_grams__gt=0)
+    below_budget_grams = sum(
+        max(0, row.budget_grams - row.used_grams)
+        for row in budget_rows
+    )
+    earned_badge_ids = set(
+        UserBadge.objects.filter(user=user).values_list('badge_id', flat=True)
+    )
+    badges = [
+        {
+            'id': badge.id,
+            'name': badge.name,
+            'type': badge.criteria_type,
+            'desc': badge.description,
+            'earned': badge.id in earned_badge_ids,
+        }
+        for badge in Badge.objects.all().order_by('criteria_type', 'threshold', 'name')
+    ]
 
     return {
         "user": {
@@ -232,9 +253,9 @@ def build_challenge_data(user, claimed_today=False):
         "notifs": [],
         "stats": {
             "scans": total_scans,
-            "recordStreak": 0,
-            "avoidedKg": 0,
+            "recordStreak": game_profile.record_streak,
+            "avoidedKg": kg(below_budget_grams),
             "campusRank": rank_data["campusRank"],
         },
-        "badges": [],
+        "badges": badges,
     }
