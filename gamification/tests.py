@@ -187,3 +187,59 @@ class StreakTests(TestCase):
         success, _ = services.claim_streak_freeze(self.user, self.today + timedelta(days=7))
         self.assertTrue(success)
         self.assertEqual(services.get_profile(self.user).freezes_claimed_this_week, 1)
+
+class BadgeTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('burhan', password='burunghantu123')
+        services.seedBadges()
+
+    # Material
+    def test_material_for_scans(self):
+        self.assertEqual(services.badge_material_from_threshold('scan_amount', 5), 'bronze')
+        self.assertEqual(services.badge_material_from_threshold('scan_amount', 50), 'silver')
+        self.assertEqual(services.badge_material_from_threshold('scan_amount', 250), 'gold')
+ 
+    def test_material_for_streaks(self):
+        self.assertEqual(services.badge_material_from_threshold('streak_duration', 7), 'bronze')
+        self.assertEqual(services.badge_material_from_threshold('streak_duration', 30), 'silver')
+        self.assertEqual(services.badge_material_from_threshold('streak_duration', 180), 'gold')
+ 
+    def test_material_for_unknown_criteria(self):
+        self.assertEqual(services.badge_material_from_threshold('unknown', 5), '')
+
+    # Rarity
+    def test_rarity(self):
+        self.assertEqual(services.badge_rarity('scan_amount', 10), 0)
+        self.assertEqual(services.badge_rarity('scan_amount', 100), 1)
+        self.assertEqual(services.badge_rarity('scan_amount', 500), 2)
+        self.assertEqual(services.badge_rarity('streak_duration', 7), 0)
+        self.assertEqual(services.badge_rarity('streak_duration', 30), 1)
+        self.assertEqual(services.badge_rarity('streak_duration', 365), 2)
+
+    def test_rarity_for_unknown_criteria(self):
+        self.assertEqual(services.badge_rarity('unknown', 0), 0)
+
+    def test_badge_seeding_seeds_all_badges(self):
+        expected = len(services.STREAK_MILESTONES) + len(services.SCAN_MILESTONES)
+        self.assertEqual(Badge.objects.count(), expected)
+ 
+    def test_badge_seeding_twice_shouldnt_change(self):
+        before = Badge.objects.count()
+        services.seedBadges()
+        self.assertEqual(Badge.objects.count(), before)
+
+    def test_no_badges_unlocked(self):
+        self.assertEqual(services.check_badges(self.user), [])
+        self.assertEqual(UserBadge.objects.filter(user=self.user).count(), 0)
+
+    def test_badge_being_rewarded(self):
+        make_logs(self.user, 5)
+        unlocked_badges = services.check_badges(self.user)
+        self.assertEqual([badge.code for badge in unlocked_badges], ['5-scans'])
+        self.assertTrue(UserBadge.objects.filter(user=self.user, badge__code='5-scans').exists())
+
+    def test_no_duplicate_badges(self):
+        make_logs(self.user, 5)
+        services.check_badges(self.user)
+        self.assertEqual(services.check_badges(self.user), [])
+        self.assertEqual(UserBadge.objects.filter(user=self.user).count(), 1)
