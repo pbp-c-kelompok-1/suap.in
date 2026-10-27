@@ -1,0 +1,22 @@
+{% extends 'story/base_story.html' %}
+
+{% block title %}
+    Hapus Konten — Suap.in
+{% endblock %}
+
+{% block story_content %}
+    <div class="topbar">
+        <h1>Hapus konten?</h1>
+        {% include 'partials/auth_status.html' %}
+    </div>
+    <div class="raise card story-editor-form">
+        <h2>{{ item }}</h2>
+        <p class="story-editor-alert">{{ explanation }}</p>
+        <form method="post">{% csrf_token %}
+            <div class="story-editor-actions">
+                <button class="btn story-danger" type="submit">Ya, hapus</button>
+                <a class="btn ghost" href="{% url 'story:manage' %}">Batal</a>
+            </div>
+        </form>
+    </div>
+{% endblock %}

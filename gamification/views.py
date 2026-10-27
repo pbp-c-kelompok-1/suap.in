@@ -2,10 +2,11 @@ import json
 
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.utils import timezone
 
+from gamification.models import Badge, GameProfile, UserBadge
 from scanner.models import CarbonBudget, FoodLog
 from scanner.services import calculate_carbon_analogy, get_carbon_status
-
 from .services import *
 from challenge.views import DEFAULT_BUDGET_GRAMS, week_totals_by_day
 
@@ -77,9 +78,9 @@ def dashboard_view(request):
     return render(request, 'gamification/dashboard.html', context)
 
 
-
 DAY_ABBR = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
 STATE_LABEL = {'done': 'ada scan', 'missed': 'terlewat', 'freeze': 'freeze', 'empty_day': 'belum'}
+
 
 def streak_view(request):
     context = {}
@@ -87,13 +88,13 @@ def streak_view(request):
         gp = get_profile(request.user)
         today = timezone.localdate()
         streak = effective_streak(gp, today)
- 
+
         start = today - timedelta(days=today.weekday())
         scanned = {
             timezone.localtime(log.scanned_at).date()
             for log in FoodLog.objects.filter(user=request.user, scanned_at__date__gte=start)
         }
- 
+
         # Hari yang dilindungi freeze: streak = rangkaian hari berurutan yang berakhir
         # di last_activity_date (hari freeze ikut dihitung di update_streak),
         # jadi hari tanpa scan di dalam rangkaian itu pasti hari freeze.
@@ -103,7 +104,7 @@ def streak_view(request):
             covered = {last - timedelta(days=i) for i in range(gp.current_streak)}
             # Hari yang terlewat sejak scan terakhir akan ditutup freeze saat scan berikutnya
             covered |= {last + timedelta(days=i) for i in range(1, (today - last).days)}
- 
+
         week = []
         for i in range(7):
             d = start + timedelta(days=i)
@@ -117,7 +118,7 @@ def streak_view(request):
                 state = 'empty_day'
             week.append({'label': DAY_ABBR[d.weekday()], 'state': state,
                          'state_label': STATE_LABEL[state], 'is_today': d == today})
- 
+
         next_goal = next((m for m in STREAK_MILESTONES if m > streak), STREAK_MILESTONES[-1])
         context = {
             'streak': streak,
@@ -194,7 +195,6 @@ def get_badge_json(request):
                 'rarity': badge_rarity(badge.criteria_type, badge.threshold)
             }
         })
-
 
     locked_badges = Badge.objects.exclude(id__in=user_badges.values_list('badge_id', flat=True))
 

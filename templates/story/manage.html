@@ -1,0 +1,16 @@
+{% extends 'story/base_story.html' %}
+{% block title %}Kelola Cerita — Suap.in{% endblock %}
+{% block story_content %}
+<div class="topbar"><h1>Kelola cerita</h1>{% include 'partials/auth_status.html' %}</div>
+<p class="ref-note">Ruang editor untuk menulis, meninjau, dan menerbitkan perjalanan Alya dan Tunas.</p>
+{% include 'story/_subnav.html' with active='manage' %}
+<a href="{% url 'story:comic_create' %}" class="btn ok">+ Tambah bab</a>
+<div class="story-editor-chapters">
+{% for comic in comics %}
+<section class="raise card">
+  <div class="story-editor-row"><div><p class="story-eyebrow">BAB {{ comic.bab }} · {% if comic.is_published %}TERBIT{% else %}DRAFT{% endif %}</p><h2>{{ comic.title }}</h2><p class="authsub">Level {{ comic.unlock_level }} · {{ comic.pages.count }} halaman</p></div><div class="story-editor-actions"><a class="btn ghost sm" href="{% url 'story:comic_edit' comic.pk %}">Edit bab</a><a class="btn ghost sm" href="{% url 'story:page_create' comic.pk %}">+ Halaman</a><a class="btn ghost sm" href="{% url 'story:comic_delete' comic.pk %}">Hapus bab</a></div></div>
+  <ol class="story-editor-pages">{% for page in comic.pages.all %}<li><div class="story-editor-row"><span><b>{{ page.position }}. {{ page.title }}</b><br><span class="story-meta">{{ page.get_scene_display }}</span></span><div class="story-editor-actions"><a class="link-sm" href="{% url 'story:story_reader' comic.bab %}?page={{ forloop.counter }}">Pratinjau</a><a class="btn ghost sm" href="{% url 'story:page_edit' comic.pk page.pk %}">Edit</a><a class="link-sm" href="{% url 'story:page_delete' comic.pk page.pk %}">Hapus</a></div></div></li>{% empty %}<li>Belum ada halaman. Tambahkan halaman pertama sebelum menerbitkan bab.</li>{% endfor %}</ol>
+</section>
+{% empty %}<div class="raise card"><h2>Mulai cerita pertamamu</h2><p>Gunakan tombol Tambah bab untuk mulai menulis.</p></div>{% endfor %}
+</div>
+{% endblock %}

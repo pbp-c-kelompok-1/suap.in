@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+{% block title %}Community — Suap.in{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  #communityMap { height: 520px; border-radius: 22px; overflow: hidden; z-index: 0; }
+  .cm-filters { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .cm-filters .tabs { margin: 0; }
+  .cm-filters select { border: 0; border-radius: 16px; background: var(--bg); color: var(--text); font: inherit; font-weight: 700;
+    padding: 10px 16px; box-shadow: inset 4px 4px 9px var(--sh-d), inset -4px -4px 9px var(--sh-l); }
+  .cm-pin { width: 36px; height: 48px; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .3)); transition: transform .15s; transform-origin: 50% 100%; }
+  .cm-pin:hover { transform: scale(1.12); }
+  .cm-pin svg { display: block; width: 36px; height: 48px; overflow: visible; }
+  .cm-pin .body { fill: var(--text-2); }
+  .cm-pin.green .body { fill: var(--ok); }
+  .cm-pin.yellow .body { fill: var(--warn); }
+  .cm-pin.red .body { fill: var(--danger); }
+  .cm-pin .count { font: 700 12px 'Fredoka', sans-serif; fill: #1f2a28; }
+  .cm-legend { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 14px; color: var(--text-2); font-weight: 700; font-size: .9rem; }
+  .cm-legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .cm-legend i { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+  .cp-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .cp-head h2 { font-size: 1.35rem; margin: 0; }
+  .cp-head span { color: var(--text-2); font-weight: 700; }
+  .cp-head .btn { margin-left: auto; }
+  .cp-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .cp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+  .cp-card { text-align: left; border: 0; padding: 0; cursor: pointer; overflow: hidden; border-radius: 20px; background: var(--surface);
+    color: var(--text); font: inherit; box-shadow: 4px 4px 10px var(--sh-d), -4px -4px 10px var(--sh-l); transition: transform .15s; }
+  .cp-card:hover { transform: translateY(-3px); }
+  .cp-card img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: var(--bg); }
+  .cp-body { padding: 10px 12px 12px; display: grid; gap: 2px; }
+  .cp-body b { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cp-body small { color: var(--text-2); font-weight: 700; }
+  .cp-co2 { justify-self: start; margin: 4px 0 2px; padding: 2px 10px; border-radius: 99px; color: #fff; font-weight: 800; font-size: .8rem; }
+  .cp-co2.green { background: var(--ok); } .cp-co2.yellow { background: var(--warn); } .cp-co2.red { background: var(--danger); }
+  .cp-more { margin-top: 18px; }
+  .lb { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: rgba(10, 20, 18, .82); padding: 20px; }
+  .lb[hidden] { display: none; }
+  .lb figure { margin: 0; max-width: min(560px, 100%); width: 100%; background: var(--surface); border-radius: 24px; overflow: hidden; }
+  .lb img { display: block; width: 100%; max-height: 70vh; object-fit: contain; background: #000; }
+  .lb figcaption { padding: 14px 18px 18px; display: grid; gap: 4px; }
+  .lb figcaption b { font-size: 1.1rem; font-weight: 800; }
+  .lb figcaption small { color: var(--text-2); font-weight: 700; }
+  .lb-btn { position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer;
+    background: var(--surface); color: var(--text); font-size: 1.4rem; font-weight: 800; box-shadow: 0 4px 12px rgba(0, 0, 0, .3); }
+  .lb-prev { left: 16px; } .lb-next { right: 16px; }
+  .lb-close { position: absolute; top: 16px; right: 16px; width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer;
+    background: var(--surface); color: var(--text); font-size: 1.2rem; font-weight: 800; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="topbar"><h1>Community</h1>{% include 'partials/auth_status.html' %}</div>
+
+<div class="raise card">
+  <div class="sec-head"><h2>Peta kantin</h2><span>foto makanan dari mahasiswa</span></div>
+
+  <div class="cm-filters">
+    <div class="tabs" role="tablist" aria-label="Rentang waktu" id="rangeTabs">
+      <button class="tab" role="tab" type="button" data-range="today" aria-selected="true">Hari ini</button>
+      <button class="tab" role="tab" type="button" data-range="week" aria-selected="false">7 hari</button>
+      <button class="tab" role="tab" type="button" data-range="all" aria-selected="false">Semua</button>
+    </div>
+    <select id="facultyFilter" aria-label="Filter fakultas">
+      <option value="">Semua fakultas</option>
+      {% for f in faculties %}<option value="{{ f }}">{{ f }}</option>{% endfor %}
+    </select>
+  </div>
+
+  <div id="communityMap" role="region" aria-label="Peta kantin"></div>
+
+  <div class="cm-legend">
+    <span><i style="background:var(--ok)"></i>Rata-rata ≤ 600 g CO₂</span>
+    <span><i style="background:var(--warn)"></i>≤ 1.200 g</span>
+    <span><i style="background:var(--danger)"></i>&gt; 1.200 g</span>
+    <span><i style="background:var(--text-2)"></i>Belum ada foto</span>
+  </div>
+  <p style="color:var(--text-2);font-weight:700;margin:10px 0 0">Pencet pin kantin untuk melihat foto makanannya.</p>
+</div>
+
+<div class="raise card" id="canteenPanel" style="margin-top:22px" hidden>
+  <div class="cp-head">
+    <h2 id="cpName"></h2><span id="cpFaculty"></span>
+    <button type="button" class="btn sm ghost" id="cpClose"><svg class="i"><use href="#i-x"/></svg>Tutup</button>
+  </div>
+  <div class="cp-stats" id="cpStats"></div>
+  <div class="cp-grid" id="cpGrid"></div>
+  <div class="empty" id="cpEmpty" hidden>
+    <h3>Belum ada foto</h3>
+    <p>Belum ada yang membagikan makanan dari kantin ini di rentang waktu ini.</p>
+  </div>
+  <button type="button" class="btn ghost cp-more" id="cpMore" hidden>Muat lagi</button>
+</div>
+
+<div class="lb" id="lightbox" role="dialog" aria-modal="true" aria-label="Foto makanan" hidden>
+  <button type="button" class="lb-close" id="lbClose" aria-label="Tutup">&times;</button>
+  <button type="button" class="lb-btn lb-prev" id="lbPrev" aria-label="Foto sebelumnya">&lsaquo;</button>
+  <figure>
+    <img id="lbImg" alt="">
+    <figcaption id="lbCap"></figcaption>
+  </figure>
+  <button type="button" class="lb-btn lb-next" id="lbNext" aria-label="Foto berikutnya">&rsaquo;</button>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+  var API = "{% url 'social:api_canteens' %}";
+  var POSTS_API = "{% url 'social:api_canteen_posts' 0 %}";
+  var state = { range: 'today', faculty: '' };
+
+  var map = L.map('communityMap').setView([-6.3665, 106.8277], 16);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    // OSM menolak request tile tanpa Referer; Django default mengirim 'same-origin' sehingga Referer hilang.
+    referrerPolicy: 'strict-origin-when-cross-origin',
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+  var pins = L.layerGroup().addTo(map);
+
+  function esc(text) {
+    return String(text).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+
+  function load() {
+    var url = API + '?range=' + state.range + '&faculty=' + encodeURIComponent(state.faculty);
+    fetch(url)
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        pins.clearLayers();
+        var bounds = [];
+        data.canteens.forEach(function (c) {
+          var icon = L.divIcon({
+            className: '',
+            html: '<div class="cm-pin ' + c.status + '">' +
+                    '<svg viewBox="0 0 36 48" aria-hidden="true">' +
+                      '<path class="body" d="M18 47C18 47 2 29 2 18a16 16 0 0 1 32 0C34 29 18 47 18 47z"/>' +
+                      '<path d="M8 12a12 12 0 0 1 9-8" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="2.5" stroke-linecap="round"/>' +
+                      '<circle cx="18" cy="18" r="9.5" fill="#fff"/>' +
+                      '<text class="count" x="18" y="22" text-anchor="middle">' + c.post_count + '</text>' +
+                    '</svg>' +
+                  '</div>',
+            iconSize: [36, 48],
+            iconAnchor: [18, 47],
+            popupAnchor: [0, -44]
+          });
+          var co2 = c.avg_co2 === null ? 'Belum ada foto' : 'Rata-rata ' + c.avg_co2 + ' g CO₂ per porsi';
+          L.marker([c.lat, c.lng], { icon: icon, title: c.name, riseOnHover: true, zIndexOffset: c.post_count * 100 })
+            .bindPopup('<b>' + esc(c.name) + '</b> · ' + esc(c.faculty) + '<br>' + c.post_count + ' foto<br>' + co2)
+            .on('click', function () { openPanel(c.id); })
+            .addTo(pins);
+          bounds.push([c.lat, c.lng]);
+        });
+        if (bounds.length) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 18 });
+      });
+  }
+
+
+  // ---------- Panel kantin ----------
+  var panel = document.getElementById('canteenPanel');
+  var grid = document.getElementById('cpGrid');
+  var moreBtn = document.getElementById('cpMore');
+  var current = { id: null, page: 1, posts: [] };
+
+  function rupiah(n) { return 'Rp ' + Number(n).toLocaleString('id-ID'); }
+
+  function chip(text) { return '<span class="chip">' + text + '</span>'; }
+
+  function cardHtml(p, index) {
+    return '<button type="button" class="cp-card" data-index="' + index + '">' +
+      '<img src="' + esc(p.photo_url) + '" alt="' + esc(p.food_name || 'Foto makanan') + '" loading="lazy">' +
+      '<span class="cp-body">' +
+        '<b>' + esc(p.food_name || 'Tanpa nama') + '</b>' +
+        '<small>' + (p.price ? rupiah(p.price) : 'Harga tidak diisi') + '</small>' +
+        '<span class="cp-co2 ' + p.status + '">' + p.co2 + ' g CO₂</span>' +
+        '<small>' + esc(p.username) + ' · ' + esc(p.time_ago) + '</small>' +
+      '</span>' +
+    '</button>';
+  }
+
+  function loadPosts(append) {
+    var url = POSTS_API.replace('/0/', '/' + current.id + '/') + '?range=' + state.range + '&page=' + current.page;
+    return fetch(url)
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        document.getElementById('cpName').textContent = data.canteen.name;
+        document.getElementById('cpFaculty').textContent = data.canteen.faculty;
+        var s = data.summary;
+        document.getElementById('cpStats').innerHTML =
+          chip(s.post_count + ' foto') +
+          chip(s.avg_price !== null ? 'Rata-rata ' + rupiah(s.avg_price) : 'Harga belum ada') +
+          chip(s.avg_co2 !== null ? 'Rata-rata ' + s.avg_co2 + ' g CO₂' : 'CO₂ belum ada');
+        if (!append) { current.posts = []; grid.innerHTML = ''; }
+        var start = current.posts.length;
+        current.posts = current.posts.concat(data.posts);
+        grid.insertAdjacentHTML('beforeend', data.posts.map(function (p, i) { return cardHtml(p, start + i); }).join(''));
+        document.getElementById('cpEmpty').hidden = current.posts.length > 0;
+        moreBtn.hidden = !data.has_more;
+      });
+  }
+
+  function openPanel(id) {
+    current.id = id;
+    current.page = 1;
+    panel.hidden = false;
+    loadPosts(false).then(function () { panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  }
+
+  moreBtn.addEventListener('click', function () { current.page += 1; loadPosts(true); });
+  document.getElementById('cpClose').addEventListener('click', function () { panel.hidden = true; current.id = null; });
+
+  // ---------- Lightbox (tampilan besar gaya story) ----------
+  var lb = document.getElementById('lightbox');
+  var lbIndex = 0;
+
+  function showPhoto(i) {
+    if (!current.posts.length) return;
+    lbIndex = (i + current.posts.length) % current.posts.length;
+    var p = current.posts[lbIndex];
+    document.getElementById('lbImg').src = p.photo_url;
+    document.getElementById('lbImg').alt = p.food_name || 'Foto makanan';
+    document.getElementById('lbCap').innerHTML =
+      '<b>' + esc(p.food_name || 'Tanpa nama') + '</b>' +
+      '<small>' + (p.price ? rupiah(p.price) : 'Harga tidak diisi') + ' · ' + p.co2 + ' g CO₂</small>' +
+      '<small>' + esc(p.username) + ' · ' + esc(p.time_ago) + ' · ' + (lbIndex + 1) + '/' + current.posts.length + '</small>';
+    lb.hidden = false;
+  }
+
+  grid.addEventListener('click', function (e) {
+    var card = e.target.closest('.cp-card');
+    if (card) showPhoto(Number(card.dataset.index));
+  });
+  document.getElementById('lbPrev').addEventListener('click', function () { showPhoto(lbIndex - 1); });
+  document.getElementById('lbNext').addEventListener('click', function () { showPhoto(lbIndex + 1); });
+  document.getElementById('lbClose').addEventListener('click', function () { lb.hidden = true; });
+  lb.addEventListener('click', function (e) { if (e.target === lb) lb.hidden = true; });
+  document.addEventListener('keydown', function (e) {
+    if (lb.hidden) return;
+    if (e.key === 'Escape') lb.hidden = true;
+    if (e.key === 'ArrowLeft') showPhoto(lbIndex - 1);
+    if (e.key === 'ArrowRight') showPhoto(lbIndex + 1);
+  });
+
+  document.querySelectorAll('#rangeTabs .tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('#rangeTabs .tab').forEach(function (t) { t.setAttribute('aria-selected', 'false'); });
+      tab.setAttribute('aria-selected', 'true');
+      state.range = tab.dataset.range;
+      load();
+      if (current.id) { current.page = 1; loadPosts(false); }
+    });
+  });
+
+  document.getElementById('facultyFilter').addEventListener('change', function (e) {
+    state.faculty = e.target.value;
+    load();
+  });
+
+  load();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,110 @@
+<style>
+  .cs-box { padding: 18px 20px; margin: 16px 0; display: grid; gap: 10px; }
+  .cs-toggle { display: flex; align-items: center; gap: 12px; cursor: pointer; font-weight: 800; }
+  .cs-toggle input { width: 22px; height: 22px; accent-color: var(--teal-500); }
+  .cs-note { color: var(--text-2); font-weight: 700; font-size: .85rem; margin: 0; }
+  .cs-fields { display: grid; gap: 14px; margin-top: 6px; }
+  .cs-fields[hidden] { display: none; }
+  .cs-fields select, .cs-fields input[type="number"] { width: 100%; border: 0; border-radius: 16px; background: var(--bg); color: var(--text);
+    font: inherit; font-weight: 700; padding: 12px 16px; box-shadow: inset 4px 4px 9px var(--sh-d), inset -4px -4px 9px var(--sh-l); }
+  .cs-fields input[hidden] { display: none; }
+  .cs-status { color: var(--text-2); font-weight: 700; font-size: .85rem; margin: 6px 0 0 8px; }
+</style>
+
+<div class="raise-sm cs-box" id="communityShare" data-nearest-url="{% url 'social:api_nearest' %}">
+  <label class="cs-toggle">
+    <input type="checkbox" name="community_share" value="1" id="csShare">
+    Bagikan ke Community
+  </label>
+  <p class="cs-note">Foto, nama makanan, harga, kantin, dan username kamu akan tampil di peta Community. Foto tersimpan permanen, tapi bisa kamu hapus kapan saja.</p>
+
+  <div class="cs-fields" id="csFields" hidden>
+    <div class="field">
+      <label for="csCanteen">Lokasi</label>
+      <select name="community_canteen" id="csCanteen">
+        <option value="">Pilih kantin</option>
+        {% regroup canteens by faculty as groups %}
+        {% for group in groups %}
+        <optgroup label="{{ group.grouper }}">
+          {% for c in group.list %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+        </optgroup>
+        {% endfor %}
+        <option value="other">Lokasi lain…</option>
+      </select>
+      <p class="cs-status" id="csStatus" aria-live="polite"></p>
+      <input type="text" name="community_custom_location" id="csCustom" maxlength="100" placeholder="Contoh: warung dekat kos" hidden>
+    </div>
+    <div class="field">
+      <label for="csFood">Nama makanan <span>opsional</span></label>
+      <input type="text" name="community_food_name" id="csFood" maxlength="100" value="{{ default_food_name }}">
+    </div>
+    <div class="field">
+      <label for="csPrice">Harga (Rp) <span>opsional</span></label>
+      <input type="number" name="community_price" id="csPrice" min="0" max="1000000" step="500" placeholder="15000">
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var box = document.getElementById('communityShare');
+  var share = document.getElementById('csShare');
+  var fields = document.getElementById('csFields');
+  var select = document.getElementById('csCanteen');
+  var custom = document.getElementById('csCustom');
+  var status = document.getElementById('csStatus');
+  var asked = false;
+
+  function setStatus(text) { status.textContent = text; }
+
+  function names(candidates) {
+    return candidates.slice(0, 2).map(function (c) { return c.name + ' (' + c.distance_m + ' m)'; }).join(' dan ');
+  }
+
+  function askLocation() {
+    if (asked) return;
+    asked = true;
+    if (!navigator.geolocation) { setStatus('Browser tidak mendukung lokasi. Pilih kantin secara manual.'); return; }
+    setStatus('Mendeteksi lokasi…');
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var body = new URLSearchParams({
+        lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy
+      });
+      fetch(box.dataset.nearestUrl, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+        body: body
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var c = data.candidates;
+          if (data.recommended) {
+            select.value = String(data.recommended);
+            setStatus('Kamu sepertinya di ' + c[0].name + ' (' + c[0].distance_m + ' m). Ganti kalau salah.');
+          } else if (data.reason === 'ambiguous') {
+            setStatus('Kamu dekat ' + names(c) + '. Pilih salah satu.');
+          } else if (data.reason === 'far') {
+            setStatus('Kamu sepertinya tidak di kantin. Pilih kantin atau "Lokasi lain".');
+          } else if (data.reason === 'inaccurate') {
+            setStatus('Lokasi kurang akurat. Pilih kantin secara manual.');
+          } else {
+            setStatus('');
+          }
+        })
+        .catch(function () { setStatus('Gagal mendeteksi lokasi. Pilih kantin secara manual.'); });
+    }, function () {
+      setStatus('Izin lokasi tidak diberikan. Pilih kantin secara manual.');
+    }, { timeout: 8000, maximumAge: 60000 });
+  }
+
+  share.addEventListener('change', function () {
+    fields.hidden = !share.checked;
+    if (share.checked) askLocation();
+  });
+
+  select.addEventListener('change', function () {
+    custom.hidden = select.value !== 'other';
+    if (!custom.hidden) custom.focus();
+  });
+})();
+</script>
