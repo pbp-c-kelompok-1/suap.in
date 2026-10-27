@@ -11,13 +11,20 @@
       <div class="pedestal"><div class="avw big" id="avBig"></div></div>
       <div class="av-name display" id="avName"></div>
       <div class="av-meta" id="avMeta">Dipakai sekarang</div>
-      <button class="btn ok" id="avUse">Pakai avatar ini</button>
-      <div class="field"><label for="pName">Nama</label><input id="pName" maxlength="24" autocomplete="off"></div>
-      <div class="field"><label for="pBio">Bio <small id="bioCount"></small></label><textarea id="pBio" maxlength="80" rows="2"></textarea></div>
-      <button class="btn ghost" id="saveProfile">Simpan profil</button>
+
+      <div class="field"><label for="pName">Nama</label><input id="pName" maxlength="24" autocomplete="off" disabled></div>
+      <div class="field"><label for="pBio">Bio <small id="bioCount"></small></label><textarea id="pBio" maxlength="80" rows="2" disabled></textarea></div>
+
+      <p class="muted profile-hint" id="profHint"></p>
+
+      <div class="profile-actions">
+        <button class="btn ghost" id="editProfile">Edit profil</button>
+        <button class="btn ghost" id="cancelProfile" hidden>Batal</button>
+        <button class="btn ok" id="saveProfile" hidden>Simpan perubahan</button>
+      </div>
     </div>
 
-    <div class="raise card">
+    <div class="raise card pick-card readonly" id="pickCard">
       <div class="sec-head"><h2>Pilih avatarmu</h2><span id="avCount">0/140 terbuka</span></div>
       <div class="sptabs" id="spTabs" role="tablist" aria-label="Jenis avatar"></div>
       <div class="pick-actions">
