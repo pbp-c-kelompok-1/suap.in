@@ -33,12 +33,19 @@ export function animateReport() {
 const avColors = ['var(--teal-500)', 'var(--blue-500)', 'var(--green-500)', 'var(--warn)', 'var(--blue-700)'];
 export function renderRank() {
   $$('#rankTabs .tab').forEach(t => t.setAttribute('aria-selected', t.dataset.r === state.rankTab));
-  $('#rankList').innerHTML = state.rank[state.rankTab].map((r, i) => `
+  const rows = state.rank[state.rankTab];
+  if (!rows.length) {
+    $('#rankList').innerHTML = state.rankTab === 'kampus'
+      ? '<li><span class="nm">Pilih kampus dulu di halaman Campus War untuk melihat peringkat kampus.</span></li>'
+      : '<li><span class="nm">Belum ada data minggu ini.</span></li>';
+    return;
+  }
+  $('#rankList').innerHTML = rows.map((r, i) => `
     <li class="${r[2] ? 'me' : ''}">
       <span class="pos ${i < 3 ? 'p' + (i + 1) : ''}">${i + 1}</span>
       ${r[2] ? `<span class="av avme">${avatarIcon(state.avatar)}</span>` : `<span class="av" style="background:${avColors[i % 5]}">${r[0][0]}</span>`}
       <span class="nm">${r[0]}</span>
-      <span class="co">${fmt(r[1]).replace('.', ',')} <small>kg CO₂</small></span>
+      <span class="co">${Number(r[1]).toLocaleString('id-ID')} <small>XP</small></span>
     </li>`).join('');
 }
 $('#rankTabs').addEventListener('click', e => {

@@ -2,7 +2,10 @@
 
 const real = window.SUAPIN_REAL || null;
 const realWeekly = real ? real.weekly.map(w => ({ d: w.d, v: w.v, hasData: w.hasData })) : null;
-const realRank = real ? real.rank.map(r => [r.name, r.kg, r.is_me ? 1 : 0]) : null;
+// rank dari server: { teman: [...], kampus: [...], nasional: [...] } berisi XP minggu ini
+const realRank = real ? Object.fromEntries(
+  Object.entries(real.rank).map(([tab, rows]) => [tab, rows.map(r => [r.name, r.xp, r.is_me ? 1 : 0])])
+) : null;
 
 /* ---------------- STATE ---------------- */
 export const state = {
@@ -21,9 +24,9 @@ export const state = {
     { d: 'Jum', v: 2.9 }, { d: 'Sab', v: 2.5 }, { d: 'Min', v: 1.7 },
   ],
   rank: {
-    teman:    realRank || [['Dinda', 14.8], ['Kamu', 18.4, 1], ['Bima', 19.6], ['Salsa', 22.0]],
-    kampus:   realRank || [['Dinda A.', 15.2], ['Bima R.', 17.8], ['Kamu', 18.4, 1], ['Salsa P.', 19.1], ['Raka T.', 20.3]],
-    nasional: realRank || [['Alya N.', 11.9], ['Fajar S.', 12.6], ['Citra W.', 13.4], ['Kamu', 18.4, 1], ['Gilang M.', 19.0]],
+    teman:    realRank ? realRank.teman : [['Dinda', 240], ['Kamu', 180, 1], ['Bima', 150], ['Salsa', 90]],
+    kampus:   realRank ? realRank.kampus : [['Dinda A.', 260], ['Bima R.', 210], ['Kamu', 180, 1], ['Salsa P.', 120], ['Raka T.', 60]],
+    nasional: realRank ? realRank.nasional : [['Alya N.', 420], ['Fajar S.', 390], ['Citra W.', 310], ['Kamu', 180, 1], ['Gilang M.', 150]],
   },
   notifs: [
     { id: 1, type: 'streak',    ico: 'flame',  tone: 'amber', t: 'Streak 7 hari!', p: 'Sedikit lagi ke lencana "Streak 14 Hari".', time: '5 mnt', read: false },

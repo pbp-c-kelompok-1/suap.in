@@ -7,6 +7,7 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from scanner.models import CarbonBudget, FoodLog
+from social.services import scope_ranking, users_with_xp
 
 DAY_ABBR = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
 DEFAULT_BUDGET_GRAMS = 2000.0
@@ -70,23 +71,16 @@ def challenge_list_view(request):
         budget = CarbonBudget.objects.filter(user=request.user, date=today).first()
         budget_cap_kg = round((budget.budget_grams if budget else DEFAULT_BUDGET_GRAMS) / 1000, 2)
 
-        cutoff = today - timedelta(days=6)
-        totals_by_user = (
-            FoodLog.objects.filter(scanned_at__date__gte=cutoff)
-            .values('user__id', 'user__username')
-            .annotate(total_grams=Sum('co2_grams'))
-        )
-        ranking = [
-            {
-                'name': row['user__username'],
-                'kg': round(row['total_grams'] / 1000, 2),
-                'is_me': row['user__id'] == request.user.id,
-            }
-            for row in totals_by_user
-        ]
-        if not any(r['is_me'] for r in ranking):
-            ranking.append({'name': request.user.username, 'kg': 0.0, 'is_me': True})
-        ranking.sort(key=lambda r: r['kg'])
+        # Peringkat mingguan = XP yang didapat 7 hari terakhir (periode yang sama dengan laporan ini).
+        # Sumber XP sama dengan leaderboard sepanjang waktu di modul social.
+        weekly_xp = users_with_xp(since=week_start)
+        ranking = {}
+        for key, scope in (('teman', 'friends'), ('kampus', 'campus'), ('nasional', 'national')):
+            users, reason = scope_ranking(weekly_xp, request.user, scope)
+            rows = [{'name': u.username, 'xp': u.xp, 'is_me': u.pk == request.user.pk} for u in users[:20]]
+            if reason != 'campus' and not any(r['is_me'] for r in rows):
+                rows.append({'name': request.user.username, 'xp': 0, 'is_me': True})
+            ranking[key] = rows
 
         context = {
             'week_start': week_start,
