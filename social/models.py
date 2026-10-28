@@ -74,3 +74,34 @@ class PostReport(models.Model):
 
     class Meta:
         unique_together = ['post', 'user']
+
+
+class Friendship(models.Model):
+    """Satu baris = satu hubungan antara dua user (arah: pengirim -> penerima)."""
+
+    PENDING = 'pending'
+    ACCEPTED = 'accepted'
+    REJECTED = 'rejected'
+    STATUS_CHOICES = [
+        (PENDING, 'Menunggu'),
+        (ACCEPTED, 'Berteman'),
+        (REJECTED, 'Ditolak'),
+    ]
+
+    from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friend_requests_sent')
+    to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friend_requests_received')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.from_user.username} -> {self.to_user.username} ({self.status})"
+
+    def other(self, user):
+        return self.to_user if self.from_user_id == user.id else self.from_user
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['from_user', 'to_user'], name='unique_friend_request'),
+        ]

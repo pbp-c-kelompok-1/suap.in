@@ -1,0 +1,108 @@
+{% load social_tags %}
+{% if q %}
+<div class="raise card fr-section">
+  <div class="sec-head"><h2>Hasil pencarian</h2><span>"{{ q }}"</span></div>
+  {% if results %}
+  <ol class="rank">
+    {% for r in results %}
+    <li class="fr-row">
+      <span class="av" style="background:var(--teal-500)">{{ r.user.username|first|upper }}</span>
+      <span class="nm">{{ r.user.username }}<small>{{ r.user.campus.university.short_name|default:"Belum pilih kampus" }}</small></span>
+      <span class="fr-actions">
+        {% if r.status == 'friends' %}
+          <span class="fr-tag">Sudah berteman</span>
+        {% elif r.status == 'sent' %}
+          <span class="fr-tag">Menunggu jawaban</span>
+        {% elif r.status == 'received' %}
+          <form method="post" action="{% url 'social:friend_request_respond' r.friendship.pk %}" data-ajax>
+            {% csrf_token %}<input type="hidden" name="action" value="accept">
+            <button type="submit" class="btn sm ok">Terima</button>
+          </form>
+        {% else %}
+          <form method="post" action="{% url 'social:friend_request_send' %}" data-ajax>
+            {% csrf_token %}<input type="hidden" name="username" value="{{ r.user.username }}">
+            <button type="submit" class="btn sm"><svg class="i"><use href="#i-userplus"/></svg>Tambah</button>
+          </form>
+        {% endif %}
+      </span>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <div class="empty"><h3>Tidak ada user dengan username itu</h3></div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if incoming %}
+<div class="raise card fr-section">
+  <div class="sec-head"><h2>Permintaan masuk</h2><span>{{ incoming|length }} orang</span></div>
+  <ol class="rank">
+    {% for f in incoming %}
+    <li class="fr-row">
+      <span class="av" style="background:var(--blue-500)">{{ f.from_user.username|first|upper }}</span>
+      <span class="nm">{{ f.from_user.username }}<small>{{ f.created_at|ago }}</small></span>
+      <span class="fr-actions">
+        <form method="post" action="{% url 'social:friend_request_respond' f.pk %}" data-ajax>
+          {% csrf_token %}<input type="hidden" name="action" value="accept">
+          <button type="submit" class="btn sm ok"><svg class="i"><use href="#i-check"/></svg>Terima</button>
+        </form>
+        <form method="post" action="{% url 'social:friend_request_respond' f.pk %}" data-ajax>
+          {% csrf_token %}<input type="hidden" name="action" value="reject">
+          <button type="submit" class="btn sm ghost">Tolak</button>
+        </form>
+      </span>
+    </li>
+    {% endfor %}
+  </ol>
+</div>
+{% endif %}
+
+{% if outgoing %}
+<div class="raise card fr-section">
+  <div class="sec-head"><h2>Permintaan terkirim</h2><span>menunggu jawaban</span></div>
+  <ol class="rank">
+    {% for f in outgoing %}
+    <li class="fr-row">
+      <span class="av" style="background:var(--text-2)">{{ f.to_user.username|first|upper }}</span>
+      <span class="nm">{{ f.to_user.username }}<small>dikirim {{ f.created_at|ago }}</small></span>
+      <span class="fr-actions">
+        <form method="post" action="{% url 'social:friendship_delete' f.pk %}" data-ajax>
+          {% csrf_token %}
+          <button type="submit" class="btn sm ghost">Batalkan</button>
+        </form>
+      </span>
+    </li>
+    {% endfor %}
+  </ol>
+</div>
+{% endif %}
+
+<div class="raise card fr-section">
+  <div class="sec-head"><h2>Teman kamu</h2><span>{{ friends|length }} teman · XP minggu ini</span></div>
+  {% if friends %}
+  <ol class="rank">
+    {% for row in friends %}
+    <li class="fr-row">
+      <span class="av" style="background:var(--teal-500)">{{ row.user.username|first|upper }}</span>
+      <span class="nm">{{ row.user.username }}<small>{{ row.user.campus.university.short_name|default:"Belum pilih kampus" }}</small></span>
+      <span class="co">{{ row.xp }} <small>XP</small></span>
+      <span class="fr-actions">
+        <form method="post" action="{% url 'social:friendship_delete' row.friendship.pk %}" data-ajax data-confirm="Hapus {{ row.user.username }} dari daftar teman?">
+          {% csrf_token %}
+          <button type="submit" class="btn sm ghost" aria-label="Hapus {{ row.user.username }} dari teman"><svg class="i"><use href="#i-x"/></svg>Hapus</button>
+        </form>
+      </span>
+    </li>
+    {% endfor %}
+  </ol>
+  <div class="rep-actions" style="margin-top:18px">
+    <a href="{% url 'social:leaderboard' %}?tab=friends" class="btn ghost" style="text-decoration:none"><svg class="i"><use href="#i-trophy"/></svg>Lihat peringkat teman</a>
+  </div>
+  {% else %}
+  <div class="empty">
+    <h3>Belum punya teman</h3>
+    <p>Cari username temanmu di atas, lalu kirim permintaan pertemanan.</p>
+  </div>
+  {% endif %}
+</div>

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Canteen, CampusMembership, CommunityPost, PostReport, University
+from .models import Canteen, CampusMembership, CommunityPost, Friendship, PostReport, University
 
 
 @admin.register(University)
@@ -41,3 +41,10 @@ class CommunityPostAdmin(admin.ModelAdmin):
 @admin.register(PostReport)
 class PostReportAdmin(admin.ModelAdmin):
     list_display = ['post', 'user', 'reason', 'created_at']
+
+
+@admin.register(Friendship)
+class FriendshipAdmin(admin.ModelAdmin):
+    list_display = ['from_user', 'to_user', 'status', 'created_at', 'responded_at']
+    list_filter = ['status']
+    search_fields = ['from_user__username', 'to_user__username']

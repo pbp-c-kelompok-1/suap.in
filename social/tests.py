@@ -12,7 +12,8 @@ from django.urls import reverse
 from django.utils import timezone
 from PIL import Image
 
-from .models import Canteen, CommunityPost, University
+from .friends import friends_of
+from .models import Canteen, CommunityPost, Friendship, University
 
 
 def tiny_photo():
@@ -289,3 +290,137 @@ class SeedShowcaseTests(TestCase):
         kancil = Canteen.objects.get(name='Kancil')
         data = self.client.get(reverse('social:api_canteen_posts', args=[kancil.pk]), {'range': 'all'}).json()
         self.assertEqual(data['posts'][0]['photo_url'], '/static/social/seed/kancil_1.jpg')
+
+
+class FriendshipTests(TestCase):
+    """CRUD Friendship sesuai README: kirim, lihat, terima/tolak, unfriend."""
+
+    def setUp(self):
+        self.iqbal = User.objects.create_user('iqbal', password='pass12345x')
+        self.nami = User.objects.create_user('nami', password='pass12345x')
+        self.acan = User.objects.create_user('acan', password='pass12345x')
+
+    def login(self, user):
+        self.client.force_login(user)
+
+    def send(self, username, ajax=True):
+        headers = {'HTTP_X_REQUESTED_WITH': 'fetch'} if ajax else {}
+        return self.client.post(reverse('social:friend_request_send'), {'username': username}, **headers)
+
+    def act(self, name, pk, **data):
+        return self.client.post(reverse(f'social:{name}', args=[pk]), data, HTTP_X_REQUESTED_WITH='fetch')
+
+    def test_friends_page_requires_login(self):
+        res = self.client.get(reverse('social:friends'))
+        self.assertEqual(res.status_code, 302)
+
+    def test_send_and_accept_request(self):
+        self.login(self.iqbal)
+        res = self.send('nami')
+        self.assertTrue(res.json()['ok'])
+        f = Friendship.objects.get()
+        self.assertEqual((f.from_user, f.to_user, f.status), (self.iqbal, self.nami, Friendship.PENDING))
+
+        self.login(self.nami)
+        res = self.act('friend_request_respond', f.pk, action='accept')
+        self.assertTrue(res.json()['ok'])
+        f.refresh_from_db()
+        self.assertEqual(f.status, Friendship.ACCEPTED)
+        self.assertEqual(set(friends_of(self.iqbal)), {self.nami})
+        self.assertEqual(set(friends_of(self.nami)), {self.iqbal})
+
+    def test_cannot_add_self_or_duplicate(self):
+        self.login(self.iqbal)
+        self.assertEqual(self.send('iqbal').status_code, 400)
+        self.send('nami')
+        res = self.send('nami')
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(Friendship.objects.count(), 1)
+
+    def test_reverse_request_auto_accepts(self):
+        self.login(self.iqbal)
+        self.send('nami')
+        self.login(self.nami)
+        self.send('iqbal')
+        self.assertEqual(Friendship.objects.get().status, Friendship.ACCEPTED)
+
+    def test_only_receiver_can_respond(self):
+        self.login(self.iqbal)
+        self.send('nami')
+        f = Friendship.objects.get()
+        res = self.act('friend_request_respond', f.pk, action='accept')  # pengirim mencoba menerima sendiri
+        self.assertEqual(res.status_code, 400)
+        self.login(self.acan)
+        self.assertEqual(self.act('friend_request_respond', f.pk, action='accept').status_code, 400)
+
+    def test_reject_then_send_again(self):
+        self.login(self.iqbal)
+        self.send('nami')
+        f = Friendship.objects.get()
+        self.login(self.nami)
+        self.act('friend_request_respond', f.pk, action='reject')
+        f.refresh_from_db()
+        self.assertEqual(f.status, Friendship.REJECTED)
+        self.login(self.iqbal)
+        self.assertTrue(self.send('nami').json()['ok'])
+        f.refresh_from_db()
+        self.assertEqual(f.status, Friendship.PENDING)
+
+    def test_cancel_and_unfriend(self):
+        self.login(self.iqbal)
+        self.send('nami')
+        f = Friendship.objects.get()
+        self.login(self.nami)  # penerima tidak bisa "membatalkan", harus menolak
+        self.assertEqual(self.act('friendship_delete', f.pk).status_code, 400)
+        self.login(self.iqbal)
+        self.assertTrue(self.act('friendship_delete', f.pk).json()['ok'])
+        self.assertFalse(Friendship.objects.exists())
+
+        f = Friendship.objects.create(from_user=self.iqbal, to_user=self.nami, status=Friendship.ACCEPTED)
+        self.login(self.nami)
+        self.assertTrue(self.act('friendship_delete', f.pk).json()['ok'])
+        self.assertEqual(list(friends_of(self.iqbal)), [])
+
+    def test_outsider_cannot_delete(self):
+        f = Friendship.objects.create(from_user=self.iqbal, to_user=self.nami, status=Friendship.ACCEPTED)
+        self.login(self.acan)
+        self.assertEqual(self.act('friendship_delete', f.pk).status_code, 400)
+        self.assertTrue(Friendship.objects.exists())
+
+    def test_page_lists_search_requests_and_friends(self):
+        Friendship.objects.create(from_user=self.acan, to_user=self.iqbal)  # masuk
+        Friendship.objects.create(from_user=self.iqbal, to_user=self.nami, status=Friendship.ACCEPTED)
+        self.login(self.iqbal)
+        res = self.client.get(reverse('social:friends'), {'q': 'a'})
+        self.assertEqual([r['user'].username for r in res.context['results']], ['acan', 'nami'])
+        self.assertEqual([r['status'] for r in res.context['results']], ['received', 'friends'])
+        self.assertEqual([f.from_user for f in res.context['incoming']], [self.acan])
+        self.assertEqual([row['user'] for row in res.context['friends']], [self.nami])
+        partial = self.client.get(reverse('social:friends'), {'partial': '1'})
+        self.assertNotContains(partial, '<html')
+
+    def test_non_ajax_form_redirects_with_message(self):
+        self.login(self.iqbal)
+        res = self.send('nami', ajax=False)
+        self.assertRedirects(res, reverse('social:friends'))
+
+    def test_leaderboard_friends_tab(self):
+        from scanner.models import FoodLog
+        Friendship.objects.create(from_user=self.iqbal, to_user=self.nami, status=Friendship.ACCEPTED)
+        for u in (self.iqbal, self.nami, self.acan):
+            FoodLog.objects.create(user=u, custom_name='Nasi', co2_grams=240)
+        self.login(self.iqbal)
+        res = self.client.get(reverse('social:leaderboard'), {'tab': 'friends'})
+        self.assertEqual({u.username for u in res.context['ranking']}, {'iqbal', 'nami'})
+
+        self.login(self.acan)
+        res = self.client.get(reverse('social:leaderboard'), {'tab': 'friends'})
+        self.assertTrue(res.context['no_friends'])
+
+
+class SidebarFriendsLinkTests(TestCase):
+    def test_sidebar_has_friends_link_marked_active(self):
+        user = User.objects.create_user('iqbal', password='pass12345x')
+        self.client.force_login(user)
+        res = self.client.get(reverse('social:friends'))
+        self.assertContains(res, f'href="{reverse("social:friends")}" aria-current="page"')
