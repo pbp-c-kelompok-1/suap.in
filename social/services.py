@@ -1,7 +1,8 @@
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 from django.contrib.auth.models import User
-from django.db.models import Avg, Count, F, Q
+from django.db.models import Avg, Count, F, Q, Sum
+from django.db.models.functions import Coalesce
 from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.timesince import timesince
@@ -10,7 +11,11 @@ from scanner.services import get_carbon_status
 
 from .models import Canteen, CommunityPost, University
 
-XP_PER_SCAN = 10  # sementara (PRD: +10 XP per scan). Ganti ke data XP modul gamifikasi kalau sudah ada.
+# ---------- XP & Leaderboard ----------
+# Sumber XP: modul gamification.
+#   - Total sepanjang waktu  -> GameProfile.total_xp      (leaderboard Peringkat, modul social)
+#   - XP dalam suatu periode -> jumlah XPActivity periode itu (leaderboard mingguan di Laporan
+#                               modul challenge, dan Campus War bulanan)
 
 
 def week_start():
@@ -22,28 +27,53 @@ def month_start():
     return timezone.localdate().replace(day=1)
 
 
-def ranked_users(since):
-    scans = Count('food_logs', filter=Q(food_logs__scanned_at__date__gte=since))
+def start_of(day):
+    """Tanggal -> datetime jam 00:00 waktu lokal (untuk filter created_at)."""
+    return timezone.make_aware(datetime.combine(day, time.min))
+
+
+def users_with_xp(since=None):
+    """User yang punya XP, urut terbesar. since=None: total sepanjang waktu; since=tanggal: XP sejak tanggal itu."""
+    if since is None:
+        xp = Coalesce(F('game_profile__total_xp'), 0)
+    else:
+        xp = Coalesce(Sum('xp_activities__amount', filter=Q(xp_activities__created_at__gte=start_of(since))), 0)
     return (
-        User.objects.annotate(scans=scans)
-        .annotate(xp=F('scans') * XP_PER_SCAN)
+        User.objects.annotate(xp=xp)
         .filter(xp__gt=0)
         .select_related('campus__university')
         .order_by('-xp', 'username')
     )
 
 
+def scope_ranking(users, viewer, scope):
+    """Batasi ranking ke 'friends' / 'campus' / 'national'.
+
+    Return (queryset, alasan_kosong) dengan alasan '' | 'login' | 'campus' | 'no_friends'.
+    """
+    from .friends import friend_ids
+
+    if scope == 'national':
+        return users, ''
+    if not viewer.is_authenticated:
+        return users.none(), 'login'
+    if scope == 'campus':
+        membership = getattr(viewer, 'campus', None)
+        if membership is None:
+            return users.none(), 'campus'
+        return users.filter(campus__university=membership.university), ''
+    ids = friend_ids(viewer)
+    return users.filter(pk__in=ids | {viewer.pk}), ('' if ids else 'no_friends')
+
+
 def ranked_campuses(since):
-    scans = Count(
-        'members__user__food_logs',
-        filter=Q(members__user__food_logs__scanned_at__date__gte=since),
+    """Campus War: XP yang dikumpulkan anggota tiap kampus sejak `since`, dirata-rata per anggota."""
+    gained = Coalesce(
+        Sum('members__user__xp_activities__amount',
+            filter=Q(members__user__xp_activities__created_at__gte=start_of(since))),
+        0,
     )
-    campuses = list(
-        University.objects.annotate(
-            member_count=Count('members', distinct=True),
-            scans=scans,
-        ).annotate(total_xp=F('scans') * XP_PER_SCAN)
-    )
+    campuses = list(University.objects.annotate(member_count=Count('members', distinct=True), total_xp=gained))
     for c in campuses:
         c.avg_xp = round(c.total_xp / c.member_count, 1) if c.member_count else 0
     campuses.sort(key=lambda c: (-c.avg_xp, c.short_name))

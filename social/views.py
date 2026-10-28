@@ -1,7 +1,8 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.db.models import Count, Q
+from django.db.models import F, Q
+from django.db.models.functions import Coalesce
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -10,36 +11,25 @@ from .community import nearest_canteens
 from .forms import CampusForm
 from .friends import FriendshipError, friend_ids, relation_status, remove, respond, send_request
 from .models import Canteen, CampusMembership, Friendship
-from .services import XP_PER_SCAN, canteen_pins, canteen_posts, month_start, ranked_campuses, ranked_users, week_start
+from .services import canteen_pins, canteen_posts, month_start, ranked_campuses, scope_ranking, users_with_xp
 
 
 def leaderboard_view(request):
+    """Leaderboard sepanjang waktu (total XP dari modul gamification).
+
+    Leaderboard mingguan ada di halaman Laporan (modul challenge) dan memakai
+    sumber XP yang sama lewat social.services.users_with_xp(since=...).
+    """
     tab = request.GET.get('tab', 'national')
-    users = ranked_users(week_start())
-    need_login = need_campus = no_friends = False
-
-    if tab == 'campus':
-        if not request.user.is_authenticated:
-            need_login, users = True, users.none()
-        elif not hasattr(request.user, 'campus'):
-            need_campus, users = True, users.none()
-        else:
-            users = users.filter(campus__university=request.user.campus.university)
-    elif tab == 'friends':
-        if not request.user.is_authenticated:
-            need_login, users = True, users.none()
-        else:
-            ids = friend_ids(request.user)
-            no_friends = not ids
-            users = users.filter(pk__in=ids | {request.user.pk})
-
-    ranking = list(users[:50])
+    if tab not in ('friends', 'campus', 'national'):
+        tab = 'national'
+    users, reason = scope_ranking(users_with_xp(), request.user, tab)
     return render(request, 'social/leaderboard.html', {
         'tab': tab,
-        'ranking': ranking,
-        'need_login': need_login,
-        'need_campus': need_campus,
-        'no_friends': no_friends,
+        'ranking': list(users[:50]),
+        'need_login': reason == 'login',
+        'need_campus': reason == 'campus',
+        'no_friends': reason == 'no_friends',
     })
 
 
@@ -129,16 +119,15 @@ def friends_view(request):
             status, friendship = relation_status(me, u)
             results.append({'user': u, 'status': status, 'friendship': friendship})
 
-    since = week_start()
     friends = (
         User.objects.filter(pk__in=friend_ids(me))
         .select_related('campus__university')
-        .annotate(scans=Count('food_logs', filter=Q(food_logs__scanned_at__date__gte=since)))
-        .order_by('-scans', 'username')
+        .annotate(xp=Coalesce(F('game_profile__total_xp'), 0))
+        .order_by('-xp', 'username')
     )
     friendships = {f.other(me).pk: f for f in Friendship.objects.filter(
         Q(from_user=me) | Q(to_user=me), status=Friendship.ACCEPTED)}
-    friend_rows = [{'user': u, 'xp': u.scans * XP_PER_SCAN, 'friendship': friendships.get(u.pk)} for u in friends]
+    friend_rows = [{'user': u, 'xp': u.xp, 'friendship': friendships.get(u.pk)} for u in friends]
 
     context = {
         'q': q,

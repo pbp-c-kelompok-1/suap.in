@@ -405,10 +405,10 @@ class FriendshipTests(TestCase):
         self.assertRedirects(res, reverse('social:friends'))
 
     def test_leaderboard_friends_tab(self):
-        from scanner.models import FoodLog
+        from gamification.services import award_xp
         Friendship.objects.create(from_user=self.iqbal, to_user=self.nami, status=Friendship.ACCEPTED)
         for u in (self.iqbal, self.nami, self.acan):
-            FoodLog.objects.create(user=u, custom_name='Nasi', co2_grams=240)
+            award_xp(u, 20)
         self.login(self.iqbal)
         res = self.client.get(reverse('social:leaderboard'), {'tab': 'friends'})
         self.assertEqual({u.username for u in res.context['ranking']}, {'iqbal', 'nami'})
@@ -424,3 +424,65 @@ class SidebarFriendsLinkTests(TestCase):
         self.client.force_login(user)
         res = self.client.get(reverse('social:friends'))
         self.assertContains(res, f'href="{reverse("social:friends")}" aria-current="page"')
+
+
+class XPLeaderboardTests(TestCase):
+    """Dua leaderboard, satu sumber XP: sepanjang waktu (social) dan mingguan (challenge)."""
+
+    def setUp(self):
+        from gamification.services import award_xp
+        self.award = award_xp
+        self.ui = University.objects.create(name='Universitas Indonesia', short_name='UI', city='Depok')
+        self.itb = University.objects.create(name='Institut Teknologi Bandung', short_name='ITB', city='Bandung')
+        self.iqbal = User.objects.create_user('iqbal', password='pass12345x')
+        self.nami = User.objects.create_user('nami', password='pass12345x')
+        self.acan = User.objects.create_user('acan', password='pass12345x')
+        from .models import CampusMembership
+        CampusMembership.objects.create(user=self.iqbal, university=self.ui)
+        CampusMembership.objects.create(user=self.nami, university=self.ui)
+        CampusMembership.objects.create(user=self.acan, university=self.itb)
+
+    def age(self, user, days):
+        """Geser semua XP user ke `days` hari yang lalu."""
+        from .models import XPActivity
+        XPActivity.objects.filter(user=user).update(created_at=timezone.now() - timedelta(days=days))
+
+    def test_xp_gain_is_logged_from_gamification(self):
+        from .models import XPActivity
+        from gamification.services import get_profile
+        get_profile(self.iqbal)  # profil baru, 0 XP: tidak dicatat
+        self.award(self.iqbal, 15)
+        self.award(self.iqbal, 11)
+        self.assertEqual(list(XPActivity.objects.filter(user=self.iqbal).values_list('amount', flat=True).order_by('id')), [15, 11])
+
+    def test_all_time_leaderboard_uses_total_xp(self):
+        self.award(self.nami, 300)
+        self.age(self.nami, 60)  # XP lama tetap dihitung di sepanjang waktu
+        self.award(self.iqbal, 100)
+        res = self.client.get(reverse('social:leaderboard'))
+        self.assertEqual([(u.username, u.xp) for u in res.context['ranking']], [('nami', 300), ('iqbal', 100)])
+
+    def test_campus_tab_and_campus_war(self):
+        self.award(self.iqbal, 100)
+        self.award(self.nami, 50)
+        self.award(self.acan, 120)
+        self.client.force_login(self.iqbal)
+        res = self.client.get(reverse('social:leaderboard'), {'tab': 'campus'})
+        self.assertEqual([u.username for u in res.context['ranking']], ['iqbal', 'nami'])
+        war = {c.short_name: c.avg_xp for c in self.client.get(reverse('social:campus_war')).context['campuses']}
+        self.assertEqual((war['ITB'], war['UI']), (120, 75))
+
+    def test_weekly_report_ranks_by_weekly_xp(self):
+        import json
+        self.award(self.nami, 500)
+        self.age(self.nami, 10)  # di luar 7 hari: tidak masuk peringkat mingguan
+        self.award(self.nami, 40)
+        self.award(self.iqbal, 60)
+        self.award(self.acan, 90)
+        Friendship.objects.create(from_user=self.iqbal, to_user=self.nami, status=Friendship.ACCEPTED)
+        self.client.force_login(self.iqbal)
+        rank = json.loads(self.client.get(reverse('challenge:list')).context['rank_json'])
+        self.assertEqual([(r['name'], r['xp']) for r in rank['nasional']], [('acan', 90), ('iqbal', 60), ('nami', 40)])
+        self.assertEqual([r['name'] for r in rank['kampus']], ['iqbal', 'nami'])
+        self.assertEqual([r['name'] for r in rank['teman']], ['iqbal', 'nami'])
+        self.assertTrue(rank['nasional'][1]['is_me'])
