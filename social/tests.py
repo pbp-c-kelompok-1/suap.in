@@ -486,3 +486,40 @@ class XPLeaderboardTests(TestCase):
         self.assertEqual([r['name'] for r in rank['kampus']], ['iqbal', 'nami'])
         self.assertEqual([r['name'] for r in rank['teman']], ['iqbal', 'nami'])
         self.assertTrue(rank['nasional'][1]['is_me'])
+
+
+class LeaderboardSeedTests(TestCase):
+    """Akun contoh leaderboard: XP total tetap, riwayat mingguan ada, akun asli tidak disentuh."""
+
+    def run_seed(self):
+        from gamification.models import GameProfile
+        from social import seed
+        from social.models import CampusMembership, XPActivity
+        seed.ensure_canteens(University, Canteen, log=lambda *a: None)
+        return seed.seed_leaderboard(User, University, CampusMembership, GameProfile, XPActivity,
+                                     timezone.localtime(), log=lambda *a: None)
+
+    def test_seed_is_idempotent_and_natural(self):
+        from gamification.models import GameProfile
+        from social import seed
+        from social.models import XPActivity
+        from social.services import users_with_xp
+        User.objects.create_user('zahra.aulia', password='rahasia123')  # akun asli dengan nama sama
+        entries = seed.load_leaderboard_entries()
+        self.run_seed()
+        self.run_seed()
+
+        self.assertFalse(GameProfile.objects.filter(user__username='zahra.aulia').exists())
+        seeded = len(entries) - 1
+        self.assertEqual(GameProfile.objects.count(), seeded)
+        totals = {e['username']: e['total_xp'] for e in entries}
+        for p in GameProfile.objects.select_related('user'):
+            self.assertEqual(p.total_xp, totals[p.user.username])  # signal tidak menambah XP
+            logged = sum(XPActivity.objects.filter(user=p.user).values_list('amount', flat=True))
+            self.assertLessEqual(logged, p.total_xp)
+
+        weekly = list(users_with_xp(since=timezone.localdate() - timedelta(days=6)))
+        self.assertGreater(len(weekly), 10)
+        self.assertNotIn('fajar.nugroho', [u.username for u in weekly])  # akun "libur" minggu ini
+        self.assertEqual(users_with_xp().first().username, 'fajar.nugroho')
+        self.assertEqual(User.objects.get(username='bima.aditya').campus.university.short_name, 'UI')
