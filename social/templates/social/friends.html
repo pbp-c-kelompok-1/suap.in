@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Teman — Suap.in{% endblock %}
+
+{% block extra_head %}
+<style>
+  .fr-search { display: flex; gap: 12px; flex-wrap: wrap; }
+  .fr-search input { flex: 1; min-width: 200px; border: 0; border-radius: 16px; background: var(--bg); color: var(--text); font: inherit;
+    font-weight: 700; padding: 12px 16px; box-shadow: inset 4px 4px 9px var(--sh-d), inset -4px -4px 9px var(--sh-l); }
+  .fr-msg { margin: 0 0 18px; padding: 12px 16px; border-radius: 16px; font-weight: 800; }
+  .fr-msg.ok { background: var(--teal-50); color: var(--teal-700); }
+  .fr-msg.err { background: rgba(229, 72, 77, .12); color: var(--danger); }
+  .fr-section { margin-top: 22px; }
+  .fr-row .nm small { display: block; color: var(--text-2); font-weight: 700; }
+  .fr-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .fr-actions form { margin: 0; }
+  .fr-tag { color: var(--text-2); font-weight: 800; font-size: .9rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="topbar"><h1>Teman</h1>{% include 'partials/auth_status.html' %}</div>
+
+<div class="raise card">
+  <div class="sec-head"><h2>Tambah teman</h2><span>cari berdasarkan username</span></div>
+  <form method="get" class="fr-search" id="friendSearch" role="search">
+    <input type="search" name="q" id="friendQuery" value="{{ q }}" placeholder="Ketik username, misal: rian" autocomplete="off" aria-label="Cari username">
+    <button type="submit" class="btn"><svg class="i"><use href="#i-userplus"/></svg>Cari</button>
+  </form>
+</div>
+
+<p class="fr-msg" id="friendMsg" role="status" hidden></p>
+
+<div id="friendsRegion">
+  {% include 'social/partials/friends_region.html' %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var region = document.getElementById('friendsRegion');
+  var query = document.getElementById('friendQuery');
+  var msg = document.getElementById('friendMsg');
+  var timer;
+
+  function refresh() {
+    var q = query.value.trim();
+    var url = '?partial=1' + (q ? '&q=' + encodeURIComponent(q) : '');
+    history.replaceState(null, '', q ? '?q=' + encodeURIComponent(q) : location.pathname);
+    return fetch(url, { headers: { 'X-Requested-With': 'fetch' } })
+      .then(function (res) { return res.text(); })
+      .then(function (html) { region.innerHTML = html; });
+  }
+
+  function show(text, ok) {
+    msg.textContent = text;
+    msg.className = 'fr-msg ' + (ok ? 'ok' : 'err');
+    msg.hidden = false;
+  }
+
+  // Cari user sambil mengetik (AJAX), tanpa pindah halaman
+  document.getElementById('friendSearch').addEventListener('submit', function (e) { e.preventDefault(); refresh(); });
+  query.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(refresh, 300); });
+
+  // Semua tombol aksi (tambah, terima, tolak, batal, hapus) dikirim lewat AJAX
+  region.addEventListener('submit', function (e) {
+    var form = e.target.closest('form[data-ajax]');
+    if (!form) return;
+    e.preventDefault();
+    if (form.dataset.confirm && !confirm(form.dataset.confirm)) return;
+    // getAttribute: form.action tertimpa oleh input bernama "action"
+    fetch(form.getAttribute('action'), { method: 'POST', body: new FormData(form), headers: { 'X-Requested-With': 'fetch' } })
+      .then(function (res) { return res.json(); })
+      .then(function (data) { show(data.message, data.ok); return refresh(); })
+      .catch(function () { show('Terjadi kesalahan. Coba lagi.', false); });
+  });
+})();
+</script>
+{% endblock %}

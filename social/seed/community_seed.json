@@ -1,0 +1,146 @@
+[
+  {
+    "photo": "mie_ayam_2.jpg",
+    "canteen": "Kancil",
+    "food_name": "Mie ayam bakso",
+    "price": 16000,
+    "co2_grams": 920,
+    "username": "zahra.aulia"
+  },
+  {
+    "photo": "pempek.jpg",
+    "canteen": "Kancil",
+    "food_name": "Pempek kapal selam + lenjer",
+    "price": 20000,
+    "co2_grams": 600,
+    "username": "salsa.amelia"
+  },
+  {
+    "photo": "indomie_katsu.jpg",
+    "canteen": "Dallas",
+    "food_name": "Indomie goreng chicken katsu",
+    "price": 18000,
+    "co2_grams": 1460,
+    "username": "rizky.ramadhan"
+  },
+  {
+    "photo": "sandwich.jpg",
+    "canteen": "Dallas",
+    "food_name": "Sandwich daging asap & keju",
+    "price": 15000,
+    "co2_grams": 900,
+    "username": "rizky.ramadhan"
+  },
+  {
+    "photo": "sate_taichan.jpg",
+    "canteen": "Takor",
+    "food_name": "Sate taichan",
+    "price": 18000,
+    "co2_grams": 750,
+    "username": "zahra.aulia"
+  },
+  {
+    "photo": "sandwich.jpg",
+    "canteen": "Takor",
+    "food_name": "Sandwich daging asap & keju",
+    "price": 15000,
+    "co2_grams": 900,
+    "username": "nadia.putri"
+  },
+  {
+    "photo": "nasi_kuning.jpg",
+    "canteen": "Takor",
+    "food_name": "Nasi kuning komplit",
+    "price": 13000,
+    "co2_grams": 780,
+    "username": "putri.ayu"
+  },
+  {
+    "photo": "nasi_goreng.jpg",
+    "canteen": "Takor",
+    "food_name": "Nasi goreng telur ceplok",
+    "price": 16000,
+    "co2_grams": 680,
+    "username": "putri.ayu"
+  },
+  {
+    "photo": "indomie_katsu.jpg",
+    "canteen": "Takor",
+    "food_name": "Indomie goreng chicken katsu",
+    "price": 18000,
+    "co2_grams": 1460,
+    "username": "rizky.ramadhan"
+  },
+  {
+    "photo": "soto_ayam.jpg",
+    "canteen": "Kanjiw",
+    "food_name": "Soto ayam",
+    "price": 14000,
+    "co2_grams": 650,
+    "username": "bagas.wicaksono"
+  },
+  {
+    "photo": "ayam_goreng_tepung.jpg",
+    "canteen": "Kanjiw",
+    "food_name": "Nasi ayam goreng tepung + telur orak-arik",
+    "price": 18000,
+    "co2_grams": 1400,
+    "username": "putri.ayu"
+  },
+  {
+    "photo": "kwetiau.jpg",
+    "canteen": "Kansas",
+    "food_name": "Kwetiau goreng ayam",
+    "price": 18000,
+    "co2_grams": 600,
+    "username": "rizky.ramadhan"
+  },
+  {
+    "photo": "ayam_katsu.jpg",
+    "canteen": "Kansas",
+    "food_name": "Nasi chicken katsu",
+    "price": 17000,
+    "co2_grams": 1140,
+    "username": "aulia.rahma"
+  },
+  {
+    "photo": "ayam_bakar.jpg",
+    "canteen": "Kantek",
+    "food_name": "Nasi ayam bakar + lalapan",
+    "price": 17000,
+    "co2_grams": 1070,
+    "username": "putri.ayu"
+  },
+  {
+    "photo": "nasi_kuning.jpg",
+    "canteen": "Kantek",
+    "food_name": "Nasi kuning komplit",
+    "price": 13000,
+    "co2_grams": 780,
+    "username": "aulia.rahma"
+  },
+  {
+    "photo": "mie_ayam_2.jpg",
+    "canteen": "Kantek",
+    "food_name": "Mie ayam bakso",
+    "price": 16000,
+    "co2_grams": 920,
+    "username": "nadia.putri"
+  },
+  {
+    "photo": "es_krim_cone.jpg",
+    "canteen": "Kantek",
+    "food_name": "Es krim cone",
+    "price": 5000,
+    "co2_grams": 350,
+    "username": "rian.pratama"
+  },
+  {
+    "photo": "mie_goreng.jpg",
+    "canteen": "Kantek",
+    "food_name": "Mie goreng",
+    "price": 13000,
+    "co2_grams": 380,
+    "username": "putri.ayu"
+  }
+]

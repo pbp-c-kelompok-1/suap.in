@@ -53,6 +53,11 @@
       <span>Community</span>
     </a>
 
+    <a href="{% url 'social:friends' %}"{% if request.resolver_match.url_name == 'friends' %} aria-current="page"{% endif %}>
+      <svg class="i"><use href="#i-userplus"/></svg>
+      <span>Teman</span>
+    </a>
+
     <a href="{% url 'story:story_list' %}">
       <svg class="i"><use href="#i2-book"/></svg>
       <span>Cerita</span>

@@ -1,0 +1,306 @@
+[
+  {
+    "username": "fajar.nugroho",
+    "first_name": "Fajar",
+    "last_name": "Nugroho",
+    "campus": "UI",
+    "total_xp": 4120,
+    "pace": "libur"
+  },
+  {
+    "username": "zahra.aulia",
+    "first_name": "Zahra",
+    "last_name": "Aulia",
+    "campus": "UI",
+    "total_xp": 3870,
+    "pace": "rajin"
+  },
+  {
+    "username": "rizky.ramadhan",
+    "first_name": "Rizky",
+    "last_name": "Ramadhan",
+    "campus": "UI",
+    "total_xp": 3215,
+    "pace": "biasa"
+  },
+  {
+    "username": "anisa.rahmawati",
+    "first_name": "Anisa",
+    "last_name": "Rahmawati",
+    "campus": "UI",
+    "total_xp": 2905,
+    "pace": "biasa"
+  },
+  {
+    "username": "dimas.prasetyo",
+    "first_name": "Dimas",
+    "last_name": "Prasetyo",
+    "campus": "ITB",
+    "total_xp": 2760,
+    "pace": "rajin"
+  },
+  {
+    "username": "putri.ayu",
+    "first_name": "Putri",
+    "last_name": "Ayu",
+    "campus": "UI",
+    "total_xp": 2480,
+    "pace": "rajin"
+  },
+  {
+    "username": "kevinwijaya",
+    "first_name": "Kevin",
+    "last_name": "Wijaya",
+    "campus": "BINUS",
+    "total_xp": 2350,
+    "pace": "biasa"
+  },
+  {
+    "username": "nabila.khairunnisa",
+    "first_name": "Nabila",
+    "last_name": "Khairunnisa",
+    "campus": "UI",
+    "total_xp": 2210,
+    "pace": "rajin"
+  },
+  {
+    "username": "nadia.putri",
+    "first_name": "Nadia",
+    "last_name": "Putri",
+    "campus": "UGM",
+    "total_xp": 1965,
+    "pace": "biasa"
+  },
+  {
+    "username": "yoga.firmansyah",
+    "first_name": "Yoga",
+    "last_name": "Firmansyah",
+    "campus": "UGM",
+    "total_xp": 1890,
+    "pace": "jarang"
+  },
+  {
+    "username": "tiara.anggraini",
+    "first_name": "Tiara",
+    "last_name": "Anggraini",
+    "campus": "UNPAD",
+    "total_xp": 1755,
+    "pace": "biasa"
+  },
+  {
+    "username": "andi.saputra",
+    "first_name": "Andi",
+    "last_name": "Saputra",
+    "campus": "UNHAS",
+    "total_xp": 1680,
+    "pace": "rajin"
+  },
+  {
+    "username": "hendra.kurniawan",
+    "first_name": "Hendra",
+    "last_name": "Kurniawan",
+    "campus": "ITS",
+    "total_xp": 1610,
+    "pace": "jarang"
+  },
+  {
+    "username": "aulia.rahma",
+    "first_name": "Aulia",
+    "last_name": "Rahma",
+    "campus": "UI",
+    "total_xp": 1540,
+    "pace": "jarang"
+  },
+  {
+    "username": "intan.maharani",
+    "first_name": "Intan",
+    "last_name": "Maharani",
+    "campus": "UI",
+    "total_xp": 1475,
+    "pace": "rajin"
+  },
+  {
+    "username": "farhan.maulana",
+    "first_name": "Farhan",
+    "last_name": "Maulana",
+    "campus": "UI",
+    "total_xp": 1390,
+    "pace": "biasa"
+  },
+  {
+    "username": "rafi.alfarizi",
+    "first_name": "Rafi",
+    "last_name": "Alfarizi",
+    "campus": "UB",
+    "total_xp": 1320,
+    "pace": "biasa"
+  },
+  {
+    "username": "wulan.sari",
+    "first_name": "Wulan",
+    "last_name": "Sari",
+    "campus": "IPB",
+    "total_xp": 1265,
+    "pace": "biasa"
+  },
+  {
+    "username": "ilham.akbar",
+    "first_name": "Ilham",
+    "last_name": "Akbar",
+    "campus": "ITB",
+    "total_xp": 1180,
+    "pace": "jarang"
+  },
+  {
+    "username": "salsa.amelia",
+    "first_name": "Salsa",
+    "last_name": "Amelia",
+    "campus": "IPB",
+    "total_xp": 1120,
+    "pace": "rajin"
+  },
+  {
+    "username": "galih.saputra",
+    "first_name": "Galih",
+    "last_name": "Saputra",
+    "campus": "UGM",
+    "total_xp": 1045,
+    "pace": "rajin"
+  },
+  {
+    "username": "dinda.ayu",
+    "first_name": "Dinda",
+    "last_name": "Ayu",
+    "campus": "UI",
+    "total_xp": 980,
+    "pace": "biasa"
+  },
+  {
+    "username": "yusuf.wibowo",
+    "first_name": "Yusuf",
+    "last_name": "Wibowo",
+    "campus": "UNDIP",
+    "total_xp": 960,
+    "pace": "jarang"
+  },
+  {
+    "username": "naufalrizki",
+    "first_name": "Naufal",
+    "last_name": "Rizki",
+    "campus": "UI",
+    "total_xp": 910,
+    "pace": "rajin"
+  },
+  {
+    "username": "bagas.wicaksono",
+    "first_name": "Bagas",
+    "last_name": "Wicaksono",
+    "campus": "UI",
+    "total_xp": 860,
+    "pace": "libur"
+  },
+  {
+    "username": "michelle_tan",
+    "first_name": "Michelle",
+    "last_name": "Tan",
+    "campus": "BINUS",
+    "total_xp": 790,
+    "pace": "biasa"
+  },
+  {
+    "username": "agus.setiawan",
+    "first_name": "Agus",
+    "last_name": "Setiawan",
+    "campus": "ITS",
+    "total_xp": 720,
+    "pace": "libur"
+  },
+  {
+    "username": "fikri.haikal",
+    "first_name": "Fikri",
+    "last_name": "Haikal",
+    "campus": "UI",
+    "total_xp": 655,
+    "pace": "biasa"
+  },
+  {
+    "username": "rian.pratama",
+    "first_name": "Rian",
+    "last_name": "Pratama",
+    "campus": "ITB",
+    "total_xp": 645,
+    "pace": "biasa"
+  },
+  {
+    "username": "ayu.lestari",
+    "first_name": "Ayu",
+    "last_name": "Lestari",
+    "campus": "UNAIR",
+    "total_xp": 580,
+    "pace": "jarang"
+  },
+  {
+    "username": "rina.siregar",
+    "first_name": "Rina",
+    "last_name": "Siregar",
+    "campus": "USU",
+    "total_xp": 540,
+    "pace": "biasa"
+  },
+  {
+    "username": "lutfi.hakim",
+    "first_name": "Lutfi",
+    "last_name": "Hakim",
+    "campus": "UGM",
+    "total_xp": 495,
+    "pace": "rajin"
+  },
+  {
+    "username": "anggun.pertiwi",
+    "first_name": "Anggun",
+    "last_name": "Pertiwi",
+    "campus": "UNPAD",
+    "total_xp": 410,
+    "pace": "biasa"
+  },
+  {
+    "username": "reza.firdaus",
+    "first_name": "Reza",
+    "last_name": "Firdaus",
+    "campus": "ITB",
+    "total_xp": 355,
+    "pace": "jarang"
+  },
+  {
+    "username": "sekar.ayuningtyas",
+    "first_name": "Sekar",
+    "last_name": "Ayuningtyas",
+    "campus": "UI",
+    "total_xp": 290,
+    "pace": "rajin"
+  },
+  {
+    "username": "arif.hidayat",
+    "first_name": "Arif",
+    "last_name": "Hidayat",
+    "campus": "IPB",
+    "total_xp": 215,
+    "pace": "jarang"
+  },
+  {
+    "username": "kezia.natalia",
+    "first_name": "Kezia",
+    "last_name": "Natalia",
+    "campus": "UI",
+    "total_xp": 140,
+    "pace": "biasa"
+  },
+  {
+    "username": "bima.aditya",
+    "first_name": "Bima",
+    "last_name": "Aditya",
+    "campus": "UI",
+    "total_xp": 85,
+    "pace": "jarang"
+  }
+]

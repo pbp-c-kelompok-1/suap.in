@@ -39,7 +39,6 @@ export const state = {
   hasWeekData: !!d.hasWeekData,
   weeklyRanking: d.weeklyRanking || null,
   rank,
-  /* Status baca & hapus disimpan di server (tabel Notification), bukan di browser. */
   notifs: (d.notifs || []).map(n => ({ ...n })),
   stats: d.stats || { scans: 0, recordStreak: 0, avoidedKg: 0, campusRank: null },
   badges: d.badges || [],

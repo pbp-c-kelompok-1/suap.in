@@ -14,5 +14,8 @@ urlpatterns = [
     path('community/api/canteens/<int:pk>/posts/', views.api_canteen_posts, name='api_canteen_posts'),
     path('community/api/nearest/', views.api_nearest, name='api_nearest'),
     path('friends/', views.friends_view, name='friends'),
+    path('friends/request/', views.friend_request_send, name='friend_request_send'),
+    path('friends/<int:pk>/respond/', views.friend_request_respond, name='friend_request_respond'),
+    path('friends/<int:pk>/delete/', views.friendship_delete, name='friendship_delete'),
     path('challenge/<int:pk>/', views.challenge_view, name='challenge'),
 ]

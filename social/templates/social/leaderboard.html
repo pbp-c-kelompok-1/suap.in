@@ -5,7 +5,7 @@
 <div class="topbar"><h1>Peringkat</h1>{% include 'partials/auth_status.html' %}</div>
 
 <div class="raise card">
-  <div class="sec-head"><h2>Leaderboard mingguan</h2><span>XP minggu ini</span></div>
+  <div class="sec-head"><h2>Leaderboard sepanjang waktu</h2><span>total XP</span></div>
 
   <div class="tabs" role="tablist" aria-label="Level peringkat">
     <a class="tab" role="tab" style="text-decoration:none" href="?tab=friends" aria-selected="{% if tab == 'friends' %}true{% else %}false{% endif %}">Teman</a>
@@ -16,7 +16,7 @@
   {% if need_login %}
     <div class="empty">
       <h3>Masuk dulu</h3>
-      <p>Login untuk melihat peringkat teman sekampusmu.</p>
+      <p>Login untuk melihat peringkat teman dan teman sekampusmu.</p>
       <a href="{% url 'authentication:login' %}" class="btn" style="text-decoration:none;margin-top:14px">Masuk</a>
     </div>
   {% elif need_campus %}
@@ -25,15 +25,16 @@
       <p>Pilih kampus dulu supaya bisa bersaing dengan teman sekampus.</p>
       <a href="{% url 'social:choose_campus' %}" class="btn" style="text-decoration:none;margin-top:14px"><svg class="i"><use href="#i-building"/></svg>Pilih kampus</a>
     </div>
-  {% elif tab == 'friends' %}
+  {% elif tab == 'friends' and no_friends %}
     <div class="empty">
-      <h3>Segera hadir</h3>
-      <p>Peringkat teman akan muncul setelah fitur pertemanan tersedia.</p>
+      <h3>Belum punya teman</h3>
+      <p>Tambahkan teman dulu supaya bisa bersaing dengan mereka.</p>
+      <a href="{% url 'social:friends' %}" class="btn" style="text-decoration:none;margin-top:14px"><svg class="i"><use href="#i-userplus"/></svg>Cari teman</a>
     </div>
   {% elif not ranking %}
     <div class="empty">
-      <h3>Belum ada yang scan minggu ini</h3>
-      <p>Jadi yang pertama!</p>
+      <h3>Belum ada yang punya XP</h3>
+      <p>Scan makananmu untuk mengumpulkan XP pertama!</p>
       <a href="{% url 'scanner:scan' %}" class="btn ok" style="text-decoration:none;margin-top:14px"><svg class="i"><use href="#i-camera"/></svg>Scan makanan</a>
     </div>
   {% else %}
@@ -50,7 +51,9 @@
   {% endif %}
 
   <div class="rep-actions" style="margin-top:20px">
+    <a href="{% url 'challenge:list' %}#/laporan" class="btn ghost" style="text-decoration:none"><svg class="i"><use href="#i-chart"/></svg>Peringkat minggu ini</a>
     <a href="{% url 'social:campus_war' %}" class="btn ghost" style="text-decoration:none"><svg class="i"><use href="#i-trophy"/></svg>Lihat Campus War</a>
+    {% if user.is_authenticated %}<a href="{% url 'social:friends' %}" class="btn ghost" style="text-decoration:none"><svg class="i"><use href="#i-userplus"/></svg>Kelola teman</a>{% endif %}
   </div>
 </div>
 {% endblock %}

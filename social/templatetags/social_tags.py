@@ -15,3 +15,10 @@ def community_share_form(context):
         'canteens': Canteen.objects.filter(is_active=True).order_by('faculty', 'name'),
         'default_food_name': ', '.join(n for n in names if n)[:100],
     }
+
+
+@register.filter
+def ago(value):
+    """'2 jam lalu' / 'baru saja' — waktu kasar yang sama dengan panel Community."""
+    from social.services import time_ago
+    return time_ago(value) if value else ''
