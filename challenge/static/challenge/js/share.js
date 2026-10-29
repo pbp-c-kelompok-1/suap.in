@@ -137,14 +137,53 @@ export function shareText(d, url) {
 
 const enc = encodeURIComponent;
 
-function targets(msg, url) {
-  return [
-    { id: 'wa', label: 'WhatsApp', color: '#25D366', mark: 'WA', href: `https://wa.me/?text=${enc(`${msg} ${url}`)}` },
-    { id: 'x', label: 'X', color: '#111111', mark: 'X', href: `https://twitter.com/intent/tweet?text=${enc(msg)}&url=${enc(url)}` },
-    { id: 'threads', label: 'Threads', color: '#222222', mark: '@', href: `https://www.threads.net/intent/post?text=${enc(`${msg} ${url}`)}` },
-    { id: 'tg', label: 'Telegram', color: '#2AA3E0', mark: 'TG', href: `https://t.me/share/url?url=${enc(url)}&text=${enc(msg)}` },
-    { id: 'fb', label: 'Facebook', color: '#1877F2', mark: 'f', href: `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}` },
-  ];
+// Tujuan bagikan. Klik ikon -> gambar otomatis terunduh -> aplikasinya dicoba dibuka dulu.
+// app = alamat untuk membuka aplikasi (HP & aplikasi desktop), web = cadangan kalau aplikasinya tidak ada.
+const TARGETS = [
+  { id: 'wa', label: 'WhatsApp', color: '#25D366', mark: 'WA', app: 'whatsapp://send', web: 'https://web.whatsapp.com/' },
+  { id: 'x', label: 'X', color: '#111111', mark: 'X', app: 'twitter://post', web: 'https://x.com/compose/post' },
+  { id: 'threads', label: 'Threads', color: '#222222', mark: '@', web: 'https://www.threads.net/' },
+  { id: 'tg', label: 'Telegram', color: '#2AA3E0', mark: 'TG', app: 'tg://', web: 'https://web.telegram.org/' },
+  { id: 'fb', label: 'Facebook', color: '#1877F2', mark: 'f', web: 'https://www.facebook.com/' },
+  { id: 'ig', label: 'Instagram', color: '', mark: 'IG', app: 'instagram://story-camera', appDesktop: 'instagram://', web: 'https://www.instagram.com/' },
+];
+
+async function copyImage(blob) {
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    return true;
+  } catch { return false; }
+}
+
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+// Coba buka aplikasinya (HP maupun aplikasi desktop). Kalau tidak ada respons
+// dalam 1,5 detik (aplikasi belum terpasang), baru buka versi web.
+function openTarget(t) {
+  const appUrl = isMobile ? t.app : (t.appDesktop || t.app);
+  if (!appUrl) { window.open(t.web, '_blank', 'noopener,noreferrer'); return; }
+
+  let opened = false;
+  const mark = () => { opened = true; };
+  window.addEventListener('blur', mark, { once: true });
+  document.addEventListener('visibilitychange', mark, { once: true });
+
+  if (isMobile) {
+    window.location.href = appUrl;
+  } else {
+    // Di laptop, pakai iframe tersembunyi supaya halaman ini tidak ikut berpindah.
+    const f = document.createElement('iframe');
+    f.style.display = 'none'; f.src = appUrl;
+    document.body.appendChild(f);
+    setTimeout(() => f.remove(), 2000);
+  }
+  setTimeout(() => {
+    window.removeEventListener('blur', mark);
+    document.removeEventListener('visibilitychange', mark);
+    if (opened) return;
+    const w = window.open(t.web, '_blank', 'noopener,noreferrer');
+    if (!w) toast('Pop-up diblokir. Izinkan pop-up untuk situs ini, lalu coba lagi.', 'check', 4000);
+  }, 1500);
 }
 
 const toBlob = canvas => new Promise(res => canvas.toBlob(res, 'image/png'));
@@ -196,13 +235,10 @@ export async function openShare(d, opener) {
       ${canNative ? '<button type="button" class="btn ok wide" data-act="native">Bagikan lewat aplikasi lain</button>' : ''}
       <p class="share-sub">Atau pilih tujuan:</p>
       <div class="share-grid">
-        ${targets(msg, url).map(t => `
-          <a class="share-opt" href="${t.href}" target="_blank" rel="noopener noreferrer" data-id="${t.id}">
-            <span class="share-dot" style="background:${t.color}">${t.mark}</span><small>${t.label}</small>
-          </a>`).join('')}
-        <button type="button" class="share-opt" data-act="ig">
-          <span class="share-dot ig">IG</span><small>Instagram</small>
-        </button>
+        ${TARGETS.map(t => `
+          <button type="button" class="share-opt" data-act="app" data-id="${t.id}">
+            <span class="share-dot${t.id === 'ig' ? ' ig' : ''}"${t.color ? ` style="background:${t.color}"` : ''}>${t.mark}</span><small>${t.label}</small>
+          </button>`).join('')}
         <button type="button" class="share-opt" data-act="copy-link">
           <span class="share-dot plain">\u29c9</span><small>Salin tautan</small>
         </button>
@@ -210,7 +246,7 @@ export async function openShare(d, opener) {
           <span class="share-dot plain">\u2193</span><small>Unduh gambar</small>
         </button>
       </div>
-      <p class="share-hint">Jika perangkat mendukung berbagi file, gunakan “Bagikan lewat aplikasi lain” untuk mengirim gambar. Tautan aplikasi sosial membuka halaman berbagi; lampirkan gambar yang diunduh jika ingin ikut membagikan kartu.</p>
+      <p class="share-hint">Di HP, pilih aplikasi lalu gambar langsung terlampir. Di laptop, aplikasinya langsung terbuka dan gambar sudah disalin: tinggal tekan Ctrl+V. Mau gambar terlampir otomatis? Pakai “Bagikan lewat aplikasi lain”.</p>
     </div>`;
   const prev = root.querySelector('.share-preview');
   canvas.setAttribute('role', 'img');
@@ -241,26 +277,31 @@ export async function openShare(d, opener) {
   root.addEventListener('click', async e => {
     if (e.target === root || e.target.closest('.share-close')) { close(); return; }
     const b = e.target.closest('[data-act]');
-    if (!b) {
-      const link = e.target.closest('.share-opt[data-id]');
-      if (!link) return;
-      // Buka halaman berbagi yang dipilih dan siapkan gambar untuk dilampirkan.
-      if (blob) {
-        download(blob, 'laporan-suapin.png');
-        toast('Kartu diunduh. Lampirkan gambar di aplikasi tujuan.', 'check');
-      }
-      return;
-    }
+    if (!b) return;
     const act = b.dataset.act;
     if (act === 'native') {
       try {
-        if (canNativeFile) await navigator.share({ files: [file], text: msg, url });
+        if (canNativeFile) await navigator.share({ files: [file] });
         else await navigator.share({ text: msg, url });
       } catch { /* user menutup menu bagikan */ }
-    } else if (act === 'download' || act === 'ig') {
+    } else if (act === 'app') {
+      const t = TARGETS.find(x => x.id === b.dataset.id);
+      if (!blob) { toast('Gagal membuat gambar laporan.', 'check'); return; }
+      if (canNativeFile && isMobile) {
+        // HP: gambar langsung terlampir lewat menu bagikan bawaan.
+        // (Laptop sengaja tidak lewat sini: menu bagikan Windows butuh satu klik tambahan.)
+        try { await navigator.share({ files: [file] }); } catch { /* ditutup pengguna */ }
+        return;
+      }
+      // Laptop: salin gambar (tinggal Ctrl+V), simpan salinan unduhan, lalu buka aplikasi / webnya.
+      const copied = await copyImage(blob);
+      download(blob, 'laporan-suapin.png');
+      toast(copied ? `Gambar disalin. Di ${t.label}, tekan Ctrl+V untuk melampirkan.` : `Gambar diunduh. Lampirkan di ${t.label}.`, 'check', 4500);
+      setTimeout(() => openTarget(t), 600);
+    } else if (act === 'download') {
       if (blob) {
         download(blob, 'laporan-suapin.png');
-        toast(act === 'ig' ? 'Gambar berhasil diunduh. Buka Instagram untuk mengunggahnya ke Story.' : 'Laporan berhasil diunduh!', 'check');
+        toast('Laporan berhasil diunduh!', 'check');
       } else toast('Gagal membuat gambar laporan.', 'check');
     } else if (act === 'copy-link') {
       toast((await copyText(url)) ? 'Tautan laporan berhasil disalin!' : 'Gagal menyalin tautan.', 'check');
