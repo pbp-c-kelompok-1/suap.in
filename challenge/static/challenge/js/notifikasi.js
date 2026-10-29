@@ -13,7 +13,7 @@ export function renderNotifs() {
   if (!list.length) {
     const none = state.notifs.length === 0;
     $('#notifs').innerHTML = emptyCard(none
-      ? { title: 'Belum ada notifikasi', text: 'Kabar baru muncul setelah kamu scan makanan atau punya teman.',
+      ? { title: 'Belum ada notifikasi', text: 'Kabar misi harian, streak, peringkat, tantangan, dan lencana akan muncul di sini.',
           actions: [ACT.scan(true), ACT.friends(false)], mascotId: 'mascotEmpty' }
       : { title: 'Tidak ada notifikasi di kategori ini', text: 'Coba pilih kategori lain.', mascotId: 'mascotEmpty' });
     $('#mascotEmpty').innerHTML = avatarSvg(state.avatar, 'mascot');

@@ -14,4 +14,20 @@
     {% endif %}
   </div>
   {% endif %}
+  <details class="rh-detail">
+    <summary>Lihat rincian minggu ini</summary>
+    <ul class="rh-days">
+      {% for d in w.days %}
+      <li class="{% if not d.has_data %}no-scan{% elif d.over_budget %}over{% endif %}">
+        <span>{{ d.date|date:"D, j M" }}</span>
+        {% if d.has_data %}
+          <b>{{ d.total_kg|floatformat:2 }} kg CO₂</b>
+          <small>{{ d.scans }} scan · budget {{ d.budget_kg|floatformat:1 }} kg{% if d.over_budget %} · lewat budget{% endif %}</small>
+        {% else %}
+          <small>Tidak ada scan</small>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </details>
 </li>

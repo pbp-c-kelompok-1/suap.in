@@ -39,7 +39,7 @@ class ChallengeDataTests(TestCase):
         d = self.data()
         self.assertEqual(d['totalScans'], 0)
         self.assertFalse(d['hasWeekData'])
-        self.assertEqual(d['notifs'], [])
+        self.assertTrue(any(n['id'].startswith('quests-new-') for n in d['notifs']))
         self.assertEqual(d['rank']['teman']['empty'], 'no_friends')
         self.assertEqual(d['rank']['kampus']['empty'], 'no_campus')
         # Belum pernah scan: tidak ikut peringkat, diarahkan untuk scan dulu.

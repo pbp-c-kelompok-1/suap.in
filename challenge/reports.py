@@ -52,6 +52,7 @@ def build_report_history(user, today=None):
 
     # {senin: {hari: gram}}, {senin: set(foto)}, {senin: jumlah baris tanpa respons AI}
     per_day, photos, loose = {}, {}, {}
+    photos_by_day, loose_by_day = {}, {}
     for scanned_at, grams, raw in rows:
         day = timezone.localtime(scanned_at).date()
         monday = _monday(day)
@@ -59,8 +60,10 @@ def build_report_history(user, today=None):
         days[day] = days.get(day, 0) + (grams or 0)
         if raw:
             photos.setdefault(monday, set()).add(raw)
+            photos_by_day.setdefault(day, set()).add(raw)
         else:
             loose[monday] = loose.get(monday, 0) + 1
+            loose_by_day[day] = loose_by_day.get(day, 0) + 1
 
     weeks = []
     monday = first_monday
@@ -72,6 +75,21 @@ def build_report_history(user, today=None):
             1 for d, g in days.items()
             if g > budgets.get(d, DEFAULT_BUDGET_GRAMS)
         )
+        daily_rows = []
+        for offset in range(7):
+            day = monday + timedelta(days=offset)
+            day_total = days.get(day, 0)
+            day_scans = len(photos_by_day.get(day, ())) + loose_by_day.get(day, 0)
+            day_budget = budgets.get(day, DEFAULT_BUDGET_GRAMS)
+            daily_rows.append({
+                'date': day,
+                'has_data': day in days,
+                'total_kg': round(day_total / 1000, 2),
+                'scans': day_scans,
+                'over_budget': day in days and day_total > day_budget,
+                'budget_kg': round(day_budget / 1000, 2),
+            })
+
         weeks.append({
             'start': monday,
             'end': monday + timedelta(days=6),
@@ -82,6 +100,7 @@ def build_report_history(user, today=None):
             'avg_day_kg': round(total_g / n_days / 1000, 1) if n_days else 0,
             'scans': len(photos.get(monday, ())) + loose.get(monday, 0),
             'over_days': over,
+            'days': daily_rows,
             'delta_percent': None,
             'delta_abs': None,
             'bar': 0,

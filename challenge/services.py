@@ -1,5 +1,6 @@
 
 from datetime import timedelta
+from itertools import combinations
 
 from django.utils import timezone
 
@@ -223,11 +224,27 @@ def todays_quests(user, today):
             'why': 'Bandingkan pilihan makananmu dan coba turunkan emisinya.',
         })
 
-    # Acak pilihan berdasarkan user dan tanggal.
+    # Acak urutan harian, lalu pilih kombinasi berdasarkan ID pengguna. Dengan
+    # begitu, akun berbeda mendapat kombinasi berbeda selama masih ada kombinasi
+    # yang tersedia; pengguna yang sama melihat misi stabil sepanjang hari.
+    pool_for_comparison = list(quest_pool)
+    rng = random.Random(today.isoformat())
     rng.shuffle(quest_pool)
+    quest_sets = list(combinations(quest_pool, min(3, len(quest_pool))))
+    selected_index = (user.pk - 1) % len(quest_sets)
+    quests = list(quest_sets[selected_index])
+
+    # Hindari kombinasi yang persis sama pada dua hari berturut-turut.
+    yesterday = today - timedelta(days=1)
+    previous_rng = random.Random(yesterday.isoformat())
+    previous_pool = list(pool_for_comparison)
+    previous_rng.shuffle(previous_pool)
+    previous_sets = list(combinations(previous_pool, min(3, len(previous_pool))))
+    previous_ids = {q['id'] for q in previous_sets[(user.pk - 1) % len(previous_sets)]}
+    if {q['id'] for q in quests} == previous_ids and len(quest_sets) > 1:
+        quests = list(quest_sets[(selected_index + 1) % len(quest_sets)])
 
     # Ambil maksimal tiga misi.
-    quests = quest_pool[:3]
     for q in quests:
         q['xp'] = QUEST_XP.get(q['id'], DEFAULT_QUEST_XP)
 
@@ -279,7 +296,7 @@ def saved_today_grams(user, today):
     return max(0, budget - used)
 
 
-def build_notifications(user, profile, scans_today, quests):
+def build_notifications(user, profile, scans_today, quests, weekly_ranking=None):
     """Kumpulkan notifikasi yang SEHARUSNYA ada sekarang.
 
     Hasilnya belum disimpan; persist_notifications yang menyimpannya ke database.
@@ -294,6 +311,47 @@ def build_notifications(user, profile, scans_today, quests):
             'title': title, 'body': body, 'link': link,
             'ephemeral': ephemeral, 'created_at': created_at or now,
         })
+
+    # Perubahan posisi leaderboard mingguan. Posisi sebelumnya disimpan di
+    # baris internal agar perubahan hanya diberitahukan sekali, bukan setiap
+    # kali dashboard dirender.
+    week_start = today - timedelta(days=today.weekday())
+    rank_key = f"rank-state-{week_start.isoformat()}"
+    rank_state = Notification.objects.filter(user=user, key=rank_key, kind='rank_state').first()
+    current_position = (weekly_ranking or {}).get('position')
+    current_rank_text = str(current_position) if current_position is not None else 'none'
+    previous_rank_text = rank_state.title.split(':', 1)[1] if rank_state and ':' in rank_state.title else None
+    if previous_rank_text is not None and previous_rank_text != current_rank_text:
+        previous_position = int(previous_rank_text) if previous_rank_text.isdigit() else None
+        if previous_position is None and current_position is not None:
+            title = f"Kamu masuk leaderboard di posisi #{current_position}!"
+            body = 'Kamu sudah memenuhi syarat peringkat minggu ini. Pertahankan progresmu!'
+        elif current_position is None and previous_position is not None:
+            title = 'Kamu keluar dari leaderboard minggu ini'
+            body = 'Posisimu berubah karena syarat scan mingguan tidak lagi terpenuhi. Scan lagi untuk masuk kembali.'
+        elif current_position < previous_position:
+            title = f"Peringkatmu naik ke #{current_position}!"
+            body = f"Kamu naik dari posisi #{previous_position}. Terus pertahankan progresmu!"
+        else:
+            title = f"Peringkatmu turun ke #{current_position}"
+            body = f"Kamu turun dari posisi #{previous_position}. Masih ada waktu untuk memperbaikinya."
+        add(
+            f"rank-move-{week_start.isoformat()}-{previous_rank_text}-{current_rank_text}-{today.isoformat()}",
+            'peringkat', 'trophy', 'blue', title, body, link='#/laporan',
+        )
+    # Baris internal ini bukan notifikasi yang ditampilkan; persist_notifications
+    # memperbarui nilainya pada setiap pemuatan agar perubahan berikutnya terdeteksi.
+    add(rank_key, 'rank_state', 'trophy', 'blue', f"rank:{current_rank_text}", '', ephemeral=False)
+
+    # Ringkasan misi harian. Kunci tanggal membuat notifikasi hanya dibuat
+    # sekali per hari, walau dashboard/API dipanggil berkali-kali.
+    if quests:
+        add(
+            f"quests-new-{today.isoformat()}", 'misi', 'target', 'teal',
+            f"Kamu punya {len(quests)} misi baru hari ini!",
+            'Misinya dipilih untuk membantumu membangun kebiasaan yang lebih ramah lingkungan. Cek progresmu dan klaim XP saat selesai.',
+            link='#/misi',
+        )
 
     # Streak
     streak = game.effective_streak(profile)
@@ -377,6 +435,15 @@ def persist_notifications(user, candidates):
     if fresh:
         Notification.objects.bulk_create(fresh, ignore_conflicts=True)
 
+    # State peringkat menggunakan key tetap per minggu, jadi update baris
+    # yang sama alih-alih membuat salinan atau menampilkannya ke pengguna.
+    for c in candidates:
+        if c['kind'] != 'rank_state':
+            continue
+        Notification.objects.filter(user=user, key=c['key'], kind='rank_state').update(
+            title=c['title'], body=c['body'], created_at=c['created_at'],
+        )
+
     Notification.objects.filter(
         user=user, read_at__lt=now - timedelta(days=NOTIF_READ_KEEP_DAYS),
     ).delete()
@@ -385,7 +452,7 @@ def persist_notifications(user, candidates):
     ).delete()
 
     rows = (
-        Notification.objects.filter(user=user, dismissed=False)
+        Notification.objects.filter(user=user, dismissed=False).exclude(kind='rank_state')
         .order_by('-created_at', '-id')[:NOTIF_MAX_SHOWN]
     )
     return [serialize_notification(n) for n in rows]
@@ -502,7 +569,7 @@ def build_challenge_data(user, claimed_today=False):
         "userTotalCarbon": rank_data["userTotalCarbon"],    
         "notifs": persist_notifications(
             user,
-            build_notifications(user, game_profile, scans_today, quests),
+            build_notifications(user, game_profile, scans_today, quests, weekly_ranking),
         ),
         "stats": {
             "scans": total_scans,
