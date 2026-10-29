@@ -1,7 +1,7 @@
 /* =========================================================
    FX
    ========================================================= */
-.toast{position:fixed;left:50%;top:calc(24px + env(safe-area-inset-top,0px));transform:translate(-50%,-90px);z-index:50;
+.toast{position:fixed;left:50%;top:calc(24px + env(safe-area-inset-top,0px));transform:translate(-50%,-90px);z-index:400;
   padding:12px 22px;border-radius:99px;background:var(--ok);color:#fff;font-family:'Fredoka';font-weight:600;font-size:1.1rem;
   box-shadow:0 5px 0 var(--ok-edge),0 14px 26px rgba(30,168,84,.4);transition:transform .45s cubic-bezier(.2,1.2,.3,1);display:flex;gap:8px;align-items:center}
 .toast.show{transform:translate(-50%,0)}
