@@ -42,32 +42,33 @@ class ChallengeDataTests(TestCase):
         self.assertEqual(d['notifs'], [])
         self.assertEqual(d['rank']['teman']['empty'], 'no_friends')
         self.assertEqual(d['rank']['kampus']['empty'], 'no_campus')
-        self.assertEqual(d['rank']['nasional']['empty'], '')
-
-        self.assertEqual(d['rank']['nasional']['items'][0]['name'], 'nami')
-        self.assertEqual(d['rank']['nasional']['items'][0]['scans'], 0)
-        self.assertEqual(d['rank']['nasional']['items'][0]['carbon'], 0)
+        # Belum pernah scan: tidak ikut peringkat, diarahkan untuk scan dulu.
+        self.assertEqual(d['rank']['nasional']['empty'], 'no_scan')
+        self.assertEqual(d['rank']['nasional']['items'], [])
+        self.assertEqual(d['weeklyRanking']['position'], None)
 
         self.assertEqual(d['stats']['campusRank'], None)
         self.assertTrue(all(q['val'] == 0 for q in d['quests']))
         
-    def test_rank_uses_real_users_and_excludes_unscanned_me(self):
+    def test_rank_uses_real_users_and_excludes_unscanned_users(self):
         other = User.objects.create_user('sinta', password='x12345678')
-        FoodLog.objects.create(user=other, custom_name='Nasi', co2_grams=1500)
+        User.objects.create_user('belum_scan', password='x12345678')
+        for _ in range(3):
+            FoodLog.objects.create(user=other, custom_name='Nasi', co2_grams=1500)
+            FoodLog.objects.create(user=self.user, custom_name='Salad', co2_grams=300)
         rows = self.data()['rank']['nasional']['items']
-        self.assertEqual(
-            [r['name'] for r in rows],
-            ['nami', 'sinta'],
-        )  
+        self.assertEqual([r['name'] for r in rows], ['nami', 'sinta'])
+        self.assertEqual([r['pos'] for r in rows], [1, 2])
 
     def test_campus_rank_and_my_position(self):
         uni = University.objects.create(name='Universitas Indonesia', short_name='UI')
         other = User.objects.create_user('sinta', password='x12345678')
         for u in (self.user, other):
             CampusMembership.objects.create(user=u, university=uni)
-        FoodLog.objects.create(user=other, custom_name='Nasi', co2_grams=1000)
-        FoodLog.objects.create(user=self.user, custom_name='Rendang', co2_grams=4000)
+        for _ in range(3):
+            FoodLog.objects.create(user=other, custom_name='Nasi', co2_grams=1000)
+            FoodLog.objects.create(user=self.user, custom_name='Rendang', co2_grams=4000)
         d = self.data()
         self.assertEqual([r['name'] for r in d['rank']['kampus']['items']], ['sinta', 'nami'])
         self.assertEqual(d['stats']['campusRank'], 2)
-        self.assertEqual(d['totalScans'], 1)
+        self.assertEqual(d['totalScans'], 3)
