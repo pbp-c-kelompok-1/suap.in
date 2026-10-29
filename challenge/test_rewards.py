@@ -54,14 +54,29 @@ class WeekAndBudgetTests(TestCase):
             ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
         )
 
-    def test_saved_budget_ignores_today(self):
+    def test_saved_budget_counts_today_and_follows_new_scans(self):
         today = timezone.localdate()
-        FoodLog.objects.create(user=self.user, custom_name='hari ini', co2_grams=1300)
-        self.assertEqual(saved_budget_grams(self.user, today), 0)
+        FoodLog.objects.create(user=self.user, custom_name='sarapan', co2_grams=500)
+        self.assertEqual(saved_budget_grams(self.user, today), 1500)      # 2000 - 500
 
+        FoodLog.objects.create(user=self.user, custom_name='makan siang', co2_grams=800)
+        self.assertEqual(saved_budget_grams(self.user, today), 700)       # 2000 - 1300
+
+        FoodLog.objects.create(user=self.user, custom_name='makan malam', co2_grams=1200)
+        self.assertEqual(saved_budget_grams(self.user, today), 0)         # lewat budget -> 0, bukan minus
+
+    def test_saved_budget_adds_up_finished_days_and_today(self):
+        today = timezone.localdate()
         kemarin = FoodLog.objects.create(user=self.user, custom_name='kemarin', co2_grams=1500)
         FoodLog.objects.filter(pk=kemarin.pk).update(scanned_at=timezone.now() - timedelta(days=1))
-        self.assertEqual(saved_budget_grams(self.user, today), 500)
+        FoodLog.objects.create(user=self.user, custom_name='hari ini', co2_grams=1300)
+        self.assertEqual(saved_budget_grams(self.user, today), 500 + 700)
+
+    def test_stats_in_challenge_data_update_after_new_scan(self):
+        FoodLog.objects.create(user=self.user, custom_name='a', co2_grams=500)
+        self.assertEqual(build_challenge_data(self.user)['stats']['avoidedKg'], 1.5)
+        FoodLog.objects.create(user=self.user, custom_name='b', co2_grams=1000)
+        self.assertEqual(build_challenge_data(self.user)['stats']['avoidedKg'], 0.5)
 
     def test_saved_budget_is_zero_when_over_budget(self):
         today = timezone.localdate()

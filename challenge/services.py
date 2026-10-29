@@ -237,19 +237,22 @@ def todays_quests(user, today):
 def saved_budget_grams(user, today):
     """Total gram CO2 yang "dihemat" dari budget harian.
 
-    Aturan: untuk setiap hari yang SUDAH LEWAT (hari ini tidak dihitung, karena
-    belum selesai) dan punya scan, hemat = budget hari itu - total emisi hari itu.
-    Hari yang melebihi budget dihitung 0, bukan minus.
+    Aturan: untuk setiap hari yang punya scan, hemat = budget hari itu - total
+    emisi hari itu. Hari yang melebihi budget dihitung 0, bukan minus.
+
+    Hari ini IKUT dihitung secara sementara: angkanya mengikuti total emisi hari
+    ini sampai sekarang, jadi turun kalau user scan lagi dan jadi 0 begitu
+    melewati budget harian. Besok angkanya sudah final.
     """
     rows = (
-        FoodLog.objects.filter(user=user, scanned_at__date__lt=today)
+        FoodLog.objects.filter(user=user, scanned_at__date__lte=today)
         .annotate(day=TruncDate('scanned_at'))
         .order_by()
         .values('day')
         .annotate(total=Sum('co2_grams'))
     )
     budgets = dict(
-        CarbonBudget.objects.filter(user=user, date__lt=today)
+        CarbonBudget.objects.filter(user=user, date__lte=today)
         .values_list('date', 'budget_grams')
     )
     saved = 0
@@ -427,7 +430,7 @@ def build_challenge_data(user, claimed_today=False):
     rank_data = build_rankings(user)
     weekly_ranking = build_weekly_ranking_recap(user)   
 
-    # Selisih budget di hari-hari yang sudah lewat (hari ini belum dihitung)
+    # Selisih budget harian; hari ini ikut dihitung sementara
     below_budget_grams = saved_budget_grams(user, today)
     earned_badge_ids = set(
         UserBadge.objects.filter(user=user).values_list('badge_id', flat=True)
