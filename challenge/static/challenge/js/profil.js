@@ -38,7 +38,7 @@ function renderStats() {
   $('#statsRow').innerHTML = `
     <div class="stat"><b>${s.scans}</b><span>Total scan</span></div>
     <div class="stat"><b>${s.recordStreak}</b><span>Streak terbaik (hari)</span></div>
-    <div class="stat"><b>${fmt(s.avoidedKg).replace('.', ',')}</b><span>kg CO\u2082 di bawah budget</span></div>
+    <div class="stat"><b>${fmt(s.avoidedKg).replace('.', ',')}</b><span>kg CO\u2082 hemat dari budget</span></div>
     <div class="stat"><b>${s.campusRank ? '#' + s.campusRank : '\u2013'}</b><span>Peringkat kampus</span></div>`;
   $('#badgeRow').innerHTML = state.badges.length
     ? state.badges.map(b => {
@@ -65,7 +65,9 @@ export function renderProfile() {
   $('#xpNext').textContent = cap > 0
     ? `${remaining} XP lagi untuk ke level ${state.level + 1}`
     : 'Level maksimum tercapai';
-  $('#xpFill').style.width = `${percent}%`;
+  const shown = xp > 0 ? Math.max(percent, 4) : 0;   /* supaya progres kecil tetap kelihatan */
+  $('#pXpTrack').setAttribute('aria-valuenow', percent);
+  requestAnimationFrame(() => { $('#pXpFill').style.width = `${shown}%`; });
   const id = state.pending, locked = isLocked(id), sp = isSp(id);
   $('#avBig').innerHTML = avatarSvg(id, 'mascot');
   $('#avName').innerHTML = avName(id) + (sp ? ` <span class="sp-tag">${ico('star')}Spesial</span>` : '');
