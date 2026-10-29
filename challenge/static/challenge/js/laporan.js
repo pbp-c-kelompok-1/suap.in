@@ -27,10 +27,11 @@ export function renderReport() {
   bars.innerHTML =
     `<div class="cap" style="bottom:calc(${cap / max * 100}% * .88 + 28px)"><span>Budget ${fmt(cap).replace('.', ',')}</span></div>` +
     state.weekly.map(w => {
-      const cls = !w.hasData ? 'nodata' : w.v > cap ? 'over' : w.v === best ? 'best' : '';
-      const label = w.hasData ? `${w.d}: ${fmt(w.v).replace('.', ',')} kg CO₂` : `${w.d}: belum ada data`;
-      const tip = w.hasData ? `${fmt(w.v).replace('.', ',')} kg` : 'Belum ada data';
-      return `<div class="col" role="listitem"><button class="pillar ${cls}" data-h="${w.hasData ? w.v / max * 100 : 4}" aria-label="${label}"><span class="tip">${tip}</span></button><small>${w.d}</small></div>`;
+      const cls = !w.hasData ? (w.future ? 'nodata future' : 'nodata') : w.v > cap ? 'over' : w.v === best ? 'best' : '';
+      const none = w.future ? 'belum tiba' : 'belum ada data';
+      const label = w.hasData ? `${w.d}: ${fmt(w.v).replace('.', ',')} kg CO₂` : `${w.d}: ${none}`;
+      const tip = w.hasData ? `${fmt(w.v).replace('.', ',')} kg` : (w.future ? 'Belum tiba' : 'Belum ada data');
+      return `<div class="col" role="listitem"><button class="pillar ${cls}" data-h="${w.hasData ? w.v / max * 100 : 4}" aria-label="${label}"><span class="tip">${tip}</span></button><small class="${w.today ? 'today' : ''}">${w.d}</small></div>`;
     }).join('');
 }
 
@@ -42,6 +43,8 @@ export function animateReport() {
     el.textContent = fmt(total * e).replace('.', ',');
     if (p < 1) requestAnimationFrame(tick);
   })(t0);
+  /* bar proyeksi: lebarnya dari data-w (diisi server), diisi di sini supaya ikut beranimasi */
+  $$('.pc-fill').forEach(b => { b.style.width = '0'; setTimeout(() => { b.style.width = `${b.dataset.w || 0}%`; }, 150); });
   $$('.pillar').forEach((b, i) => { b.style.height = '0'; setTimeout(() => { b.style.height = `calc(${b.dataset.h}% * .88)`; }, 80 + i * 70); });
 }
 

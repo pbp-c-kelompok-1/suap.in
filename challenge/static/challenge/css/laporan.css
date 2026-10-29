@@ -90,3 +90,32 @@ a.tab{text-decoration:none;display:inline-flex;align-items:center}
   border:2px dashed var(--teal-300);color:var(--teal-800);font-weight:700;line-height:1.4}
 .wk-live-note svg{flex:none;width:22px;height:22px;color:var(--warn)}
 :root[data-theme="dark"] .wk-live-note{color:var(--teal-100)}
+
+
+/* ---- Penjelasan proyeksi setahun ---- */
+.proj-what{color:var(--text-2);font-weight:700;margin:0 0 14px;line-height:1.45}
+.proj .proj-how{margin-top:12px;font-size:.92rem;line-height:1.5}
+.proj .proj-how b{color:var(--text)}
+.proj-compare{margin-top:18px;display:grid;gap:12px}
+.pc-row{display:grid;grid-template-columns:96px 1fr auto;gap:10px;align-items:center}
+.pc-lbl{font-size:.82rem;font-weight:800;color:var(--text-2)}
+.pc-val{font-family:'Fredoka';font-size:.92rem;min-width:62px;text-align:right}
+.pc-track{height:16px;padding:3px;border-radius:99px;background:var(--bg);
+  box-shadow:inset 4px 4px 9px var(--sh-d),inset -4px -4px 9px var(--sh-l)}
+.pc-fill{height:100%;width:0;border-radius:99px;min-width:6px;transition:width .7s cubic-bezier(.2,.9,.3,1.1)}
+.pc-fill.ok{background:linear-gradient(90deg,var(--green-400),var(--green-600))}
+.pc-fill.over{background:linear-gradient(90deg,#FF7A7A,var(--danger))}
+.pc-fill.budget{background:linear-gradient(90deg,#FFC24D,var(--warn))}
+.pc-note{margin:0;font-size:.78rem;font-weight:700;color:var(--text-2)}
+.proj-verdict{margin-top:16px;padding:12px 16px;border-radius:18px;font-weight:700;line-height:1.45;display:flex;gap:10px;align-items:center}
+.proj-verdict.ok{background:var(--green-50);color:var(--green-800)}
+.proj-verdict.over{background:#FFF4DD;color:#7A4E00}
+.proj-verdict svg{flex:none;width:24px;height:24px;color:var(--ok)}
+:root[data-theme="dark"] .proj-verdict.ok{background:rgba(30,168,84,.18);color:var(--green-100)}
+:root[data-theme="dark"] .proj-verdict.over{background:rgba(245,166,35,.18);color:#FFD9A0}
+.proj-hint{margin:14px 0 0;font-size:.82rem;font-weight:700;color:var(--text-2);line-height:1.45}
+
+/* hari yang belum tiba di grafik mingguan */
+.pillar.future{opacity:.45}
+.col small.today{color:var(--cta)}
+@media (max-width:640px){.pc-row{grid-template-columns:1fr auto;}.pc-lbl{grid-column:1/-1}}
