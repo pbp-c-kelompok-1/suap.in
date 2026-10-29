@@ -38,7 +38,7 @@ function renderStats() {
   $('#statsRow').innerHTML = `
     <div class="stat"><b>${s.scans}</b><span>Total scan</span></div>
     <div class="stat"><b>${s.recordStreak}</b><span>Streak terbaik (hari)</span></div>
-    <div class="stat"><b>${fmt(s.avoidedKg).replace('.', ',')}</b><span>kg CO\u2082 hemat dari budget</span></div>
+    <div class="stat"><b>${fmt(s.avoidedKg).replace('.', ',')}</b><span>kg CO\u2082 hemat hari ini</span></div>
     <div class="stat"><b>${s.campusRank ? '#' + s.campusRank : '\u2013'}</b><span>Peringkat kampus</span></div>`;
   $('#badgeRow').innerHTML = state.badges.length
     ? state.badges.map(b => {
@@ -49,6 +49,22 @@ function renderStats() {
       }).join('')
     : '<p class="muted">Belum ada lencana yang tersedia.</p>';
 }
+
+/* Ambil angka "hemat hari ini" terbaru dari server tiap Profil dibuka / tab kembali aktif. */
+export async function refreshStats() {
+  if (!urls.stats) return;
+  try {
+    const res = await fetch(urls.stats, { credentials: 'same-origin', cache: 'no-store' });
+    const data = await res.json();
+    if (data && data.ok && typeof data.avoidedKg === 'number' && data.avoidedKg !== state.stats.avoidedKg) {
+      state.stats.avoidedKg = data.avoidedKg;
+      renderStats();
+    }
+  } catch { /* abaikan; pakai angka yang sudah ada */ }
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && location.hash === '#/profil') refreshStats();
+});
 
 export function renderProfile() {
   renderStats();

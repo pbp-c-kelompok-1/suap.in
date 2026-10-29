@@ -262,6 +262,23 @@ def saved_budget_grams(user, today):
     return saved
 
 
+def saved_today_grams(user, today):
+    """Gram CO2 yang dihemat dari budget HARI INI saja.
+
+    hemat = budget hari ini - total emisi hari ini, minimal 0 (lewat budget -> 0).
+    Selalu mengikuti scan terbaru, dan mulai dari 0 lagi setiap ganti hari.
+    """
+    used = (
+        FoodLog.objects.filter(user=user, scanned_at__date=today)
+        .aggregate(total=Sum('co2_grams'))['total']
+    )
+    if used is None:      # belum ada scan hari ini
+        return 0
+    row = CarbonBudget.objects.filter(user=user, date=today).first()
+    budget = row.budget_grams if row else DEFAULT_BUDGET_GRAMS
+    return max(0, budget - used)
+
+
 def build_notifications(user, profile, scans_today, quests):
     """Kumpulkan notifikasi yang SEHARUSNYA ada sekarang.
 
@@ -430,8 +447,8 @@ def build_challenge_data(user, claimed_today=False):
     rank_data = build_rankings(user)
     weekly_ranking = build_weekly_ranking_recap(user)   
 
-    # Selisih budget harian; hari ini ikut dihitung sementara
-    below_budget_grams = saved_budget_grams(user, today)
+    # Hemat dari budget: hari ini saja, berubah tiap scan
+    below_budget_grams = saved_today_grams(user, today)
     earned_badge_ids = set(
         UserBadge.objects.filter(user=user).values_list('badge_id', flat=True)
     )

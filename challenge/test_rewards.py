@@ -9,7 +9,7 @@ from django.utils import timezone
 from scanner.models import FoodLog
 
 from .models import QuestClaim
-from .services import build_challenge_data, count_scans, saved_budget_grams
+from .services import build_challenge_data, count_scans, saved_budget_grams, saved_today_grams
 
 
 def post_json(client, url, payload):
@@ -77,6 +77,16 @@ class WeekAndBudgetTests(TestCase):
         self.assertEqual(build_challenge_data(self.user)['stats']['avoidedKg'], 1.5)
         FoodLog.objects.create(user=self.user, custom_name='b', co2_grams=1000)
         self.assertEqual(build_challenge_data(self.user)['stats']['avoidedKg'], 0.5)
+
+    def test_saved_today_ignores_other_days_and_hits_zero_when_over(self):
+        today = timezone.localdate()
+        kemarin = FoodLog.objects.create(user=self.user, custom_name='kemarin', co2_grams=1500)
+        FoodLog.objects.filter(pk=kemarin.pk).update(scanned_at=timezone.now() - timedelta(days=1))
+        self.assertEqual(saved_today_grams(self.user, today), 0)          # belum scan hari ini
+        FoodLog.objects.create(user=self.user, custom_name='a', co2_grams=1600)
+        self.assertEqual(saved_today_grams(self.user, today), 400)        # 2000 - 1600
+        FoodLog.objects.create(user=self.user, custom_name='b', co2_grams=900)
+        self.assertEqual(saved_today_grams(self.user, today), 0)          # lewat budget -> 0
 
     def test_saved_budget_is_zero_when_over_budget(self):
         today = timezone.localdate()
