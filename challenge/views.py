@@ -11,6 +11,7 @@ from django.views.decorators.http import require_POST
 from scanner.models import FoodLog, CarbonBudget
 
 from .models import ChallengeProfile, Notification, QuestClaim
+from .reports import build_report_history
 from .services import (
     DEFAULT_BUDGET_GRAMS,
     DEFAULT_QUEST_XP,
@@ -111,10 +112,12 @@ def challenge_list_view(request):
         'prev_avg_kg': round(prev_avg_g / 1000, 1),
         'has_prev_week_data': has_prev_week_data,
         'delta_percent': delta_percent,
+        'delta_abs': abs(delta_percent) if delta_percent is not None else None,
         'projection': projection,
         'savings_kg': savings_kg,
         'savings_trees': savings_trees,
         'is_saving': is_saving,
+        'history': build_report_history(request.user, today),
         'challenge_data': build_challenge_data(
             request.user,
             claimed_today=_claimed_today(request),

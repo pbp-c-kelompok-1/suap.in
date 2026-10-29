@@ -11,10 +11,10 @@
       {% if delta_percent is not None %}
       <div class="delta" {% if delta_percent > 0 %}style="color:var(--danger);background:var(--surface)"{% endif %}>
         <svg class="i" {% if delta_percent > 0 %}style="transform:rotate(180deg)"{% endif %}><use href="#i-down"/></svg>
-        {{ delta_percent|floatformat:0 }}% {% if delta_percent > 0 %}lebih tinggi{% else %}lebih rendah{% endif %} dari minggu lalu (rata-rata per hari)
+        {% if delta_percent == 0 %}Rata-rata emisimu per hari sama dengan minggu lalu.{% else %}Rata-rata emisimu per hari {{ delta_abs }}% {% if delta_percent > 0 %}lebih tinggi{% else %}lebih rendah{% endif %} dibanding minggu lalu.{% endif %}
       </div>
       {% else %}
-      <div class="delta">Belum cukup data untuk dibandingkan dengan minggu lalu.</div>
+      <div class="delta">Belum bisa dibandingkan dengan minggu lalu karena datanya belum ada.</div>
       {% endif %}
       <div class="chart">
         <div class="bars" id="bars" role="list"></div>
@@ -26,17 +26,36 @@
           <span><i style="background:var(--bg);box-shadow:inset 0 0 0 1px var(--sh-d)"></i>Belum ada data</span>
         </div>
       </div>
+
+      <section class="rh" aria-labelledby="rhTitle">
+        <h3 id="rhTitle">Laporan minggu-minggu sebelumnya</h3>
+        {% if history.weeks %}
+        <ol class="rh-list">
+          {% for w in history.weeks|slice:":4" %}{% include 'challenge/partials/_report_week.html' %}{% endfor %}
+        </ol>
+        {% if history.weeks|length > 4 %}
+        <details class="rh-more">
+          <summary>Lihat {{ history.weeks|length|add:"-4" }} minggu lainnya</summary>
+          <ol class="rh-list">
+            {% for w in history.weeks|slice:"4:" %}{% include 'challenge/partials/_report_week.html' %}{% endfor %}
+          </ol>
+        </details>
+        {% endif %}
+        <p class="rh-note">Dicatat sejak akunmu dibuat ({{ history.joined|date:"j M Y" }}) dan disimpan sampai sekitar 6 bulan terakhir.</p>
+        {% else %}
+        <p class="rh-empty">Belum ada laporan sebelumnya. Rekap mingguan akan tersimpan otomatis setelah minggu ini selesai.</p>
+        {% endif %}
+      </section>
     </div>
 
     <div class="raise card proj">
       <h3>Proyeksi setahun</h3>
-      <p class="proj-what">Perkiraan total emisi makananmu selama <b>1 tahun</b>, kalau pola makanmu tetap seperti minggu ini.</p>
+      <p class="proj-what">Kalau pola makanmu tetap seperti sekarang, ini perkiraan emisi CO₂-mu selama setahun.</p>
 
       {% if projection %}
       <div class="big"><b>{{ projection.kg }}</b><span>kg CO₂ per tahun</span></div>
       <p class="proj-how">
-        Cara hitungnya: rata-rata <b>{{ projection.daily_avg_kg|floatformat:1 }} kg</b> per hari
-        (dari {{ projection.days_logged }} hari yang kamu scan) × 365 hari.
+        Berdasarkan rata-rata <b>{{ projection.daily_avg_kg|floatformat:1 }} kg CO₂ per hari</b>, dari {{ projection.days_logged }} hari yang kamu scan.
       </p>
 
       <div class="proj-compare" role="img"
@@ -51,17 +70,17 @@
           <div class="pc-track"><div class="pc-fill budget" data-w="{{ projection.bar_budget }}"></div></div>
           <b class="pc-val">{{ projection.budget_year_kg }} kg</b>
         </div>
-        <p class="pc-note">Budget setahun = {{ projection.budget_day_kg|floatformat:1 }} kg per hari × 365 hari.</p>
+        <p class="pc-note">Budget tahunanmu setara dengan {{ projection.budget_year_kg }} kg CO₂.</p>
       </div>
 
       {% if projection.is_over_budget %}
       <div class="proj-verdict over">
-        Proyeksimu ± {{ projection.gap_kg }} kg ({{ projection.gap_percent }}%) <b>di atas</b> budget setahun. Coba pilih makanan yang lebih rendah karbon.
+        Jika pola ini berlanjut, emisi tahunanmu diperkirakan {{ projection.gap_kg }} kg CO₂ ({{ projection.gap_percent }}%) <b>di atas budget</b>. Coba pilih makanan yang lebih rendah karbon, ya!
       </div>
       {% else %}
       <div class="proj-verdict ok">
         <svg class="i"><use href="#i-leaf"/></svg>
-        <span>Proyeksimu ± {{ projection.gap_kg }} kg ({{ projection.gap_percent }}%) <b>di bawah</b> budget setahun. Pertahankan!</span>
+        <span>Kabar baik! Emisi tahunanmu diperkirakan {{ projection.gap_kg }} kg CO₂ ({{ projection.gap_percent }}%) <b>di bawah budget</b>. Pertahankan, ya!</span>
       </div>
       {% endif %}
 
@@ -69,19 +88,27 @@
       <div class="save">
         {% if is_saving %}
         <svg class="i"><use href="#i-leaf"/></svg>
-        <span>Dibanding ritme minggu lalu, kamu hemat ± {{ savings_kg }} kg per tahun{% if savings_trees %}, setara ± {{ savings_trees }} pohon{% endif %}.</span>
+        <span>Dibanding minggu lalu, kalau ritme ini kamu pertahankan selama setahun, kamu bisa menghemat sekitar {{ savings_kg }} kg CO₂{% if savings_trees %} (setara serapan sekitar {{ savings_trees }} pohon dalam setahun){% endif %}.</span>
         {% else %}
-        <span>Dibanding ritme minggu lalu, emisimu naik ± {{ savings_kg }} kg per tahun.</span>
+        <span>Dibanding minggu lalu, kalau ritme ini berlanjut selama setahun, emisimu bertambah sekitar {{ savings_kg }} kg CO₂.</span>
         {% endif %}
       </div>
       {% endif %}
 
       {% if projection.low_confidence %}
-      <p class="proj-hint">Baru {{ projection.days_logged }} hari data, jadi angkanya masih kasar. Makin banyak hari yang kamu scan, makin akurat proyeksinya.</p>
+      <p class="proj-hint">Perkiraan masih awal karena baru {{ projection.days_logged }} hari yang kamu scan. Tambah data scan agar hasilnya makin akurat.</p>
       {% endif %}
       {% else %}
       <div class="big"><b>–</b><span>kg CO₂ per tahun</span></div>
-      <p class="proj-how">Mulai scan makananmu minggu ini untuk melihat proyeksi tahunan.</p>
+      <p class="proj-how">Scan makanan minggu ini untuk melihat perkiraan emisi tahunanmu.</p>
+      {% endif %}
+
+      {% if history.projection_kg is not None and history.weeks_with_data >= 2 %}
+      <div class="proj-history">
+        <b>Dari riwayat laporanmu</b>
+        <p>Dari {{ history.weeks_with_data }} minggu yang tercatat, rata-rata emisimu <b>{{ history.avg_day_kg|floatformat:1 }} kg</b> per hari. Kalau pola itu berlanjut, perkiraannya sekitar <b>{{ history.projection_kg }} kg</b> per tahun.</p>
+        {% if history.best %}<p>Minggu terbaikmu: {{ history.best.start|date:"j M" }} – {{ history.best.end|date:"j M Y" }}, rata-rata {{ history.best.avg_day_kg|floatformat:1 }} kg per hari.</p>{% endif %}
+      </div>
       {% endif %}
     </div>
   </div>
