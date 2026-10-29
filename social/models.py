@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import User
 
 
@@ -42,7 +43,10 @@ class Canteen(models.Model):
 
 class CommunityPost(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='community_posts')
-    photo = models.ImageField(upload_to='community/%Y/%m/')
+    photo = models.ImageField(upload_to='community/%Y/%m/', blank=True)
+    # Foto data awal (showcase) disimpan sebagai file static di repo, bukan di media/,
+    # supaya selalu ikut ter-deploy. Isinya path relatif static, contoh 'social/seed/kancil_1.jpg'.
+    seed_image = models.CharField(max_length=200, blank=True)
     food_logs = models.ManyToManyField('scanner.FoodLog', blank=True, related_name='community_posts')
     total_co2_grams = models.FloatField(default=0)
     canteen = models.ForeignKey(Canteen, on_delete=models.SET_NULL, null=True, blank=True, related_name='posts')
@@ -71,3 +75,52 @@ class PostReport(models.Model):
 
     class Meta:
         unique_together = ['post', 'user']
+
+
+class Friendship(models.Model):
+    """Satu baris = satu hubungan antara dua user (arah: pengirim -> penerima)."""
+
+    PENDING = 'pending'
+    ACCEPTED = 'accepted'
+    REJECTED = 'rejected'
+    STATUS_CHOICES = [
+        (PENDING, 'Menunggu'),
+        (ACCEPTED, 'Berteman'),
+        (REJECTED, 'Ditolak'),
+    ]
+
+    from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friend_requests_sent')
+    to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friend_requests_received')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.from_user.username} -> {self.to_user.username} ({self.status})"
+
+    def other(self, user):
+        return self.to_user if self.from_user_id == user.id else self.from_user
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['from_user', 'to_user'], name='unique_friend_request'),
+        ]
+
+
+class XPActivity(models.Model):
+    """Riwayat XP yang didapat user.
+
+    Dicatat otomatis setiap total_xp di GameProfile (modul gamification) naik,
+    lihat social/signals.py. Dipakai untuk menghitung XP per periode
+    (leaderboard mingguan di Laporan dan Campus War bulanan).
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='xp_activities')
+    amount = models.PositiveIntegerField()
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    def __str__(self):
+        return f"{self.user.username} +{self.amount} XP"
+
+    class Meta:
+        ordering = ['-created_at']

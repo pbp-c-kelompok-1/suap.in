@@ -59,9 +59,9 @@
 
   <div class="cm-filters">
     <div class="tabs" role="tablist" aria-label="Rentang waktu" id="rangeTabs">
-      <button class="tab" role="tab" type="button" data-range="today" aria-selected="true">Hari ini</button>
+      <button class="tab" role="tab" type="button" data-range="today" aria-selected="false">Hari ini</button>
       <button class="tab" role="tab" type="button" data-range="week" aria-selected="false">7 hari</button>
-      <button class="tab" role="tab" type="button" data-range="all" aria-selected="false">Semua</button>
+      <button class="tab" role="tab" type="button" data-range="all" aria-selected="true">Semua</button>
     </div>
     <select id="facultyFilter" aria-label="Filter fakultas">
       <option value="">Semua fakultas</option>
@@ -111,7 +111,7 @@
 (function () {
   var API = "{% url 'social:api_canteens' %}";
   var POSTS_API = "{% url 'social:api_canteen_posts' 0 %}";
-  var state = { range: 'today', faculty: '' };
+  var state = { range: 'all', faculty: '' };
 
   var map = L.map('communityMap').setView([-6.3665, 106.8277], 16);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
