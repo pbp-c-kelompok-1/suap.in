@@ -1,0 +1,30 @@
+<div class="raise card" style="margin-top: 26px;">
+  <div class="sec-head">
+    <h2>Tambah lencana</h2><span>Khusus Admin</span>
+  </div>
+
+  <form id="badge-form">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <p class="strength-lbl" style="color:var(--danger); margin-bottom: 14px;">{% for error in form.non_field_errors %}{{ error }}{% endfor %}</p>
+    {% endif %}
+
+    <div style="display:grid; gap: 16px">
+      {% include 'partials/field.html' with field=form.name %}
+      {% include 'partials/field.html' with field=form.description %}
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+        {% include 'partials/field.html' with field=form.criteria_type %}
+        {% include 'partials/field.html' with field=form.threshold %}
+      </div>
+
+      {% include 'partials/field.html' with field=form.icon hint='Nama ikon dari sprite, contoh: flame atau camera.' %}
+    </div>
+
+    <div class="rep-actions" style="margin-top: 22px;">
+      <button type="submit" class="btn ok"><svg class="i"><use href="#i-check"/></svg>Simpan lencana</button>
+      <button type="reset" class="btn ghost">Reset</button>
+    </div>
+  </form>
+</div>

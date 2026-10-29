@@ -227,7 +227,7 @@ def badge_rarity(criteria_type, n):
             case _:
                 return 2
     
-        return 0
+    return 0
 
 
 # ==== Scanner ==========================================================================

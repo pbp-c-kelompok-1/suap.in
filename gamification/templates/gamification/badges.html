@@ -100,6 +100,10 @@
 
 </div>
 
+{% if user.is_staff %}
+  {% include 'gamification/partials/badge_form.html' with form=badge_form %}
+{% endif %}
+
 {% else %}
 <div class="raise card" style="text-align:center">
     <div class="mascot-wrap" id="mascotBadges" style="margin:0 auto 12px"></div>
@@ -131,6 +135,19 @@
         const badgeCode = item.code;
         const badge = item.fields;
 
+        {% if user.is_staff %}
+        const name = `
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+                <span>${badge.name}</span>
+                <button type="button" data-code="${badgeCode}" class="delete-badge btn ghost sm">
+                    Delete
+                </button>
+            </div>`;
+
+        {% else %}
+        const name = `${badge.name}`;
+        {% endif %}
+
         const divElement = document.createElement('div');
         divElement.classList.add('badge-i');
         
@@ -141,7 +158,7 @@
         divElement.style.setProperty("--edge", "var(--green-700)");
 
         const overlay = isUnlocked ? 'shine' : '';
-        divElement.innerHTML = `<div class="bi ${overlay} ${badge.material}"><svg class="i badge-icon"><use href="#i-${badge.icon}" /></svg></div>${badge.name}`;
+        divElement.innerHTML = `<div class="bi ${overlay} ${badge.material}"><svg class="i badge-icon"><use href="#i-${badge.icon}" /></svg></div>${name}`;
 
         return divElement;
     }
@@ -295,4 +312,8 @@
 
     fetchBadges();
 </script>
+{% if user.is_staff %}
+  <script type="module" src="{% static 'gamification/js/create_badge.js' %}"></script>
+  <script type="module" src="{% static 'gamification/js/delete_badge.js' %}"></script>
+{% endif %}
 {% endblock %}

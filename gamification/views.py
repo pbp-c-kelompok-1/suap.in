@@ -1,19 +1,27 @@
-from datetime import timedelta
+import json
 
 from django.http import JsonResponse
-from django.shortcuts import render
-from django.utils import timezone
+from django.shortcuts import get_object_or_404, render
+from django.views.decorators.http import require_POST
 
 from gamification.models import Badge, GameProfile, UserBadge
+from gamification.services import *
+from gamification.forms import BadgeForm
+
 from scanner.models import CarbonBudget, FoodLog
 from scanner.services import calculate_carbon_analogy, get_carbon_status
-from .services import *
+
+from challenge.views import DEFAULT_BUDGET_GRAMS, week_totals_by_day
+
+from django.utils import timezone
+from datetime import timedelta
 
 
 def dashboard_view(request):
     context = {}
     if request.user.is_authenticated:
-        budget = CarbonBudget.objects.filter(user=request.user, date=timezone.localdate()).first()
+        today = timezone.localdate()
+        budget = CarbonBudget.objects.filter(user=request.user, date=today).first()
         used = budget.used_grams if budget else 0.0
         limit = budget.budget_grams if budget else 2000.0
         status_color, status_label = get_carbon_status(used, limit)
@@ -25,6 +33,26 @@ def dashboard_view(request):
         for log in recent:
             log.display_name = log.custom_name or (log.food_item.name if log.food_item else 'Item')
 
+        # Gamification
+        profile = get_profile(request.user)
+        progress = xp_progress(profile)
+        is_max = profile.level >= MAX_LEVEL
+        # Report
+        week_start = today - timedelta(days=6)
+        totals_by_date = week_totals_by_day(request.user, week_start, today)
+        weekly = []
+        for i in range(7):
+            d = week_start + timedelta(days=i)
+            grams = totals_by_date.get(d, 0.0)
+            weekly.append({
+                'd': DAY_ABBR[d.weekday()],
+                'v': round(grams / 1000, 2),
+                'hasData': d in totals_by_date,
+            })
+
+        budget = CarbonBudget.objects.filter(user=request.user, date=today).first()
+        budget_cap_kg = round((budget.budget_grams if budget else DEFAULT_BUDGET_GRAMS) / 1000, 2)
+
         context = {
             'used_grams': used,
             'limit_grams': limit,
@@ -35,6 +63,17 @@ def dashboard_view(request):
             'status_label': status_label,
             'analogy': calculate_carbon_analogy(used),
             'recent_logs': recent,
+            # streak
+            'streak': effective_streak(profile, today),
+            'scanned_today': profile.last_activity_date == today,
+            # level
+            'level': profile.level,
+            'tier_name': [name for min_level, name in TIERS if profile.level >= min_level][-1],
+            'xp_percent': progress['percent'],
+            'is_max_level': is_max,
+            # Report
+            'weekly_json': json.dumps(weekly),
+            'budget_cap_kg_js': f'{budget_cap_kg:.2f}'
         }
     return render(request, 'gamification/dashboard.html', context)
 
@@ -178,7 +217,34 @@ def badges_view(request):
     if request.user.is_authenticated:
         check_badges(request.user)
 
-    return render(request, 'gamification/badges.html')
+    return render(request, 'gamification/badges.html', {'badge_form': BadgeForm(None)})
+
+@require_POST
+def create_badge_ajax(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    form = BadgeForm(request.POST)
+    if form.is_valid():
+        convert_to_slug = lambda s: s.lower().replace(" ", "-")
+        badge = form.save(commit=False)
+        badge.code = convert_to_slug(badge.name)
+        badge.save()
+        return JsonResponse(
+            {"message": "Lencana berhasil ditambahkan.", "code": badge.code}, status=201
+        )
+
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+
+@require_POST
+def delete_badge(request, code):
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    badge = get_object_or_404(Badge, code=code)
+    badge.delete()
+
+    return JsonResponse({"success": True, "message": "Lencana berhasil dihapus."})
 
 def story_view(request):
     return render(request, 'coming_soon.html', {

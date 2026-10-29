@@ -1,14 +1,55 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Beranda — Suap.in{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'gamification/css/streak.css' %}">
+<link rel="stylesheet" href="{% static 'gamification/css/badges.css' %}">
+{% endblock %}
+
+{% block extra_css %}
+.dashboard-widget-container > div { flex-direction: column; }
+.dash-link { color: inherit; text-decoration: none; transition: transform .2s ease; }
+.dash-link:hover { transform: translateY(-3px); }
+@media (max-width: 680px) {
+  .dashboard-widget-container > div { width: 100%; flex-direction: row; justify-content: space-evenly;}
+}
+{% endblock %}
 
 {% block content %}
 {% if user.is_authenticated %}
 <div class="topbar"><h1>Halo, {{ user.username }}!</h1>{% include 'partials/auth_status.html' %}</div>
 <p class="ref-note">Yuk catat makananmu hari ini dan jaga jejak karbonmu.</p>
 
-<div class="grid-2" style="align-items:start">
-  <div class="raise card">
+<div class="dashboard-widget-container" style="display: flex; flex-direction: row; margin-bottom: 20px; gap: 20px; flex-wrap: wrap;">
+
+  <div style="display: flex; gap: 20px;">
+
+    <a href="{% url 'gamification:level' %}" class="raise card dash-link" title="Pantau perkembangan level" aria-label="Lihat level dan XP" style="display: flex; flex-direction: column; align-items: center; flex: 1 1 0;">
+      <h3>{{ tier_name }}</h3>
+      <div class="ring" role="img" aria-label="Level" style="transform: scale(1.2); margin-top: 25px;">
+        <svg viewBox="0 0 120 120">
+          <circle class="tr" cx="60" cy="60" r="50" fill="none" stroke-width="14"/>
+          <circle class="fg" id="ringFg" cx="60" cy="60" r="50" fill="none" stroke-width="14" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+        </svg>
+        <div class="ring-c"><span>Level</span><b id="ringVal">{% if is_max_level %}MAX{% else %}{{ level }}{% endif %}</b></div>
+      </div>
+    </a>
+
+    <a href="{% url 'gamification:streak' %}" class="raise card dash-link" title="Pantau streak" aria-label="Lihat streak" style="display: flex; flex-direction: column; align-items: center; flex: 1 1 0;">
+      <h3>{% if streak > 0 %}{% if scanned_today %}Streakmu Menyala!{% else %}Jaga Streak {{ streak }} Harimu!{% endif %}{% else %}Mulai streak barumu!{% endif %}</h3>
+      <div class="flame-orb {% if not streak %}cold{% endif %}" style="background: transparent; box-shadow: none; transform: translateY(-5px);">
+        <svg class="i" style="--current-streak: {{ streak }};">
+          <use href="#i-flame" />
+        </svg>
+        <span class="flame-num">{{ streak }}</span>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="raise card" style="flex: 1;">
     <div class="budget-top" style="margin-bottom:8px">
       <div>
         <span class="chip lvl">{{ status_label }}</span>
@@ -24,6 +65,50 @@
       <div class="xp-fill" style="width:{{ progress_percent }}%"></div>
     </div>
     <a href="{% url 'scanner:scan' %}" class="btn ok wide"><svg class="i"><use href="#i-camera"/></svg>Scan Makanan</a>
+  </div>
+
+</div>
+
+<a href="{% url 'gamification:badges' %}" class="dash-link">
+  <div class="raise card dash-link" style="margin-bottom: 20px;">
+
+    <div class="sec-head">
+      <h2>Lencana terbaru</h2>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading" class="empty-state" style="display: none;">
+        <p>Memuat Lencana...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error" class="empty-state" style="display: none;">
+        <p>Gagal memuat data lencana. Silakan coba lagi.</p>
+    </div>
+
+      <!-- Empty State -->
+    <div id="empty" class="empty-state" style="display: none;">
+        <p>Belum ada lencana.</p>
+    </div>
+  
+    <!-- Badges -->
+    <div id="badge-grid" class="badges" style="justify-content: space-evenly;"></div>
+  </div>
+</a>
+
+<div class="grid-2" style="align-items:start">
+
+  <div class="raise card">
+    <div class="big"><b id="weekTotal">0</b><span>kg CO₂</span></div>
+    <div class="chart">
+      <div class="bars" id="bars" role="list"></div>
+      <div class="legend">
+        <span><i style="background:var(--green-500)"></i>Di bawah budget</span>
+        <span><i style="background:var(--danger)"></i>Lewat budget</span>
+        <span><i style="background:var(--blue-500)"></i>Hari terbaik</span>
+        <span><i style="background:var(--bg);box-shadow:inset 0 0 0 1px var(--sh-d)"></i>Belum ada data</span>
+      </div>
+    </div>
   </div>
 
   <div class="raise card">
@@ -67,6 +152,128 @@
 {% endblock %}
 
 {% block extra_scripts %}
+{% if user.is_authenticated %}
+<script>
+(function () {
+  const weekly = {{ weekly_json|safe }};
+  const cap = {{ budget_cap_kg_js }};
+  const fmt = n => n.toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).replace('.', ',');
+
+  const withData = weekly.filter(w => w.hasData);
+  const best = withData.length ? Math.min(...withData.map(w => w.v)) : null;
+  const max = Math.max(cap, ...weekly.map(w => w.v), 0.1) * 1.2;
+  document.getElementById('bars').innerHTML =
+    `<div class="cap" style="bottom:calc(${cap / max * 100}% * .88 + 28px)"><span>Budget ${fmt(cap)}</span></div>` +
+    weekly.map(w => {
+      const cls = !w.hasData ? 'nodata' : w.v > cap ? 'over' : w.v === best ? 'best' : '';
+      const label = w.hasData ? `${w.d}: ${fmt(w.v)} kg CO₂` : `${w.d}: belum ada data`;
+      const tip = w.hasData ? `${fmt(w.v)} kg` : 'Belum ada data';
+      return `<div class="col" role="listitem"><button class="pillar ${cls}" data-h="${w.hasData ? w.v / max * 100 : 4}" aria-label="${label}"><span class="tip">${tip}</span></button><small>${w.d}</small></div>`;
+    }).join('');
+
+  
+  const total = weekly.reduce((sum, w) => sum + w.v, 0);
+  const weekTotal = document.getElementById('weekTotal');
+  const t0 = performance.now();
+  (function tick(t) {
+    const p = Math.min(1, (t - t0) / 900);
+    weekTotal.textContent = fmt(total * (1 - Math.pow(1 - p, 3)));
+    if (p < 1) requestAnimationFrame(tick);
+  })(t0);
+
+  
+  document.querySelectorAll('.pillar').forEach((bar, i) => {
+    setTimeout(() => { bar.style.height = `calc(${bar.dataset.h}% * .88)`; }, 80 + i * 70);
+  });
+
+  
+  requestAnimationFrame(() => {
+    document.getElementById('ringFg').style.strokeDashoffset = 314.16 * (1 - {{ xp_percent }} / 100);
+  });
+})();
+</script>
+<script>
+  const BASE_BADGE_ENDPOINT = "{% url 'gamification:get_badges_json' %}";
+  const gridContainer = document.getElementById('badge-grid');
+  const loadingState = document.getElementById('loading');
+  const errorState = document.getElementById('error');
+  const emptyState = document.getElementById('empty');
+  let badgeAbortController;
+  let unlockedBadges = [];
+
+  /* Rendering */
+  function renderBadges() {
+    gridContainer.innerHTML = '';
+    const time = (item) => Date.parse(item.fields.earned_at_raw) || 0;
+    const items = unlockedBadges
+      .sort((a, b) => time(b) - time(a))
+      .slice(0, 6);
+
+    if (!items.length) {
+        displayPageSection({ showEmpty: true });
+        return
+      }
+    
+    items.forEach((item) => gridContainer.appendChild(createBadge(item, true)));
+    
+      displayPageSection({ showGrid: true });
+  }
+
+  function createBadge(item, isUnlocked) {
+        const badgeCode = item.code;
+        const badge = item.fields;
+
+        const divElement = document.createElement('div');
+        divElement.classList.add('badge-i');
+        
+        const dateObtained = isUnlocked ? `\nDiperoleh pada tanggal: ${badge.earned_at}` : '';
+        divElement.title = `${badge.description}${dateObtained}`;
+
+        divElement.style.setProperty("--col", "var(--green-500)");
+        divElement.style.setProperty("--edge", "var(--green-700)");
+
+        const overlay = isUnlocked ? 'shine' : 'grayscaled';
+        divElement.innerHTML = `<div class="bi ${overlay} ${badge.material}"><svg class="i badge-icon"><use href="#i-${badge.icon}" /></svg></div>${badge.name}`;
+
+        return divElement;
+    }
+
+    function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false}) {
+        loadingState.style.display = showLoading ? 'block' : 'none';
+        errorState.style.display = showError ? 'block' : 'none';
+        emptyState.style.display = showEmpty ? 'block' : 'none';
+        gridContainer.style.display = showGrid ? 'flex' : 'none';
+    }
+
+  /* Data Fetching */
+  async function fetchBadges() {
+    if (badgeAbortController) badgeAbortController.abort();
+    badgeAbortController = new AbortController();
+
+    displayPageSection({ showLoading: true });
+
+    fetch(BASE_BADGE_ENDPOINT, {
+      headers: { 'Accept': 'application/json' },
+      signal: badgeAbortController.signal,
+    })
+      .then((response) => {
+        if (response.ok) return response.json();
+        else throw new Error('Failed to fetch data');
+      })
+      .then((data) => {
+        unlockedBadges = data.unlocked;
+        renderBadges();
+      })
+      .catch((error) => {
+        if (error.name === 'AbortError') return;
+        console.log(error);
+        displayPageSection({ showError: true });
+      });
+  }
+
+  fetchBadges();
+</script>
+{% else %}
 <script>
 (function () {
   var slot = document.getElementById('mascotLand');
@@ -74,4 +281,5 @@
   if (slot && tpl) slot.appendChild(tpl.content.cloneNode(true));
 })();
 </script>
+{% endif %}
 {% endblock %}
