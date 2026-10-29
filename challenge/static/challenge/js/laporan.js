@@ -5,7 +5,7 @@ import { fmt, state } from './state.js';
 import { toast } from './fx.js';
 
 export function renderReport() {
-  const cap = state.budgetCapKg;
+  const cap = state.budget.max;
   const withData = state.weekly.filter(w => w.hasData);
   const best = withData.length ? Math.min(...withData.map(w => w.v)) : null;
   const max = Math.max(cap, ...state.weekly.map(w => w.v), 0.1) * 1.2;
@@ -31,21 +31,29 @@ export function animateReport() {
   $$('.pillar').forEach((b, i) => { b.style.height = '0'; setTimeout(() => { b.style.height = `calc(${b.dataset.h}% * .88)`; }, 80 + i * 70); });
 }
 const avColors = ['var(--teal-500)', 'var(--blue-500)', 'var(--green-500)', 'var(--warn)', 'var(--blue-700)'];
+const EMPTY_MSG = {
+  no_friends: 'Tambah teman dulu untuk melihat peringkat teman.',
+  no_campus:  'Pilih kampus di halaman Campus War untuk melihat peringkat kampus.',
+  no_scan:    'Scan makanan dulu agar kamu muncul di peringkat.',
+  no_scan_week: 'Belum ada scan minggu ini.',
+  few_scans:  'Scan minimal 3 kali seminggu agar masuk peringkat.',
+};
 export function renderRank() {
   $$('#rankTabs .tab').forEach(t => t.setAttribute('aria-selected', t.dataset.r === state.rankTab));
-  const rows = state.rank[state.rankTab];
-  if (!rows.length) {
-    $('#rankList').innerHTML = state.rankTab === 'kampus'
-      ? '<li><span class="nm">Pilih kampus dulu di halaman Campus War untuk melihat peringkat kampus.</span></li>'
-      : '<li><span class="nm">Belum ada data minggu ini.</span></li>';
+  const slot = state.rank[state.rankTab] || { items: [], empty: 'no_scan' };
+  const { items, empty } = slot;
+  const note = document.getElementById('rankNote');
+  if (note) note.textContent = '';
+  if (!items.length) {
+    $('#rankList').innerHTML = `<li><span class="nm">${EMPTY_MSG[empty] || 'Belum ada data minggu ini.'}</span></li>`;
     return;
   }
-  $('#rankList').innerHTML = rows.map((r, i) => `
-    <li class="${r[2] ? 'me' : ''}">
+  $('#rankList').innerHTML = items.map((r, i) => `
+    <li class="${r.is_me ? 'me' : ''}">
       <span class="pos ${i < 3 ? 'p' + (i + 1) : ''}">${i + 1}</span>
-      ${r[2] ? `<span class="av avme">${avatarIcon(state.avatar)}</span>` : `<span class="av" style="background:${avColors[i % 5]}">${r[0][0]}</span>`}
-      <span class="nm">${r[0]}</span>
-      <span class="co">${Number(r[1]).toLocaleString('id-ID')} <small>XP</small></span>
+      ${r.is_me ? `<span class="av avme">${avatarIcon(state.avatar)}</span>` : `<span class="av" style="background:${avColors[i % 5]}">${r.name[0]}</span>`}
+      <span class="nm">${r.name}</span>
+      <span class="co">${fmt(r.kg).replace('.', ',')} <small>kg</small></span>
     </li>`).join('');
 }
 $('#rankTabs').addEventListener('click', e => {
