@@ -14,7 +14,7 @@ Aturan:
 import math
 from datetime import timedelta
 
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncWeek
 from django.utils import timezone
 
@@ -57,7 +57,14 @@ def _weekly_entries(first_monday, last_day):
         .annotate(week=TruncWeek('scanned_at'))
         .order_by()
         .values('user_id', 'user__username', 'week')
-        .annotate(scans=Count('id'), co2=Sum('co2_grams'))
+        .annotate(
+            # satu foto = satu scan (semua item satu foto punya respons AI yang sama)
+            scans=(
+                Count('ai_raw_response', filter=~Q(ai_raw_response=''), distinct=True)
+                + Count('id', filter=Q(ai_raw_response=''))
+            ),
+            co2=Sum('co2_grams'),
+        )
     )
     by_week = {}
     for r in rows:

@@ -13,22 +13,17 @@ const rank = d.rank || {
 
 export const urls = cfgEl ? { ...cfgEl.dataset } : {};
 
-/* Status baca/hapus notifikasi disimpan per user di browser (belum ada tabel di server). */
-const NOTIF_KEY = `suapin-notif-${(d.user || {}).id || 'anon'}`;
-function loadLocal() {
-  try { return JSON.parse(localStorage.getItem(NOTIF_KEY)) || { read: [], gone: [] }; }
-  catch { return { read: [], gone: [] }; }
+/* Kirim POST JSON ke server (dengan CSRF). Mengembalikan { ok, status, data }. */
+export async function post(url, body = {}) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': urls.csrf || '' },
+    credentials: 'same-origin',
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok && data.ok !== false, status: res.status, data };
 }
-const local = loadLocal();
-export function saveNotifLocal() {
-  try {
-    localStorage.setItem(NOTIF_KEY, JSON.stringify({
-      read: state.notifs.filter(n => n.read).map(n => n.id),
-      gone: local.gone,
-    }));
-  } catch { /* storage tidak tersedia: status baca hanya berlaku di sesi ini */ }
-}
-export function markGone(id) { if (!local.gone.includes(id)) local.gone.push(id); }
 
 export const state = {
   user: d.user || { id: 0, name: '' },
@@ -37,12 +32,15 @@ export const state = {
   budget: { used: (d.budget || {}).usedKg || 0, max: (d.budget || {}).maxKg || 2 },
   scansToday: d.scansToday || 0,
   totalScans: d.totalScans || 0,
+  userTotalCarbon: d.userTotalCarbon || 0,
   quests: d.quests || [],
   chest: d.chest || { ready: false, claimed: false },
   weekly: d.weekly || [],
   hasWeekData: !!d.hasWeekData,
+  weeklyRanking: d.weeklyRanking || null,
   rank,
-  notifs: (d.notifs || []).filter(n => !local.gone.includes(n.id)).map(n => ({ ...n, read: local.read.includes(n.id) })),
+  /* Status baca & hapus disimpan di server (tabel Notification), bukan di browser. */
+  notifs: (d.notifs || []).map(n => ({ ...n })),
   stats: d.stats || { scans: 0, recordStreak: 0, avoidedKg: 0, campusRank: null },
   badges: d.badges || [],
   filter: 'all',

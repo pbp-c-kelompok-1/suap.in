@@ -7,6 +7,9 @@
          data-friends="{% url 'social:friends' %}"
          data-campus="{% url 'social:choose_campus' %}"
          data-claim="{% url 'challenge:claim_freeze' %}"
+         data-claim-quest="{% url 'challenge:claim_quest' %}"
+         data-notif-read="{% url 'challenge:notif_read' %}"
+         data-notif-dismiss="{% url 'challenge:notif_dismiss' %}"
          data-csrf="{{ csrf_token }}"></div>
     {% include 'challenge/partials/svg_sprite.html' %}
     {% include 'partials/icon_extra.html' %}

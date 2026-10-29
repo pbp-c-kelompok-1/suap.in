@@ -2,6 +2,7 @@ import json
 from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError, transaction
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -9,12 +10,20 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from scanner.models import FoodLog, CarbonBudget
 
-from .models import ChallengeProfile
+from .models import ChallengeProfile, Notification, QuestClaim
 from .services import (
+    DEFAULT_BUDGET_GRAMS,
+    DEFAULT_QUEST_XP,
     build_challenge_data,
+    count_scans,
+    serialize_notification,
     todays_quests,
     week_totals_by_day,
 )
+
+DAYS_IN_YEAR = 365
+KG_PER_TREE_PER_YEAR = 21   # kira-kira CO2 yang diserap satu pohon dalam setahun
+MIN_DAYS_FOR_GOOD_PROJECTION = 3
 
 FREEZE_SESSION_KEY = 'challenge_freeze_claimed_on'
 
@@ -26,7 +35,11 @@ def _claimed_today(request):
 @login_required
 def challenge_list_view(request):
     today = timezone.localdate()
-    week_start = today - timedelta(days=6)
+
+    # Satu minggu = Senin sampai Minggu, sama dengan peringkat mingguan.
+    # Rentang tanggal tetap sepanjang minggu dan baru berganti hari Senin.
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=6)
     prev_week_start = week_start - timedelta(days=7)
     prev_week_end = week_start - timedelta(days=1)
 
@@ -37,37 +50,68 @@ def challenge_list_view(request):
         prev_week_end,
     )
 
-    this_week_kg = round(sum(totals_by_date.values()) / 1000, 2)
-    prev_week_kg = round(sum(prev_totals_by_date.values()) / 1000, 2)
+    this_week_g = sum(totals_by_date.values())
+    prev_week_g = sum(prev_totals_by_date.values())
+    this_week_kg = round(this_week_g / 1000, 2)
+    prev_week_kg = round(prev_week_g / 1000, 2)
 
-    has_this_week_data = bool(totals_by_date)
-    has_prev_week_data = bool(prev_totals_by_date)
+    days_logged = len(totals_by_date)
+    prev_days_logged = len(prev_totals_by_date)
+    has_this_week_data = days_logged > 0
+    has_prev_week_data = prev_days_logged > 0
+
+    # Minggu ini belum selesai, jadi dibandingkan lewat RATA-RATA PER HARI
+    # (hari yang ada scan-nya), bukan total. Kalau tidak, minggu berjalan
+    # selalu terlihat "jauh lebih hemat" hanya karena harinya belum lengkap.
+    this_avg_g = this_week_g / days_logged if has_this_week_data else 0
+    prev_avg_g = prev_week_g / prev_days_logged if has_prev_week_data else 0
 
     delta_percent = None
-    if has_this_week_data and has_prev_week_data and prev_week_kg > 0:
-        delta_percent = round(
-            (this_week_kg - prev_week_kg) / prev_week_kg * 100
-        )
+    if has_this_week_data and has_prev_week_data and prev_avg_g > 0:
+        delta_percent = round((this_avg_g - prev_avg_g) / prev_avg_g * 100)
 
-    projection_kg = savings_kg = savings_trees = is_saving = None
+    budget_row = CarbonBudget.objects.filter(user=request.user, date=today).first()
+    budget_day_g = budget_row.budget_grams if budget_row else DEFAULT_BUDGET_GRAMS
 
+    projection = None
     if has_this_week_data:
-        projection_kg = round(this_week_kg / 7 * 365)
+        projection_kg = round(this_avg_g / 1000 * DAYS_IN_YEAR)
+        budget_year_kg = round(budget_day_g / 1000 * DAYS_IN_YEAR)
+        bar_max = max(projection_kg, budget_year_kg, 1)
+        is_over_budget = projection_kg > budget_year_kg
+        projection = {
+            'kg': projection_kg,
+            'daily_avg_kg': round(this_avg_g / 1000, 1),
+            'days_logged': days_logged,
+            'budget_day_kg': round(budget_day_g / 1000, 1),
+            'budget_year_kg': budget_year_kg,
+            'bar_mine': round(projection_kg / bar_max * 100),
+            'bar_budget': round(budget_year_kg / bar_max * 100),
+            'is_over_budget': is_over_budget,
+            'gap_kg': abs(budget_year_kg - projection_kg),
+            'gap_percent': (
+                round(abs(budget_year_kg - projection_kg) / budget_year_kg * 100)
+                if budget_year_kg else 0
+            ),
+            'low_confidence': days_logged < MIN_DAYS_FOR_GOOD_PROJECTION,
+        }
 
-        if has_prev_week_data:
-            diff_kg = prev_week_kg - this_week_kg
-            is_saving = diff_kg > 0
-            savings_kg = round(abs(diff_kg) * 52)
-            savings_trees = round(savings_kg / 21)
+    savings_kg = savings_trees = is_saving = None
+    if has_this_week_data and has_prev_week_data:
+        diff_g_per_day = prev_avg_g - this_avg_g
+        is_saving = diff_g_per_day > 0
+        savings_kg = round(abs(diff_g_per_day) / 1000 * DAYS_IN_YEAR)
+        savings_trees = round(savings_kg / KG_PER_TREE_PER_YEAR)
 
     context = {
         'week_start': week_start,
-        'week_end': today,
+        'week_end': week_end,
         'this_week_kg': this_week_kg,
         'prev_week_kg': prev_week_kg,
+        'prev_avg_kg': round(prev_avg_g / 1000, 1),
         'has_prev_week_data': has_prev_week_data,
         'delta_percent': delta_percent,
-        'projection_kg': projection_kg,
+        'projection': projection,
         'savings_kg': savings_kg,
         'savings_trees': savings_trees,
         'is_saving': is_saving,
@@ -121,6 +165,113 @@ def claim_freeze_view(request):
         'ok': True,
         'freezes': profile.streak_freezes,
     })
+
+
+def _json_body(request):
+    try:
+        data = json.loads(request.body or b'{}')
+    except (ValueError, UnicodeDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+@login_required
+@require_POST
+def claim_quest_view(request):
+    """Klaim hadiah XP satu misi yang sudah selesai (manual oleh user)."""
+    data = _json_body(request)
+    if data is None:
+        return JsonResponse({'ok': False, 'message': 'Data tidak valid.'}, status=400)
+
+    quest_id = str(data.get('quest_id', ''))[:40]
+    today = timezone.localdate()
+
+    quests, _, _, _ = todays_quests(request.user, today)
+    quest = next((q for q in quests if q['id'] == quest_id), None)
+
+    if quest is None:
+        return JsonResponse({'ok': False, 'message': 'Misi tidak ditemukan.'}, status=404)
+
+    if quest['val'] < quest['goal']:
+        return JsonResponse({'ok': False, 'message': 'Misi ini belum selesai.'}, status=400)
+
+    from gamification import services as game
+
+    xp = quest.get('xp', DEFAULT_QUEST_XP)
+
+    try:
+        with transaction.atomic():
+            QuestClaim.objects.create(
+                user=request.user, date=today, quest_id=quest_id, xp=xp,
+            )
+            result = game.award_xp(request.user, xp)
+    except IntegrityError:
+        return JsonResponse({
+            'ok': False,
+            'message': 'Hadiah misi ini sudah diklaim.',
+        }, status=400)
+
+    # Ubah notifikasi "klaim hadiahmu" jadi konfirmasi, dan tandai sudah dibaca.
+    key = f"quest-{today.isoformat()}-{quest_id}"
+    Notification.objects.filter(user=request.user, key=key).update(
+        icon='check',
+        tone='green',
+        title='Hadiah misi diklaim!',
+        body=f"{quest['title']}: kamu mendapat +{xp} XP.",
+        read_at=timezone.now(),
+    )
+    notif = Notification.objects.filter(
+        user=request.user, key=key, dismissed=False,
+    ).first()
+
+    profile = game.get_profile(request.user)
+    prog = game.xp_progress(profile)
+
+    return JsonResponse({
+        'ok': True,
+        'quest_id': quest_id,
+        'xp': xp,
+        'level': profile.level,
+        'leveledUp': result['leveled_up'],
+        'tier': game.tier_from_level(profile.level),
+        'xpCurrent': prog['current'],
+        'cap': prog['needed'],
+        'notif': serialize_notification(notif) if notif else None,
+    })
+
+
+@login_required
+@require_POST
+def notifications_read_view(request):
+    """Tandai notifikasi sudah dibaca: {"ids": ["..."]} atau {"all": true}."""
+    data = _json_body(request)
+    if data is None:
+        return JsonResponse({'ok': False, 'message': 'Data tidak valid.'}, status=400)
+
+    qs = Notification.objects.filter(
+        user=request.user, dismissed=False, read_at__isnull=True,
+    )
+    if not data.get('all'):
+        ids = data.get('ids')
+        if not isinstance(ids, list):
+            return JsonResponse({'ok': False, 'message': 'Data tidak valid.'}, status=400)
+        qs = qs.filter(key__in=[str(i)[:80] for i in ids[:200]])
+
+    updated = qs.update(read_at=timezone.now())
+    return JsonResponse({'ok': True, 'updated': updated})
+
+
+@login_required
+@require_POST
+def notification_dismiss_view(request):
+    """Hapus notifikasi dari daftar: {"id": "..."}."""
+    data = _json_body(request)
+    key = str((data or {}).get('id', ''))[:80]
+    if not key:
+        return JsonResponse({'ok': False, 'message': 'Data tidak valid.'}, status=400)
+
+    Notification.objects.filter(user=request.user, key=key).update(dismissed=True)
+    return JsonResponse({'ok': True})
 
 
 @login_required
@@ -178,8 +329,8 @@ def api_challenge_data(request):
             "id": user.id,
             "name": user.username,
         },
-        "scans_today": len(daily_logs),
-        "total_scans": FoodLog.objects.filter(user=user).count(),
+        "scans_today": count_scans(logs_today),
+        "total_scans": count_scans(FoodLog.objects.filter(user=user)),
         "daily_co2_kg": round(daily_grams / 1000, 2),
         "weekly_co2_kg": round(weekly_grams / 1000, 2),
         "daily_budget_kg": round(
