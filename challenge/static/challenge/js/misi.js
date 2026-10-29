@@ -2,8 +2,9 @@
 import { $, ico } from './utils.js';
 import { cheer } from './mascot.js';
 import { confetti, toast } from './fx.js';
-import { fmt, state, urls } from './state.js';
+import { fmt, post, state, urls } from './state.js';
 import { ACT, emptyCard } from './empty.js';
+import { renderNotifs } from './notifikasi.js';
 
 const done = q => q.val >= q.goal;
 const doneCount = () => state.quests.filter(done).length;
@@ -46,12 +47,15 @@ export function renderQuests() {
   $('#quests').innerHTML = state.quests.map(q => {
     const ok = done(q);
     const pct = Math.min(100, q.val / q.goal * 100);
+    const xp = q.xp || 0;
+    const xpTag = xp ? `<span class="xp-tag">${ico('star')}+${xp} XP</span>` : '';
     let action;
-    if (ok) action = `<button class="btn ok" disabled>${ico('check')}Selesai</button>`;
+    if (ok && q.claimed) action = `<button class="btn ok" disabled>${ico('check')}Diklaim</button>`;
+    else if (ok) action = `<button class="btn ok" data-claim="${q.id}">${ico('gift')}Klaim +${xp} XP</button>`;
     else if (q.failed) action = `<button class="btn ghost sm" disabled>Lewat budget</button>`;
     else action = `<a class="btn ghost sm" href="${urls.scan}">${ico('camera')}Scan sekarang</a>`;
     return `
-    <article class="raise quest tone-${q.tone} ${ok ? 'done' : ''}">
+    <article class="raise quest tone-${q.tone} ${ok ? 'done' : ''} ${ok && !q.claimed ? 'ready' : ''}">
       <div class="q-ico">${ico(ok ? 'check' : q.icon)}</div>
       <div class="q-body">
         <h3>${q.title}</h3>
@@ -59,7 +63,7 @@ export function renderQuests() {
         <div class="prog"><div class="inset"><div class="bar" style="width:${pct}%"></div></div><b>${q.val}/${q.goal}</b></div>
         <span class="why">${ico('leaf')}${q.why}</span>
       </div>
-      <div class="q-side">${action}</div>
+      <div class="q-side">${xpTag}${action}</div>
     </article>`;
   }).join('');
 }
@@ -95,4 +99,39 @@ $('#chestBtn').addEventListener('click', async () => {
     toast('Tidak bisa terhubung ke server.', 'alert');
   }
   renderChest();
+});
+
+/* Klaim hadiah XP satu misi (manual, supaya user tahu apa yang didapat) */
+$('#quests').addEventListener('click', async e => {
+  const btn = e.target.closest('[data-claim]');
+  if (!btn) return;
+  const q = state.quests.find(x => x.id === btn.dataset.claim);
+  if (!q || q.claimed) return;
+
+  btn.disabled = true;
+  let res;
+  try {
+    res = await post(urls.claimQuest, { quest_id: q.id });
+  } catch {
+    res = { ok: false, data: { message: 'Tidak bisa terhubung ke server.' } };
+  }
+
+  if (res.ok) {
+    const d = res.data;
+    q.claimed = true;
+    state.xp = d.xpCurrent; state.cap = d.cap; state.level = d.level; state.tier = d.tier;
+    if (d.notif) {
+      const i = state.notifs.findIndex(n => n.id === d.notif.id);
+      if (i >= 0) state.notifs[i] = d.notif;
+      renderNotifs();
+    }
+    confetti(60, btn); cheer();
+    toast(`+${d.xp} XP didapat dari "${q.title}"`, 'star');
+    if (d.leveledUp) setTimeout(() => toast(`Naik ke level ${d.level}!`, 'trophy'), 1800);
+  } else {
+    toast(res.data.message || 'Gagal mengklaim hadiah.', 'alert');
+    if (res.status === 400 && /sudah diklaim/.test(res.data.message || '')) q.claimed = true;
+  }
+  renderQuests();
+  renderHeader();
 });
