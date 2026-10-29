@@ -83,3 +83,17 @@
 .chest h3{font-size:1.15rem}
 .chest p{color:var(--text-2)}
 .chest .btn{margin-left:auto}
+
+/* agar PNG mengikuti ukuran wadah dan nggak ketarik bentuknya */
+.mascot-wrap .es-mascot {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .es-mascot {
+        animation: none;
+    }
+}

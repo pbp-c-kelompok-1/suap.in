@@ -1,6 +1,6 @@
 // Halaman Notifikasi: filter + tandai dibaca
 import { $, $$, ico } from './utils.js';
-import { avatarSvg } from './avatar.js';
+import { mountMascot } from './mascot.js';
 import { state } from './state.js';
 
 export function renderNotifs() {
@@ -11,7 +11,7 @@ export function renderNotifs() {
   $('#readAll').disabled = unread === 0;
   if (!list.length) {
     $('#notifs').innerHTML = `<div class="raise empty"><div class="mascot-wrap" id="mascotEmpty"></div><h3>Tidak ada notifikasi</h3><p>Semua bersih. Foto makananmu untuk memancing kabar baru.</p></div>`;
-    $('#mascotEmpty').innerHTML = avatarSvg(state.avatar, 'mascot');
+    mountMascot($('#mascotEmpty'), 'senyum');
     return;
   }
   $('#notifs').innerHTML = list.map(n => `

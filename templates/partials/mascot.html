@@ -1,0 +1,17 @@
+{% load static %}
+
+<!-- Path gambar disiapkan Django supaya tetap sesuai saat deploy. -->
+<template
+    id="es-mascot-tpl"
+    data-senyum="{% static 'images/mascot/senyum.png' %}"
+    data-menyapa="{% static 'images/mascot/menyapa.png' %}"
+    data-memindai="{% static 'images/mascot/memindai.png' %}"
+>
+    <img
+        src="{% static 'images/mascot/senyum.png' %}"
+        class="mascot es-mascot"
+        alt="Maskot es campur Suap.in"
+        width="132"
+        height="132"
+    >
+</template>
