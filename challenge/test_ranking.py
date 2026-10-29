@@ -161,7 +161,7 @@ class WeeklyRankingTests(TestCase):
         self.assertEqual((recap['position'], recap['totalUsers']), (1, 2))
         self.assertEqual(recap['delta'], 1)
         self.assertEqual(recap['tone'], 'top')
-        self.assertIn('nomor 1', recap['message'])
+        self.assertIn('peringkat 1', recap['message'])
         self.assertIn('Naik 1 peringkat', recap['message'])
         self.assertEqual([t['name'] for t in recap['top']], ['me', 'rival'])
 

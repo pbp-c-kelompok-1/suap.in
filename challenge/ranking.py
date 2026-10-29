@@ -143,7 +143,7 @@ def _message(pos, total, delta, my_entry, ever_scanned):
         return 'start', f'Scan {need} makanan lagi minggu ini supaya kamu masuk peringkat.'
 
     if pos == 1:
-        text, tone = 'Kamu nomor 1 minggu ini! Pertahankan pilihan makanan rendah karbonmu.', 'top'
+        text, tone = 'Kamu peringkat 1 minggu ini! Pertahankan pilihan makanan rendah karbonmu.', 'top'
     elif pos <= 3:
         text, tone = 'Keren, kamu masuk 3 besar! Sedikit lagi ke puncak, pertahankan ya.', 'top'
     elif pos <= math.ceil(total / 2):
