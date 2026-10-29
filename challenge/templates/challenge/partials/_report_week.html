@@ -1,0 +1,17 @@
+<li class="rh-item{% if not w.has_data %} none{% endif %}">
+  <div class="rh-top">
+    <span class="rh-date">{% if w.start.month == w.end.month %}{{ w.start|date:"j" }}–{{ w.end|date:"j M Y" }}{% else %}{{ w.start|date:"j M" }} – {{ w.end|date:"j M Y" }}{% endif %}</span>
+    {% if w.has_data %}<b class="rh-kg">{{ w.total_kg|floatformat:1 }} kg CO₂</b>{% else %}<span class="rh-kg muted">Tidak ada scan</span>{% endif %}
+  </div>
+  {% if w.has_data %}
+  <div class="rh-bar" aria-hidden="true"><i style="width:{{ w.bar }}%"></i></div>
+  <div class="rh-meta">
+    <span>{{ w.days_logged }} hari scan · {{ w.scans }} scan{% if w.over_days %} · {{ w.over_days }} hari lewat budget{% endif %}</span>
+    {% if w.delta_percent is not None %}
+    <span class="rh-chip {% if w.delta_percent > 0 %}up{% elif w.delta_percent < 0 %}down{% endif %}">
+      {% if w.delta_percent > 0 %}Rata-rata harian {{ w.delta_abs }}% lebih tinggi{% elif w.delta_percent < 0 %}Rata-rata harian {{ w.delta_abs }}% lebih rendah{% else %}Rata-rata harian sama{% endif %} dari minggu sebelumnya
+    </span>
+    {% endif %}
+  </div>
+  {% endif %}
+</li>

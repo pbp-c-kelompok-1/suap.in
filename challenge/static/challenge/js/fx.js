@@ -2,9 +2,9 @@
 import { $, ico } from './utils.js';
 
 let toastT;
-export function toast(msg, icon = 'check') {
+export function toast(msg, icon = 'check', ms = 1800) {
   const t = $('#toast'); t.innerHTML = ico(icon) + msg; t.classList.add('show');
-  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1800);
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), ms);
 }
 export function confetti(n = 40, origin) {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;

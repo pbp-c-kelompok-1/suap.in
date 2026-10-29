@@ -31,3 +31,7 @@
 .empty{text-align:center;padding:48px 20px;color:var(--text-2)}
 .empty h3{color:var(--text);margin:14px 0 4px}
 .empty .mascot-wrap{margin:0 auto}
+.empty-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+.raise.empty{border-radius:28px}
+.muted{color:var(--text-2);font-weight:700}
+#misiEmpty .empty{margin-bottom:30px}

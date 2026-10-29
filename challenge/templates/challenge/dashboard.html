@@ -1,16 +1,17 @@
 {% extends 'challenge/base_challenge.html' %}
 
 {% block content %}
-    {% if user.is_authenticated %}
-    <script>
-      window.SUAPIN_REAL = {
-        profileName: "{{ user.username|escapejs }}",
-        weekly: JSON.parse("{{ weekly_json|escapejs }}"),
-        rank: JSON.parse("{{ rank_json|escapejs }}"),
-        budgetCapKg: {{ budget_cap_kg_js }}
-      };
-    </script>
-    {% endif %}
+    {{ challenge_data|json_script:"suapin-data" }}
+    <div id="suapin-cfg" data-stats="{% url 'challenge:api_stats' %}" data-save-profile="{% url 'challenge:save_profile' %}" hidden
+         data-scan="{% url 'scanner:scan' %}"
+         data-friends="{% url 'social:friends' %}"
+         data-challenge="{% url 'story:challenge_list' %}"
+         data-campus="{% url 'social:choose_campus' %}"
+         data-claim="{% url 'challenge:claim_freeze' %}"
+         data-claim-quest="{% url 'challenge:claim_quest' %}"
+         data-notif-read="{% url 'challenge:notif_read' %}"
+         data-notif-dismiss="{% url 'challenge:notif_dismiss' %}"
+         data-csrf="{{ csrf_token }}"></div>
     {% include 'challenge/partials/svg_sprite.html' %}
     {% include 'partials/icon_extra.html' %}
     {% include 'challenge/partials/mascot_template.html' %}

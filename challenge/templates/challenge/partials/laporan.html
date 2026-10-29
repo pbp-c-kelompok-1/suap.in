@@ -2,7 +2,7 @@
 <section class="page" id="page-laporan" aria-labelledby="h-lap">
   <div class="topbar">
     <h1 id="h-lap">Laporan minggu ini</h1>
-    {% if week_start %}<span class="chip">{{ week_start|date:"d" }} – {{ week_end|date:"d M Y" }}</span>{% endif %}
+    {% if week_start %}<span class="chip">{% if week_start.month == week_end.month %}{{ week_start|date:"j" }} – {{ week_end|date:"j M Y" }}{% else %}{{ week_start|date:"j M" }} – {{ week_end|date:"j M Y" }}{% endif %}</span>{% endif %}
   </div>
 
   <div class="grid-2">
@@ -11,50 +11,132 @@
       {% if delta_percent is not None %}
       <div class="delta" {% if delta_percent > 0 %}style="color:var(--danger);background:var(--surface)"{% endif %}>
         <svg class="i" {% if delta_percent > 0 %}style="transform:rotate(180deg)"{% endif %}><use href="#i-down"/></svg>
-        {{ delta_percent|floatformat:0 }}% {% if delta_percent > 0 %}lebih tinggi{% else %}lebih rendah{% endif %} dari minggu lalu ({{ prev_week_kg|floatformat:1 }} kg)
+        {% if delta_percent == 0 %}Rata-rata emisimu per hari sama dengan minggu lalu.{% else %}Rata-rata emisimu per hari {{ delta_abs }}% {% if delta_percent > 0 %}lebih tinggi{% else %}lebih rendah{% endif %} dibanding minggu lalu.{% endif %}
       </div>
       {% else %}
-      <div class="delta">Belum cukup data untuk dibandingkan dengan minggu lalu.</div>
+      <div class="delta">Belum bisa dibandingkan dengan minggu lalu karena datanya belum ada.</div>
       {% endif %}
       <div class="chart">
         <div class="bars" id="bars" role="list"></div>
-        <div class="legend">
+        <div id="barsEmpty" hidden></div>
+        <div class="legend" id="barsLegend">
           <span><i style="background:var(--green-500)"></i>Di bawah budget</span>
           <span><i style="background:var(--danger)"></i>Lewat budget</span>
           <span><i style="background:var(--blue-500)"></i>Hari terbaik</span>
           <span><i style="background:var(--bg);box-shadow:inset 0 0 0 1px var(--sh-d)"></i>Belum ada data</span>
         </div>
       </div>
+
+      <section class="rh" aria-labelledby="rhTitle">
+        <h3 id="rhTitle">Laporan minggu-minggu sebelumnya</h3>
+        {% if history.weeks %}
+        <ol class="rh-list">
+          {% for w in history.weeks|slice:":4" %}{% include 'challenge/partials/_report_week.html' %}{% endfor %}
+        </ol>
+        {% if history.weeks|length > 4 %}
+        <details class="rh-more">
+          <summary>Lihat {{ history.weeks|length|add:"-4" }} minggu lainnya</summary>
+          <ol class="rh-list">
+            {% for w in history.weeks|slice:"4:" %}{% include 'challenge/partials/_report_week.html' %}{% endfor %}
+          </ol>
+        </details>
+        {% endif %}
+        <p class="rh-note">Dicatat sejak akunmu dibuat ({{ history.joined|date:"j M Y" }}) dan disimpan sampai sekitar 6 bulan terakhir.</p>
+        {% else %}
+        <p class="rh-empty">Belum ada laporan sebelumnya. Rekap mingguan akan tersimpan otomatis setelah minggu ini selesai.</p>
+        {% endif %}
+      </section>
     </div>
 
     <div class="raise card proj">
       <h3>Proyeksi setahun</h3>
-      {% if projection_kg is not None %}
-      <div class="big"><b>{{ projection_kg }}</b><span>kg CO₂</span></div>
-      <p>Kalau ritme minggu ini terjaga sampai 52 minggu ke depan.</p>
-      {% if is_saving %}
-      <div class="save"><svg class="i"><use href="#i-leaf"/></svg><span>Hemat ± {{ savings_kg }} kg dibanding ritme minggu lalu, setara ± {{ savings_trees }} pohon.</span></div>
-      {% elif savings_kg is not None %}
-      <div class="save"><span>Emisimu naik ± {{ savings_kg }} kg dibanding ritme minggu lalu.</span></div>
+      <p class="proj-what">Kalau pola makanmu tetap seperti sekarang, ini perkiraan emisi CO₂-mu selama setahun.</p>
+
+      {% if projection %}
+      <div class="big"><b>{{ projection.kg }}</b><span>kg CO₂ per tahun</span></div>
+      <p class="proj-how">
+        Berdasarkan rata-rata <b>{{ projection.daily_avg_kg|floatformat:1 }} kg CO₂ per hari</b>, dari {{ projection.days_logged }} hari yang kamu scan.
+      </p>
+
+      <div class="proj-compare" role="img"
+           aria-label="Proyeksimu {{ projection.kg }} kg dibandingkan budget setahun {{ projection.budget_year_kg }} kg">
+        <div class="pc-row">
+          <span class="pc-lbl">Proyeksimu</span>
+          <div class="pc-track"><div class="pc-fill {% if projection.is_over_budget %}over{% else %}ok{% endif %}" data-w="{{ projection.bar_mine }}"></div></div>
+          <b class="pc-val">{{ projection.kg }} kg</b>
+        </div>
+        <div class="pc-row">
+          <span class="pc-lbl">Budget setahun</span>
+          <div class="pc-track"><div class="pc-fill budget" data-w="{{ projection.bar_budget }}"></div></div>
+          <b class="pc-val">{{ projection.budget_year_kg }} kg</b>
+        </div>
+        <p class="pc-note">Budget tahunanmu setara dengan {{ projection.budget_year_kg }} kg CO₂.</p>
+      </div>
+
+      {% if projection.is_over_budget %}
+      <div class="proj-verdict over">
+        <span>Jika pola ini berlanjut, emisi tahunanmu diperkirakan {{ projection.gap_kg }} kg CO₂ ({{ projection.gap_percent }}%) <b>di atas budget</b>. Coba pilih makanan yang lebih rendah karbon, ya!</span>
+      </div>
+      {% else %}
+      <div class="proj-verdict ok">
+        <svg class="i"><use href="#i-leaf"/></svg>
+        <span>Kabar baik! Emisi tahunanmu diperkirakan {{ projection.gap_kg }} kg CO₂ ({{ projection.gap_percent }}%) <b>di bawah budget</b>. Pertahankan, ya!</span>
+      </div>
+      {% endif %}
+
+      {% if savings_kg %}
+      <div class="save">
+        {% if is_saving %}
+        <svg class="i"><use href="#i-leaf"/></svg>
+        <span>Dibanding minggu lalu, kalau ritme ini kamu pertahankan selama setahun, kamu bisa menghemat sekitar {{ savings_kg }} kg CO₂{% if savings_trees %} (setara serapan sekitar {{ savings_trees }} pohon dalam setahun){% endif %}.</span>
+        {% else %}
+        <span>Dibanding minggu lalu, kalau ritme ini berlanjut selama setahun, emisimu bertambah sekitar {{ savings_kg }} kg CO₂.</span>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if projection.low_confidence %}
+      <p class="proj-hint">Perkiraan masih awal karena baru {{ projection.days_logged }} hari yang kamu scan. Tambah data scan agar hasilnya makin akurat.</p>
       {% endif %}
       {% else %}
-      <div class="big"><b>–</b><span>kg CO₂</span></div>
-      <p>Mulai scan makananmu minggu ini untuk melihat proyeksi tahunan.</p>
+      <div class="big"><b>–</b><span>kg CO₂ per tahun</span></div>
+      <p class="proj-how">Scan makanan minggu ini untuk melihat perkiraan emisi tahunanmu.</p>
+      {% endif %}
+
+      {% if history.projection_kg is not None and history.weeks_with_data >= 2 %}
+      <div class="proj-history">
+        <b>Dari riwayat laporanmu</b>
+        <p>Dari {{ history.weeks_with_data }} minggu yang tercatat, rata-rata emisimu <b>{{ history.avg_day_kg|floatformat:1 }} kg</b> per hari. Kalau pola itu berlanjut, perkiraannya sekitar <b>{{ history.projection_kg }} kg</b> per tahun.</p>
+        {% if history.best %}<p>Minggu terbaikmu: {{ history.best.start|date:"j M" }} – {{ history.best.end|date:"j M Y" }}, rata-rata {{ history.best.avg_day_kg|floatformat:1 }} kg per hari.</p>{% endif %}
+      </div>
       {% endif %}
     </div>
   </div>
 
-  <div class="raise card">
+  <!-- Rekap minggu ini (diisi laporan.js) -->
+  <div class="raise card wk-card" id="weeklyRankingRecap"></div>
+
+  <div class="raise card wk-card">
     <h2 style="font-size:1.35rem">Peringkat mingguan</h2>
+    <p class="muted rank-note" id="rankNote"></p>
+
     <div class="tabs" role="tablist" aria-label="Level peringkat" id="rankTabs">
       <button class="tab" role="tab" aria-selected="false" data-r="teman">Teman</button>
       <button class="tab" role="tab" aria-selected="true" data-r="kampus">Kampus</button>
       <button class="tab" role="tab" aria-selected="false" data-r="nasional">Nasional</button>
     </div>
     <ol class="rank" id="rankList"></ol>
+    <div id="rankEmpty" hidden></div>
     <div class="rep-actions">
       <button class="btn" id="shareBtn"><svg class="i"><use href="#i-share"/></svg>Bagikan ke Story</button>
       <button class="btn ghost" id="challengeBtn"><svg class="i"><use href="#i-sword"/></svg>Tantang teman</button>
     </div>
+  </div>
+
+  <!-- Riwayat peringkat mingguan (diisi laporan.js) -->
+  <div class="raise card wk-card" id="rankHistoryCard" hidden>
+    <h2 style="font-size:1.35rem">Riwayat peringkat</h2>
+    <p class="muted rank-note" id="rankHistoryNote"></p>
+    <ol class="wk-history" id="rankHistory"></ol>
   </div>
 </section>
