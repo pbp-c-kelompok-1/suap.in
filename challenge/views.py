@@ -17,6 +17,8 @@ from .services import (
     DEFAULT_QUEST_XP,
     build_challenge_data,
     count_scans,
+    kg,
+    saved_today_grams,
     serialize_notification,
     todays_quests,
     week_totals_by_day,
@@ -125,6 +127,13 @@ def challenge_list_view(request):
     }
 
     return render(request, 'challenge/dashboard.html', context)
+
+
+@login_required
+def api_stats_view(request):
+    """Angka 'hemat dari budget' hari ini (berubah tiap scan)."""
+    today = timezone.localdate()
+    return JsonResponse({'ok': True, 'avoidedKg': kg(saved_today_grams(request.user, today))})
 
 
 @login_required

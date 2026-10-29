@@ -3,7 +3,7 @@ import { $, $$ } from './utils.js';
 import { animateBudgetRing } from './reference.js';
 import { animateReport } from './laporan.js';
 import { renderHeader } from './misi.js';
-import { renderProfile } from './profil.js';
+import { refreshStats, renderProfile } from './profil.js';
 import { state } from './state.js';
 
 /* ---------------- ROUTER ---------------- */
@@ -15,7 +15,7 @@ export function route() {
   window.scrollTo({ top: 0 });
   if (page === 'laporan') animateReport();
   if (page === 'misi') { renderHeader(); }
-  if (page === 'profil') { state.pending = state.avatar; renderProfile(); }
+  if (page === 'profil') { state.pending = state.avatar; renderProfile(); refreshStats(); }
   if (page === 'scanner' && $('.tab[data-sub="budget"]').getAttribute('aria-selected') === 'true') animateBudgetRing();
 }
 

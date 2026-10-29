@@ -12,5 +12,6 @@ urlpatterns = [
     path('report/', views.weekly_report_view, name='report'),
     path('api/daily/', views.api_daily_challenges, name='api_daily'),
     path('api/data/', views.api_challenge_data, name='api_data'),
+    path('api/stats/', views.api_stats_view, name='api_stats'),
     path('profile/save/', views.save_profile_view, name='save_profile'),
 ]
