@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Count, Max
 from django.db import transaction
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.core.paginator import Paginator
 from django.http import Http404, JsonResponse
@@ -13,6 +13,12 @@ from gamification.services import MAX_LEVEL, get_profile, tier_from_level, xp_pr
 
 from .forms import FriendChallengeForm, StoryComicForm, StoryPageForm
 from .models import FriendChallenge, StoryComic, StoryPage
+
+from .challenge_services import (
+    accept_challenge as accept_challenge_service,
+    get_challenge_scores,
+    refresh_challenge,
+)
 
 
 @login_required
@@ -95,35 +101,183 @@ def story_reader(request, bab):
 
 # Tantangan 1v1
 
-@login_required
-def challenge_list(request):
-    form = FriendChallengeForm(request.POST or None, user=request.user)
-    if request.method == "POST" and form.is_valid():
-        challenge = form.save(commit=False)
-        challenge.challenger = request.user
-        challenge.save()
-        messages.success(request, f"Tantangan dikirim ke {challenge.opponent.username}!")
-        return redirect("story:challenge_list")
-
+def _challenge_context(user, form=None):
+    # Cuma ambil tantangan yg melibatkan akun yang lagi login
     challenges = (
         FriendChallenge.objects
-        .filter(Q(challenger=request.user) | Q(opponent=request.user))
-        .select_related("challenger", "opponent", "winner")
+        .filter(Q(challenger=user) | Q(opponent=user))
+        .select_related('challenger', 'opponent', 'winner')
     )
-    context = {
-        "form": form,
-        "challenges": challenges,
+
+    cards = []
+
+    for challenge in challenges:
+        error = ''
+
+        try:
+            # Sekalian cek apakah tantangan aktif udah melewati batas waktu
+            # klo udah, service menyimpan hasil akhirnya.
+            if challenge.status == 'active':
+                challenge, scores = refresh_challenge(
+                    user,
+                    challenge.pk,
+                )
+            else:
+                scores = get_challenge_scores(challenge)
+
+            # Jangan tampilkan angka nol seolah-olah itu skor tantangan lama yang sebenarnya belum punya rincian hasil.
+            if (
+                challenge.status == 'finished'
+                and not challenge.result_snapshot
+            ):
+                error = (
+                    'Tantangan lama ini belum memiliki '
+                    'rincian skor tersimpan.'
+                )
+
+        except ValidationError as exc:
+            scores = None
+            error = ' '.join(exc.messages)
+
+        cards.append({
+            'challenge': challenge,
+            'scores': scores,
+            'error': error,
+        })
+
+    return {
+        'form': (
+            form
+            if form is not None
+            else FriendChallengeForm(user=user)
+        ),
+        'cards': cards,
+        'active_count': sum(
+            card['challenge'].status == 'active'
+            for card in cards
+        ),
+        'pending_count': sum(
+            card['challenge'].status == 'pending'
+            for card in cards
+        ),
+        'finished_count': sum(
+            card['challenge'].status == 'finished'
+            for card in cards
+        ),
     }
-    return render(request, "story/challenge_list.html", context)
+
+
+def _challenge_response(request, message):
+    # Request AJAX cukup menerima daftar terbaru.
+    # klo JavaScript mati, form tetap bisa kembali lewat redirect.
+    if request.headers.get('Accept') == 'application/json':
+        return JsonResponse({
+            'message': message,
+            'html': render_to_string(
+                'story/_challenge_cards.html',
+                _challenge_context(request.user),
+                request=request,
+            ),
+        })
+
+    messages.info(request, message)
+    return redirect('story:challenge_list')
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def challenge_list(request):
+    form = FriendChallengeForm(
+        request.POST if request.method == 'POST' else None,
+        user=request.user,
+    )
+
+    if request.method == 'POST' and form.is_valid():
+        challenge = form.save(commit=False)
+
+        # Pengirim diambil dari sesi login, bukan input dari browser.
+        challenge.challenger = request.user
+        challenge.save()
+
+        messages.success(
+            request,
+            f'Tantangan dikirim ke {challenge.opponent.username}!',
+        )
+        return redirect('story:challenge_list')
+
+    return render(
+        request,
+        'story/challenge_list.html',
+        _challenge_context(request.user, form=form),
+    )
+
+
+@login_required
+@require_POST
+def challenge_accept(request, pk):
+    try:
+        accept_challenge_service(request.user, pk)
+
+    except FriendChallenge.DoesNotExist:
+        raise Http404('Tantangan tidak ditemukan.')
+
+    except ValidationError as exc:
+        # Misalnya tombol diklik lagi setelah tantangan udah diterima.
+        return _challenge_response(
+            request,
+            ' '.join(exc.messages),
+        )
+
+    return _challenge_response(
+        request,
+        'Tantangan diterima. Waktu main dimulai sekarang!',
+    )
+
+
+@login_required
+@require_POST
+def challenge_refresh(request, pk):
+    try:
+        challenge, _ = refresh_challenge(request.user, pk)
+
+    except FriendChallenge.DoesNotExist:
+        raise Http404('Tantangan tidak ditemukan.')
+
+    except ValidationError as exc:
+        return _challenge_response(
+            request,
+            ' '.join(exc.messages),
+        )
+
+    if challenge.status == 'finished':
+        message = (
+            'Waktu tantangan sudah habis. '
+            'Hasil akhirnya sudah disimpan.'
+        )
+    else:
+        message = 'Progres terbaru sudah dimuat.'
+
+    return _challenge_response(request, message)
 
 
 @login_required
 @require_POST
 def cancel_challenge(request, pk):
-    challenge = get_object_or_404(FriendChallenge, pk=pk, challenger=request.user, status="pending")
-    challenge.delete()
-    messages.success(request, "Tantangan dibatalkan.")
-    return redirect("story:challenge_list")
+    with transaction.atomic():
+        # Lock dulu supaya pembatalan nggak bertabrakan
+        # dengan penerimaan tantangan oleh lawan.
+        challenge = get_object_or_404(
+            FriendChallenge.objects.select_for_update(),
+            pk=pk,
+            challenger=request.user,
+            status='pending',
+        )
+        challenge.delete()
+
+    return _challenge_response(
+        request,
+        'Tantangan dibatalkan.',
+    )
 
 
 # Cuma atmin yg boleh edit isi cerita

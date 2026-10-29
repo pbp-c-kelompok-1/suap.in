@@ -1,0 +1,46 @@
+{% extends 'story/base_story.html' %}
+{% load static %}
+
+{% block title %}Milestone Rewards — Suap.in{% endblock %}
+
+{% block extra_head %}
+    {{ block.super }}
+    <link
+        rel="stylesheet"
+        href="{% static 'story/css/rewards.css' %}"
+    >
+{% endblock %}
+
+{% block story_content %}
+    <div class="topbar">
+        <h1>Milestone Rewards</h1>
+        {% include 'partials/auth_status.html' %}
+    </div>
+
+    <p class="ref-note">
+        Langkah kecilmu layak dirayakan. Buka hadiah lewat level
+        dan kebiasaan yang terus tumbuh.
+    </p>
+
+    {% include 'story/_subnav.html' with active='rewards' %}
+
+    <!-- Pesan hasil klaim diisi lewat JavaScript -->
+    <p
+        id="reward-feedback"
+        role="status"
+        aria-live="polite"
+    ></p>
+
+    <!-- Bagian ini diganti setelah klaim, tanpa reload seluruh halaman -->
+    <div id="reward-content">
+        {% include 'story/_reward_content.html' %}
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    {{ block.super }}
+    <script
+        src="{% static 'story/js/rewards.js' %}"
+        defer
+    ></script>
+{% endblock %}

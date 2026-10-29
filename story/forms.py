@@ -16,8 +16,14 @@ class FriendChallengeForm(forms.ModelForm):
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
-        # utk sekarang pilihannya semua akun selain diri sendiri.
-        self.fields['opponent'].queryset = User.objects.exclude(pk=user.pk).order_by('username')
+        # lawan harus aktif dan gk boleh diri sendiri
+        self.fields['opponent'].queryset = (
+            User.objects.filter(is_active=True)
+            .exclude(pk=user.pk)
+            .order_by('username')
+            if user is not None
+            else User.objects.none()
+        )
 
 
 class StoryComicForm(forms.ModelForm):
