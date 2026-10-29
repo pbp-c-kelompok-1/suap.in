@@ -224,3 +224,20 @@ $('#challengeBtn').addEventListener('click', () => {
   else toast('Halaman tantangan belum tersedia', 'sword');
 });
 
+
+/* Riwayat laporan: ketuk kartu minggu untuk membuka detailnya. */
+export function initReportHistory() {
+  const scroller = $('#rhScroller');
+  if (!scroller) return;
+  const select = card => {
+    $$('.rh-card', scroller).forEach(c => c.setAttribute('aria-pressed', String(c === card)));
+    $$('.rh-detail').forEach(d => { d.hidden = d.dataset.week !== card.dataset.week; });
+  };
+  scroller.addEventListener('click', e => {
+    const card = e.target.closest('.rh-card');
+    if (card) select(card);
+  });
+  const first = $('.rh-card', scroller);
+  if (first) select(first);                       // minggu terbaru terbuka lebih dulu
+}
+initReportHistory();

@@ -124,26 +124,21 @@ a.tab{text-decoration:none;display:inline-flex;align-items:center}
 /* ---- Riwayat laporan mingguan (kartu grafik) ---- */
 .rh{margin-top:22px;padding-top:18px;border-top:2px dashed var(--sh-d)}
 .rh h3{font-size:1.05rem;margin:0 0 12px}
-.rh-hint{margin:-4px 0 10px;color:var(--text-2);font-size:.82rem;font-weight:700}
-.rh-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;padding:4px 4px 12px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
-.rh-list{list-style:none;display:flex;gap:12px;margin:0;padding:0;align-items:stretch;width:max-content;min-width:100%}
-.rh-item{flex:0 0 clamp(260px,78%,360px);min-width:0;padding:12px 14px;border-radius:16px;background:var(--bg);box-shadow:inset 3px 3px 7px var(--sh-d),inset -3px -3px 7px var(--sh-l);scroll-snap-align:start;overflow-wrap:anywhere}
+.rh-list{list-style:none;display:grid;gap:10px;margin:0;padding:0}
+.rh-item{padding:12px 14px;border-radius:16px;background:var(--bg);box-shadow:inset 3px 3px 7px var(--sh-d),inset -3px -3px 7px var(--sh-l)}
 .rh-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
 .rh-date{font-family:'Fredoka',system-ui,sans-serif;font-weight:600}
 .rh-kg{font-weight:800}
 .rh-bar{height:8px;border-radius:99px;background:var(--surface);margin:8px 0 6px;overflow:hidden}
 .rh-bar i{display:block;height:100%;border-radius:99px;background:var(--green-500)}
 .rh-meta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.82rem;font-weight:700;color:var(--text-2)}
-.rh-detail{margin-top:10px;border-top:1px dashed var(--sh-d);padding-top:8px}
-.rh-detail summary{cursor:pointer;font-size:.82rem;font-weight:800;color:var(--cta);padding:4px 0;list-style-position:inside}
-.rh-days{list-style:none;display:grid;gap:7px;margin:8px 0 0;padding:0}
-.rh-days li{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:8px 9px;border-radius:10px;background:var(--surface);font-size:.78rem}
-.rh-days li span{font-weight:800}.rh-days li b{text-align:right}.rh-days li small{grid-column:1/-1;color:var(--text-2);font-weight:700}
-.rh-days li.over b{color:var(--danger)}.rh-days li.no-scan{opacity:.7}
 .rh-chip{padding:2px 10px;border-radius:99px;background:var(--surface)}
 .rh-chip.down{color:var(--green-700)}
 .rh-chip.up{color:var(--danger)}
 .rh-item.none{opacity:.75}
+.rh-more{margin-top:10px}
+.rh-more summary{cursor:pointer;font-weight:800;color:var(--cta);padding:6px 0}
+.rh-more .rh-list{margin-top:8px}
 .rh-note,.rh-empty{margin:12px 0 0;font-size:.85rem;font-weight:700;color:var(--text-2);line-height:1.45}
 .proj-history{margin-top:14px;padding:12px 14px;border-radius:16px;background:var(--bg);font-size:.88rem;line-height:1.5;color:var(--text-2);font-weight:700}
 .proj-history > b{display:block;color:var(--text);margin-bottom:4px}
@@ -165,3 +160,40 @@ a.tab{text-decoration:none;display:inline-flex;align-items:center}
 .share-dot.plain{background:var(--bg);color:var(--text);box-shadow:inset 2px 2px 5px var(--sh-d),inset -2px -2px 5px var(--sh-l);font-size:1.4rem}
 .share-opt:focus-visible,.share-close:focus-visible{outline:3px solid var(--teal-300);outline-offset:2px;border-radius:14px}
 .share-hint{margin:14px 0 0;font-size:.78rem;line-height:1.45;font-weight:700;color:var(--text-2)}
+
+/* ---- Riwayat laporan: kartu minggu yang bisa digeser + detail ---- */
+.grid-2>*{min-width:0}                          /* kartu tidak melebar karena isinya bisa digeser */
+.rh-scroller{display:flex;gap:12px;overflow-x:auto;padding:6px 4px 14px;margin:0 -4px;scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.rh-card{flex:0 0 138px;scroll-snap-align:start;display:flex;flex-direction:column;gap:4px;text-align:left;cursor:pointer;
+  padding:12px 14px;border:0;border-radius:18px;background:var(--surface);color:inherit;font:inherit;
+  box-shadow:5px 5px 12px var(--sh-d),-5px -5px 12px var(--sh-l);transition:transform .15s}
+.rh-card:hover{transform:translateY(-2px)}
+.rh-card[aria-pressed="true"]{box-shadow:inset 3px 3px 7px var(--sh-d),inset -3px -3px 7px var(--sh-l);outline:2px solid var(--green-500)}
+.rh-card .rh-date{font-size:.85rem}
+.rh-card .rh-kg{font-size:1.15rem}
+.rh-card .rh-kg small{font-size:.7rem;font-weight:700;color:var(--text-2)}
+.rh-card .rh-bar{display:block;height:6px;border-radius:99px;background:var(--bg);overflow:hidden;margin:2px 0}
+.rh-card .rh-bar i{display:block;height:100%;border-radius:99px;background:var(--green-500)}
+.rh-sub{font-size:.78rem;font-weight:800;color:var(--text-2)}
+.rh-card.none{opacity:.7}
+.rh-hint{margin:2px 0 10px;font-size:.8rem;font-weight:700;color:var(--text-2)}
+.rh-detail{padding:14px 16px;border-radius:18px;background:var(--bg);box-shadow:inset 3px 3px 7px var(--sh-d),inset -3px -3px 7px var(--sh-l)}
+.rh-dhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.rh-dhead h4{margin:0;font-family:'Fredoka',system-ui,sans-serif;font-size:1rem}
+.rh-days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;height:120px;margin:12px 0 10px;align-items:end}
+.rh-day{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px;min-width:0}
+.rh-dv{font-size:.68rem;font-weight:800;color:var(--text-2)}
+.rh-dbar{flex:1;width:100%;max-width:26px;display:flex;align-items:flex-end;border-radius:8px;background:var(--surface)}
+.rh-dbar i{display:block;width:100%;border-radius:8px;background:var(--green-500)}
+.rh-day.over .rh-dbar i{background:var(--danger)}
+.rh-day.nodata .rh-dbar i{background:transparent}
+.rh-day small{font-size:.7rem;font-weight:800;color:var(--text-2)}
+.rh-facts{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 10px;padding:0}
+.rh-facts li{display:flex;flex-direction:column;align-items:center;text-align:center;padding:8px 6px;border-radius:14px;background:var(--surface)}
+.rh-facts b{font-family:'Fredoka',system-ui,sans-serif;font-size:1.05rem}
+.rh-facts span{font-size:.72rem;font-weight:700;color:var(--text-2)}
+.rh-rank{margin:6px 0 0;font-size:.88rem;font-weight:700}
+.rh-rank.muted{color:var(--text-2)}
+.rh-detail .rh-chip{display:inline-block;margin:8px 0 0}
+.rank-link{display:inline-block;margin:2px 0 8px;font-weight:800;color:var(--cta);font-size:.9rem}

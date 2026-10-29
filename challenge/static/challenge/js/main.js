@@ -5,11 +5,7 @@ import { mountMascots } from './mascot.js';
 import { renderChest, renderQuests } from './misi.js';
 import { renderNotifs } from './notifikasi.js';
 import { renderProfile } from './profil.js';
-import {
-  renderRank,
-  renderReport,
-  renderWeeklyRankingRecap,
-} from './laporan.js';
+import { renderRank, renderReport, renderWeeklyRankingRecap } from './laporan.js';
 import { route } from './router.js';
 import './theme.js';
 
@@ -20,19 +16,6 @@ initSubTabs('#page-auth', '#authTabs');
 initSubTabs('#page-scanner', '#scanTabs');
 renderPubProfile('me');
 renderCond('sehat');
-renderQuests();
-renderChest();
-renderReport();
-renderWeeklyRankingRecap();
-renderRank();
-renderNotifs();
-renderProfile();
+renderQuests(); renderChest(); renderReport(); renderWeeklyRankingRecap(); renderRank(); renderNotifs(); renderProfile();
 if (!location.hash) location.hash = '#/misi';
 route();
-
-
-// Saat dashboard dipulihkan dari back-forward cache setelah kembali dari halaman scan,
-// muat ulang data server agar statistik profil tidak menampilkan data lama.
-window.addEventListener('pageshow', event => {
-  if (event.persisted) window.location.reload();
-});

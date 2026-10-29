@@ -8,6 +8,9 @@ class ChallengeProfile(models.Model):
     display_name = models.CharField(max_length=24, blank=True)
     bio = models.CharField(max_length=80, blank=True)
     avatar_id = models.PositiveSmallIntegerField(default=0)
+    # Peringkat nasional terakhir yang sudah dilihat user (untuk notifikasi naik/turun).
+    last_rank = models.PositiveIntegerField(null=True, blank=True)
+    last_rank_week = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return f'Profil {self.user.username}'
@@ -28,6 +31,28 @@ class QuestClaim(models.Model):
 
     def __str__(self):
         return f'{self.user.username} - {self.quest_id} - {self.date} (+{self.xp} XP)'
+
+
+class DailyQuestSet(models.Model):
+    """Misi yang dipilih untuk satu user di satu hari.
+
+    Disimpan supaya misinya tidak berubah-ubah sepanjang hari, dan supaya besok
+    bisa dipastikan tidak sama dengan hari ini.
+    """
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='daily_quest_sets')
+    date = models.DateField()
+    quest_ids = models.CharField(max_length=200)   # dipisah koma, urutan tampil
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'date'], name='unique_quest_set_per_day'),
+        ]
+
+    def ids(self):
+        return [q for q in self.quest_ids.split(',') if q]
+
+    def __str__(self):
+        return f'{self.user.username} {self.date}: {self.quest_ids}'
 
 
 class Notification(models.Model):

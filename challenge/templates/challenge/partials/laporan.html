@@ -31,7 +31,7 @@
         <h3 id="rhTitle">Laporan minggu-minggu sebelumnya</h3>
         {% if history.weeks %}
         <p class="rh-hint">Geser ke kanan atau kiri untuk membuka ringkasan tiap minggu.</p>
-        <div class="rh-scroll" role="region" aria-label="Riwayat laporan mingguan, geser horizontal" tabindex="0">
+        <div class="rh-scroll" id="rhScroller" role="region" aria-label="Riwayat laporan mingguan, geser horizontal" tabindex="0">
           <ol class="rh-list">
             {% for w in history.weeks %}{% include 'challenge/partials/_report_week.html' %}{% endfor %}
           </ol>

@@ -11,7 +11,8 @@ from django.utils import timezone
 
 from scanner.models import CarbonBudget, FoodLog
 
-from .services import DEFAULT_BUDGET_GRAMS
+from .ranking import weekly_positions
+from .services import DAY_ABBR, DEFAULT_BUDGET_GRAMS
 
 REPORT_HISTORY_WEEKS = 26  # sekitar 6 bulan
 DAYS_IN_YEAR = 365
@@ -19,6 +20,28 @@ DAYS_IN_YEAR = 365
 
 def _monday(day):
     return day - timedelta(days=day.weekday())
+
+
+def _week_budget_g(monday, budgets):
+    return sum(budgets.get(monday + timedelta(days=i), DEFAULT_BUDGET_GRAMS) for i in range(7))
+
+
+def _day_cells(monday, days, budgets):
+    """Tujuh hari (Sen-Min) untuk grafik batang kecil di detail laporan."""
+    peak = max([g for g in days.values()] + [DEFAULT_BUDGET_GRAMS]) or 1
+    cells = []
+    for i in range(7):
+        day = monday + timedelta(days=i)
+        grams = days.get(day)
+        budget = budgets.get(day, DEFAULT_BUDGET_GRAMS)
+        cells.append({
+            'label': DAY_ABBR[i],
+            'has': grams is not None,
+            'kg': round((grams or 0) / 1000, 1),
+            'over': grams is not None and grams > budget,
+            'h': max(6, round(grams / peak * 100)) if grams is not None else 0,
+        })
+    return cells
 
 
 def build_report_history(user, today=None):
@@ -52,7 +75,6 @@ def build_report_history(user, today=None):
 
     # {senin: {hari: gram}}, {senin: set(foto)}, {senin: jumlah baris tanpa respons AI}
     per_day, photos, loose = {}, {}, {}
-    photos_by_day, loose_by_day = {}, {}
     for scanned_at, grams, raw in rows:
         day = timezone.localtime(scanned_at).date()
         monday = _monday(day)
@@ -60,10 +82,10 @@ def build_report_history(user, today=None):
         days[day] = days.get(day, 0) + (grams or 0)
         if raw:
             photos.setdefault(monday, set()).add(raw)
-            photos_by_day.setdefault(day, set()).add(raw)
         else:
             loose[monday] = loose.get(monday, 0) + 1
-            loose_by_day[day] = loose_by_day.get(day, 0) + 1
+
+    positions = weekly_positions(user, first_monday, range_end)
 
     weeks = []
     monday = first_monday
@@ -75,21 +97,6 @@ def build_report_history(user, today=None):
             1 for d, g in days.items()
             if g > budgets.get(d, DEFAULT_BUDGET_GRAMS)
         )
-        daily_rows = []
-        for offset in range(7):
-            day = monday + timedelta(days=offset)
-            day_total = days.get(day, 0)
-            day_scans = len(photos_by_day.get(day, ())) + loose_by_day.get(day, 0)
-            day_budget = budgets.get(day, DEFAULT_BUDGET_GRAMS)
-            daily_rows.append({
-                'date': day,
-                'has_data': day in days,
-                'total_kg': round(day_total / 1000, 2),
-                'scans': day_scans,
-                'over_budget': day in days and day_total > day_budget,
-                'budget_kg': round(day_budget / 1000, 2),
-            })
-
         weeks.append({
             'start': monday,
             'end': monday + timedelta(days=6),
@@ -100,10 +107,12 @@ def build_report_history(user, today=None):
             'avg_day_kg': round(total_g / n_days / 1000, 1) if n_days else 0,
             'scans': len(photos.get(monday, ())) + loose.get(monday, 0),
             'over_days': over,
-            'days': daily_rows,
             'delta_percent': None,
             'delta_abs': None,
             'bar': 0,
+            'rank': positions.get(monday),
+            'days': _day_cells(monday, days, budgets),
+            'budget_kg': round(_week_budget_g(monday, budgets) / 7000, 1),
         })
         monday += timedelta(weeks=1)
 

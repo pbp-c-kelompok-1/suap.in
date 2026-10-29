@@ -13,7 +13,7 @@ export function renderNotifs() {
   if (!list.length) {
     const none = state.notifs.length === 0;
     $('#notifs').innerHTML = emptyCard(none
-      ? { title: 'Belum ada notifikasi', text: 'Kabar misi harian, streak, peringkat, tantangan, dan lencana akan muncul di sini.',
+      ? { title: 'Belum ada notifikasi', text: 'Kabar baru muncul setelah kamu scan makanan atau punya teman.',
           actions: [ACT.scan(true), ACT.friends(false)], mascotId: 'mascotEmpty' }
       : { title: 'Tidak ada notifikasi di kategori ini', text: 'Coba pilih kategori lain.', mascotId: 'mascotEmpty' });
     $('#mascotEmpty').innerHTML = avatarSvg(state.avatar, 'mascot');
@@ -41,7 +41,10 @@ $('#notifs').addEventListener('click', e => {
     if (!n) return;
     if (!n.read) { n.read = true; sync(urls.notifRead, { ids: [n.id] }); }
     renderNotifs();
-    if (n.link) location.hash = n.link;   /* mis. #/misi untuk klaim hadiah */
+    if (n.link) {
+      if (n.link.startsWith('/')) location.href = n.link;   /* halaman lain, mis. daftar tantangan */
+      else location.hash = n.link;                          /* mis. #/misi untuk klaim hadiah */
+    }
   }
   if (del) {
     const id = del.dataset.del; const row = del.closest('.n-wrap');

@@ -1,6 +1,5 @@
 
 from datetime import timedelta
-from itertools import combinations
 
 from django.utils import timezone
 
@@ -16,8 +15,10 @@ from django.db.models.functions import TruncDate
 from social.models import CampusMembership
 from social.services import time_ago
 from story.models import FriendChallenge
-from .models import Notification, QuestClaim
-from .ranking import build_rankings, build_weekly_ranking_recap
+from django.urls import reverse
+
+from .models import ChallengeProfile, DailyQuestSet, Notification, QuestClaim
+from .ranking import compute_leaderboard
 
 
 DAY_ABBR = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
@@ -31,6 +32,10 @@ QUEST_XP = {
     'low_carbon': 20,
     'consistent_scanner': 30,
     'average_carbon': 20,
+    'scan_two': 15,
+    'scan_four': 35,
+    'beat_yesterday': 25,
+    'light_item': 15,
 }
 DEFAULT_QUEST_XP = 10
 
@@ -77,178 +82,216 @@ def week_totals_by_day(user, start_date, end_date):
 
 
 
-def todays_quests(user, today):
-    logs = FoodLog.objects.filter(
-        user=user,
-        scanned_at__date=today,
-    )
+# ---- Misi harian ------------------------------------------------------------
+#
+# Misi dipilih dari katalog di bawah. Pilihannya:
+# - beda tiap user (seed memakai id user) dan beda tiap hari (seed memakai tanggal),
+# - dipengaruhi kebiasaan 6 hari terakhir (lihat _habit_weights),
+# - tidak boleh sama dengan misi kemarin,
+# - disimpan di DailyQuestSet, jadi tidak berubah-ubah sepanjang hari.
+QUESTS_PER_DAY = 3
+FAMILY_CAP = {'count': 1, 'carbon': 2, 'habit': 1}   # batas misi sejenis per hari
+QUEST_FAMILY = {
+    'scan_once': 'count', 'scan_two': 'count', 'scan_three': 'count', 'scan_four': 'count',
+    'carbon_budget': 'carbon', 'low_carbon': 'carbon', 'average_carbon': 'carbon',
+    'beat_yesterday': 'carbon', 'light_item': 'carbon',
+    'consistent_scanner': 'habit',
+}
 
+
+def _round_to(value, step, lo, hi):
+    return int(max(lo, min(hi, round(value / step) * step)))
+
+
+def _day_stats(logs):
+    """{tanggal: {'grams': total, 'scans': jumlah scan}} dari queryset FoodLog."""
+    days = {}
+    for log in logs:
+        day = timezone.localtime(log.scanned_at).date()
+        d = days.setdefault(day, {'grams': 0, 'raws': set(), 'loose': 0})
+        d['grams'] += log.co2_grams or 0
+        if log.ai_raw_response:
+            d['raws'].add(log.ai_raw_response)
+        else:
+            d['loose'] += 1
+    return {
+        day: {'grams': d['grams'], 'scans': len(d['raws']) + d['loose']}
+        for day, d in days.items()
+    }
+
+
+def _quest_context(user, today):
+    logs = FoodLog.objects.filter(user=user, scanned_at__date=today)
     scans_today = count_scans(logs)
     used_grams = sum(log.co2_grams or 0 for log in logs)
+    lightest = min((log.co2_grams or 0 for log in logs), default=None)
 
-    budget = CarbonBudget.objects.filter(
+    budget = CarbonBudget.objects.filter(user=user, date=today).first()
+    budget_grams = budget.budget_grams if budget else DEFAULT_BUDGET_GRAMS
+
+    # Kebiasaan: 6 hari sebelum hari ini.
+    recent = _day_stats(FoodLog.objects.filter(
         user=user,
-        date=today,
-    ).first()
-
-    budget_grams = (
-        budget.budget_grams if budget else DEFAULT_BUDGET_GRAMS
-    )
-
-    over_budget = used_grams > budget_grams
-
-    # Data kebiasaan user untuk menentukan variasi misi.
-    recent_start = today - timedelta(days=6)
-    recent_logs = FoodLog.objects.filter(
-        user=user,
-        scanned_at__date__gte=recent_start,
+        scanned_at__date__gte=today - timedelta(days=6),
         scanned_at__date__lt=today,
-    )
+    ))
+    n_days = len(recent)
+    total_g = sum(d['grams'] for d in recent.values())
+    total_scans = sum(d['scans'] for d in recent.values())
+    yesterday = recent.get(today - timedelta(days=1))
+    return {
+        'scans_today': scans_today,
+        'used_grams': used_grams,
+        'lightest': lightest,
+        'budget_grams': budget_grams,
+        'over_budget': used_grams > budget_grams,
+        'recent_days': n_days,
+        'avg_day_g': (total_g / n_days) if n_days else None,
+        'avg_scan_g': (total_g / total_scans) if total_scans else None,
+        'avg_scans_per_day': (total_scans / n_days) if n_days else None,
+        'yesterday_g': yesterday['grams'] if yesterday else None,
+    }
 
-    recent_scan_days = set()
-    recent_grams = 0
 
-    for log in recent_logs:
-        recent_scan_days.add(
-            timezone.localtime(log.scanned_at).date()
-        )
-        recent_grams += log.co2_grams or 0
+def _quest_catalog(c):
+    """Semua misi yang BISA muncul untuk user ini hari ini, lengkap dengan progresnya."""
+    st, used = c['scans_today'], c['used_grams']
+    cat = {}
 
-    # Seed dibuat dari user + tanggal supaya misi tetap sama
-    # selama satu hari, tetapi bisa berubah di hari berikutnya.
+    def add(qid, **q):
+        q.setdefault('failed', False)
+        q['id'] = qid
+        cat[qid] = q
+
+    for qid, goal, title, why in (
+        ('scan_once', 1, 'Scan makanan pertama', 'Mulai catat jejak karbon makananmu.'),
+        ('scan_two', 2, 'Scan 2 makanan', 'Dua scan sehari bikin gambaran harianmu lebih lengkap.'),
+        ('scan_three', 3, 'Scan 3 makanan', 'Kenali dampak pilihan makananmu.'),
+    ):
+        add(qid, title=title, why=why, goal=goal, val=min(st, goal), tone='green' if goal == 1 else 'blue',
+            icon='camera' if goal == 1 else 'target',
+            desc=f'Simpan minimal {goal} hasil scan hari ini.')
+    if (c['avg_scans_per_day'] or 0) >= 2.5:
+        add('scan_four', title='Scan 4 makanan', why='Kamu sudah rajin scan, naikkan sedikit tantangannya.',
+            goal=4, val=min(st, 4), tone='blue', icon='target',
+            desc='Simpan minimal 4 hasil scan hari ini.')
+
+    add('carbon_budget', title='Jaga budget karbon', why=('Budget karbon terlampaui.' if c['over_budget'] else 'Total emisi masih dalam budget.'),
+        desc='Jaga total emisi hari ini agar tidak melebihi budget.', goal=1,
+        val=int(st > 0 and not c['over_budget']), failed=c['over_budget'], tone='green', icon='leaf')
+
+    # Target rendah karbon mengikuti kebiasaan: sedikit di bawah rata-rata harianmu.
+    low_goal = _round_to(c['avg_day_g'] * 0.85, 50, 400, 1500) if c['avg_day_g'] else 800
+    add('low_carbon', title='Pilih makanan rendah karbon',
+        desc=f'Jaga total emisi hari ini di bawah {low_goal}g CO2.', goal=1,
+        val=int(st > 0 and used <= low_goal), failed=used > low_goal, tone='green', icon='leaf',
+        why='Coba pilih makanan dengan jejak karbon lebih rendah.')
+
+    add('light_item', title='Satu pilihan ringan',
+        desc='Catat satu makanan di bawah 150g CO2 hari ini.', goal=1,
+        val=int(c['lightest'] is not None and c['lightest'] <= 150), tone='teal', icon='leaf',
+        why='Satu pilihan kecil yang ringan sudah menghitung.')
+
+    if c['recent_days']:
+        avg_goal = _round_to(c['avg_scan_g'] * 0.9, 50, 250, 600) if c['avg_scan_g'] else 400
+        per_scan = (used / st) if st else None
+        add('average_carbon', title='Jaga rata-rata emisi',
+            desc=f'Usahakan rata-rata scan di bawah {avg_goal}g CO2.', goal=1,
+            val=int(per_scan is not None and per_scan <= avg_goal),
+            failed=per_scan is not None and per_scan > avg_goal, tone='teal', icon='leaf',
+            why='Bandingkan pilihan makananmu dan coba turunkan emisinya.')
+
+        days_goal = 3 if c['recent_days'] < 4 else 4
+        add('consistent_scanner', title='Tetap konsisten',
+            desc=f'Scan makanan setidaknya {days_goal} hari dalam seminggu ini.', goal=days_goal,
+            val=min(c['recent_days'] + (1 if st > 0 else 0), days_goal), tone='blue', icon='target',
+            why='Kebiasaan kecil yang konsisten lebih mudah dipertahankan.')
+
+    if c['yesterday_g']:
+        add('beat_yesterday', title='Lebih ringan dari kemarin',
+            desc='Total emisi hari ini lebih rendah dari kemarin.', goal=1,
+            val=int(st > 0 and used < c['yesterday_g']), failed=used >= c['yesterday_g'] and st > 0,
+            tone='teal', icon='leaf', why='Kemarin ' + f"{round(c['yesterday_g'])}g CO2. Bisa lebih rendah hari ini?")
+    return cat
+
+
+def _habit_weights(catalog, c):
+    """Bobot pemilihan per misi, disesuaikan dengan kebiasaan user."""
+    w = {qid: 1.0 for qid in catalog}
+
+    def boost(ids, factor):
+        for qid in ids:
+            if qid in w:
+                w[qid] *= factor
+
+    if c['recent_days'] <= 1:                        # jarang scan -> ajak mulai & konsisten
+        boost(('scan_once', 'scan_two', 'consistent_scanner', 'light_item'), 2.0)
+    if c['recent_days'] >= 4:                        # rajin -> tantangan lebih
+        boost(('consistent_scanner', 'beat_yesterday', 'average_carbon'), 1.6)
+    avg_scans = c['avg_scans_per_day']
+    if avg_scans is not None:
+        if avg_scans >= 2.5:
+            boost(('scan_four', 'scan_three'), 1.8)
+        elif avg_scans <= 1.5:
+            boost(('scan_once', 'scan_two'), 1.5)
+            boost(('scan_three',), 0.6)
+    if c['avg_day_g'] is not None and c['avg_day_g'] > c['budget_grams']:
+        boost(('low_carbon', 'carbon_budget', 'average_carbon', 'light_item'), 2.0)   # sering lewat budget
+    return w
+
+
+def _pick_quest_ids(user, today, catalog, c, avoid):
     import random
+    rng = random.Random(f"{user.pk}-{today.isoformat()}")
+    weights = _habit_weights(catalog, c)
+    candidates = [q for q in catalog if q not in avoid]
+    if len(candidates) < QUESTS_PER_DAY:            # katalog terlalu kecil: abaikan larangan
+        candidates = list(catalog)
 
-    rng = random.Random(
-        f"{user.pk}-{today.isoformat()}"
-    )
+    picked, used_family = [], {}
+    pool = list(candidates)
+    while pool and len(picked) < QUESTS_PER_DAY:
+        total = sum(weights[q] for q in pool)
+        r, acc, choice = rng.uniform(0, total), 0.0, pool[-1]
+        for q in pool:
+            acc += weights[q]
+            if r <= acc:
+                choice = q
+                break
+        pool.remove(choice)
+        fam = QUEST_FAMILY.get(choice, choice)
+        if used_family.get(fam, 0) >= FAMILY_CAP.get(fam, 1):
+            continue
+        used_family[fam] = used_family.get(fam, 0) + 1
+        picked.append(choice)
+    # Kalau batas keluarga bikin kurang dari 3, isi sisanya tanpa batas.
+    for q in candidates:
+        if len(picked) >= QUESTS_PER_DAY:
+            break
+        if q not in picked:
+            picked.append(q)
+    return picked
 
-    quest_pool = []
 
-    # Misi scan tetap tersedia, tetapi tidak selalu semuanya dipilih.
-    quest_pool.append({
-        'id': 'scan_once',
-        'title': 'Scan makanan pertama',
-        'desc': 'Simpan minimal satu hasil scan hari ini.',
-        'val': min(scans_today, 1),
-        'goal': 1,
-        'tone': 'green',
-        'icon': 'camera',
-        'failed': False,
-        'why': 'Mulai catat jejak karbon makananmu.',
-    })
+def todays_quests(user, today):
+    c = _quest_context(user, today)
+    catalog = _quest_catalog(c)
 
-    quest_pool.append({
-        'id': 'scan_three',
-        'title': 'Scan 3 makanan',
-        'desc': 'Simpan minimal tiga hasil scan hari ini.',
-        'val': min(scans_today, 3),
-        'goal': 3,
-        'tone': 'blue',
-        'icon': 'target',
-        'failed': False,
-        'why': 'Kenali dampak pilihan makananmu.',
-    })
+    stored = DailyQuestSet.objects.filter(user=user, date=today).first()
+    ids = [q for q in stored.ids() if q in catalog] if stored else []
+    if len(ids) < QUESTS_PER_DAY:
+        prev = DailyQuestSet.objects.filter(user=user, date=today - timedelta(days=1)).first()
+        ids = _pick_quest_ids(user, today, catalog, c, set(prev.ids()) if prev else set())
+        DailyQuestSet.objects.update_or_create(
+            user=user, date=today, defaults={'quest_ids': ','.join(ids)},
+        )
 
-    # Misi berdasarkan jumlah CO2 hari ini.
-    quest_pool.append({
-        'id': 'carbon_budget',
-        'title': 'Jaga budget karbon',
-        'desc': 'Jaga total emisi hari ini agar tidak melebihi budget.',
-        'val': int(scans_today > 0 and not over_budget),
-        'goal': 1,
-        'tone': 'green',
-        'icon': 'leaf',
-        'failed': over_budget,
-        'why': (
-            'Budget karbon terlampaui.'
-            if over_budget
-            else 'Total emisi masih dalam budget.'
-        ),
-    })
-
-    # Misi untuk menjaga emisi tetap rendah.
-    low_carbon_goal = 500
-
-    quest_pool.append({
-        'id': 'low_carbon',
-        'title': 'Pilih makanan rendah karbon',
-        'desc': f'Jaga total emisi hari ini di bawah {low_carbon_goal}g CO2.',
-        'val': int(
-            scans_today > 0
-            and used_grams <= low_carbon_goal
-        ),
-        'goal': 1,
-        'tone': 'green',
-        'icon': 'leaf',
-        'failed': used_grams > low_carbon_goal,
-        'why': 'Coba pilih makanan dengan jejak karbon lebih rendah.',
-    })
-
-    # Misi menjaga konsistensi selama beberapa hari.
-    active_days_goal = 3
-
-    quest_pool.append({
-        'id': 'consistent_scanner',
-        'title': 'Tetap konsisten',
-        'desc': f'Scan makanan setidaknya {active_days_goal} hari minggu ini.',
-        'val': min(
-            len(recent_scan_days) + (1 if scans_today > 0 else 0),
-            active_days_goal,
-        ),
-        'goal': active_days_goal,
-        'tone': 'blue',
-        'icon': 'target',
-        'failed': False,
-        'why': 'Kebiasaan kecil yang konsisten lebih mudah dipertahankan.',
-    })
-
-    # Misi mengurangi rata-rata emisi dibanding minggu berjalan.
-    if recent_scan_days:
-        average_goal = 400
-
-        quest_pool.append({
-            'id': 'average_carbon',
-            'title': 'Jaga rata-rata emisi',
-            'desc': f'Usahakan rata-rata scan di bawah {average_goal}g CO2.',
-            'val': int(
-                scans_today > 0
-                and (used_grams / scans_today) <= average_goal
-            ),
-            'goal': 1,
-            'tone': 'teal',
-            'icon': 'leaf',
-            'failed': (
-                scans_today > 0
-                and (used_grams / scans_today) > average_goal
-            ),
-            'why': 'Bandingkan pilihan makananmu dan coba turunkan emisinya.',
-        })
-
-    # Acak urutan harian, lalu pilih kombinasi berdasarkan ID pengguna. Dengan
-    # begitu, akun berbeda mendapat kombinasi berbeda selama masih ada kombinasi
-    # yang tersedia; pengguna yang sama melihat misi stabil sepanjang hari.
-    pool_for_comparison = list(quest_pool)
-    rng = random.Random(today.isoformat())
-    rng.shuffle(quest_pool)
-    quest_sets = list(combinations(quest_pool, min(3, len(quest_pool))))
-    selected_index = (user.pk - 1) % len(quest_sets)
-    quests = list(quest_sets[selected_index])
-
-    # Hindari kombinasi yang persis sama pada dua hari berturut-turut.
-    yesterday = today - timedelta(days=1)
-    previous_rng = random.Random(yesterday.isoformat())
-    previous_pool = list(pool_for_comparison)
-    previous_rng.shuffle(previous_pool)
-    previous_sets = list(combinations(previous_pool, min(3, len(previous_pool))))
-    previous_ids = {q['id'] for q in previous_sets[(user.pk - 1) % len(previous_sets)]}
-    if {q['id'] for q in quests} == previous_ids and len(quest_sets) > 1:
-        quests = list(quest_sets[(selected_index + 1) % len(quest_sets)])
-
-    # Ambil maksimal tiga misi.
-    for q in quests:
-        q['xp'] = QUEST_XP.get(q['id'], DEFAULT_QUEST_XP)
-
-    return quests, scans_today, used_grams, budget_grams
+    quests = []
+    for qid in ids:
+        q = dict(catalog[qid])
+        q['xp'] = QUEST_XP.get(qid, DEFAULT_QUEST_XP)
+        quests.append(q)
+    return quests, c['scans_today'], c['used_grams'], c['budget_grams']
 
 
 def saved_budget_grams(user, today):
@@ -296,7 +339,7 @@ def saved_today_grams(user, today):
     return max(0, budget - used)
 
 
-def build_notifications(user, profile, scans_today, quests, weekly_ranking=None):
+def build_notifications(user, profile, scans_today, quests, extra=None):
     """Kumpulkan notifikasi yang SEHARUSNYA ada sekarang.
 
     Hasilnya belum disimpan; persist_notifications yang menyimpannya ke database.
@@ -312,47 +355,6 @@ def build_notifications(user, profile, scans_today, quests, weekly_ranking=None)
             'ephemeral': ephemeral, 'created_at': created_at or now,
         })
 
-    # Perubahan posisi leaderboard mingguan. Posisi sebelumnya disimpan di
-    # baris internal agar perubahan hanya diberitahukan sekali, bukan setiap
-    # kali dashboard dirender.
-    week_start = today - timedelta(days=today.weekday())
-    rank_key = f"rank-state-{week_start.isoformat()}"
-    rank_state = Notification.objects.filter(user=user, key=rank_key, kind='rank_state').first()
-    current_position = (weekly_ranking or {}).get('position')
-    current_rank_text = str(current_position) if current_position is not None else 'none'
-    previous_rank_text = rank_state.title.split(':', 1)[1] if rank_state and ':' in rank_state.title else None
-    if previous_rank_text is not None and previous_rank_text != current_rank_text:
-        previous_position = int(previous_rank_text) if previous_rank_text.isdigit() else None
-        if previous_position is None and current_position is not None:
-            title = f"Kamu masuk leaderboard di posisi #{current_position}!"
-            body = 'Kamu sudah memenuhi syarat peringkat minggu ini. Pertahankan progresmu!'
-        elif current_position is None and previous_position is not None:
-            title = 'Kamu keluar dari leaderboard minggu ini'
-            body = 'Posisimu berubah karena syarat scan mingguan tidak lagi terpenuhi. Scan lagi untuk masuk kembali.'
-        elif current_position < previous_position:
-            title = f"Peringkatmu naik ke #{current_position}!"
-            body = f"Kamu naik dari posisi #{previous_position}. Terus pertahankan progresmu!"
-        else:
-            title = f"Peringkatmu turun ke #{current_position}"
-            body = f"Kamu turun dari posisi #{previous_position}. Masih ada waktu untuk memperbaikinya."
-        add(
-            f"rank-move-{week_start.isoformat()}-{previous_rank_text}-{current_rank_text}-{today.isoformat()}",
-            'peringkat', 'trophy', 'blue', title, body, link='#/laporan',
-        )
-    # Baris internal ini bukan notifikasi yang ditampilkan; persist_notifications
-    # memperbarui nilainya pada setiap pemuatan agar perubahan berikutnya terdeteksi.
-    add(rank_key, 'rank_state', 'trophy', 'blue', f"rank:{current_rank_text}", '', ephemeral=False)
-
-    # Ringkasan misi harian. Kunci tanggal membuat notifikasi hanya dibuat
-    # sekali per hari, walau dashboard/API dipanggil berkali-kali.
-    if quests:
-        add(
-            f"quests-new-{today.isoformat()}", 'misi', 'target', 'teal',
-            f"Kamu punya {len(quests)} misi baru hari ini!",
-            'Misinya dipilih untuk membantumu membangun kebiasaan yang lebih ramah lingkungan. Cek progresmu dan klaim XP saat selesai.',
-            link='#/misi',
-        )
-
     # Streak
     streak = game.effective_streak(profile)
     if streak > 0 and scans_today == 0:
@@ -363,6 +365,19 @@ def build_notifications(user, profile, scans_today, quests, weekly_ranking=None)
     elif streak > 0:
         add(f"streak-{today.isoformat()}-{streak}", 'streak', 'flame', 'amber',
             f'Streak {streak} hari!', 'Pertahankan terus ritmemu.')
+    elif profile.current_streak > 0 and profile.last_activity_date:
+        # Streak sudah putus tapi belum direset di database (user belum scan lagi).
+        add(f"streak-lost-{profile.last_activity_date.isoformat()}", 'streak', 'flame', 'red',
+            'Streakmu terputus',
+            f'Streak {profile.current_streak} harimu berakhir. Scan hari ini untuk mulai lagi!',
+            link='', created_at=now)
+
+    # Misi baru hari ini
+    if quests:
+        add(f"quests-new-{today.isoformat()}", 'misi', 'target', 'blue',
+            f'Kamu punya {len(quests)} misi baru hari ini!',
+            'Selesaikan semuanya untuk membuka peti bonus.',
+            link='#/misi')
 
     # Misi selesai: ajak user klaim hadiahnya
     for q in quests:
@@ -374,37 +389,112 @@ def build_notifications(user, profile, scans_today, quests, weekly_ranking=None)
 
     if quests and all(q['val'] >= q['goal'] for q in quests):
         add(f"misi-done-{today.isoformat()}", 'misi', 'check', 'teal',
-            'Semua misi hari ini selesai',
-            'Buka peti bonusmu untuk dapat streak freeze.',
+            'Kamu sudah menyelesaikan semua misi hari ini!',
+            'Klaim peti bonusmu, lalu kembali besok untuk misi baru.',
             link='#/misi')
 
     # Lencana yang baru didapat
     since = now - timedelta(days=NOTIF_BADGE_WINDOW_DAYS)
+    earned_ids = set()
     for ub in (
         UserBadge.objects
-        .filter(user=user, earned_at__gte=since)
+        .filter(user=user)
         .select_related("badge")
-        .order_by("-earned_at")[:10]
+        .order_by("-earned_at")
     ):
-        add(f"badge-{ub.badge_id}", 'lencana', 'trophy', 'blue',
-            f"Lencana baru: {ub.badge.name}",
-            ub.badge.description or "Kamu membuka lencana baru.",
-            link='#/profil', created_at=ub.earned_at)
+        earned_ids.add(ub.badge_id)
+        if ub.earned_at >= since and len([c for c in cands if c['kind'] == 'lencana']) < 10:
+            add(f"badge-{ub.badge_id}", 'lencana', 'trophy', 'blue',
+                f"Lencana baru: {ub.badge.name}",
+                ub.badge.description or "Kamu membuka lencana baru.",
+                link='#/profil', created_at=ub.earned_at)
+
+    # Pengumuman lencana yang baru dirilis hanya bisa dihitung bila model Badge
+    # memiliki timestamp rilis. Branch Challenge tidak menambah field lintas-app;
+    # bila field belum ada, lewati bagian ini tanpa membuat dashboard error.
+    if any(field.name == 'created_at' for field in Badge._meta.get_fields()):
+        released_after = max(since, user.date_joined)
+        for badge in Badge.objects.filter(created_at__gte=released_after).order_by('-created_at'):
+            if badge.id in earned_ids:
+                continue
+            add(f"badge-new-{badge.id}", 'lencana', 'star', 'amber',
+                f"Lencana baru dirilis: {badge.name}",
+                f"{badge.description or 'Ada lencana baru.'} Yuk kejar!",
+                link='#/profil', created_at=badge.created_at)
 
     # Friend Challenge yang masih menunggu jawaban
-    pending = (
+    pending = list(
         FriendChallenge.objects
         .filter(opponent=user, status="pending")
         .select_related("challenger")
         .order_by("-created_at")[:5]
     )
+    names = {
+        p.user_id: p.display_name
+        for p in ChallengeProfile.objects.filter(user_id__in=[c.challenger_id for c in pending])
+        if p.display_name
+    }
     for challenge in pending:
-        add(f"challenge-{challenge.pk}", 'teman', 'users', 'purple',
-            f"{challenge.challenger.username} menantangmu!",
-            "Ada challenge baru yang menunggumu.",
+        who = names.get(challenge.challenger_id) or challenge.challenger.username
+        add(f"challenge-{challenge.pk}", 'teman', 'sword', 'purple',
+            f"{who} menantangmu!",
+            f"Adu {challenge.get_metric_display().lower()} selama {challenge.duration_days} hari.",
+            link=reverse('story:challenge_list'),
             ephemeral=True, created_at=challenge.created_at)
 
+    # Kejadian lain yang dihitung di luar (mis. perubahan peringkat)
+    for ev in (extra or []):
+        add(**ev)
+
     return cands
+
+
+def rank_notifications(user, rank_data, today=None):
+    """Notifikasi saat peringkat nasional minggu ini naik atau turun.
+
+    Posisi terakhir yang sudah dilihat user disimpan di ChallengeProfile, jadi
+    tiap perubahan hanya diberitahukan satu kali. Pengecekan terjadi tiap user
+    membuka dashboard, karena peringkat berubah juga akibat scan orang lain.
+    """
+    today = today or timezone.localdate()
+    week = today - timedelta(days=today.weekday())
+    nat = rank_data['rank']['nasional']
+    pos, total = nat['position'], nat['total']
+    prof, _ = ChallengeProfile.objects.get_or_create(user=user)
+    same_week = prof.last_rank_week == week
+    old = prof.last_rank if same_week else None
+    if pos is None:
+        # Simpan bahwa dashboard sudah dibuka sebelum pengguna memenuhi syarat
+        # peringkat, agar saat ia masuk leaderboard notifikasinya spesifik.
+        if not same_week or prof.last_rank is None:
+            prof.last_rank = 0
+            prof.last_rank_week = week
+            prof.save(update_fields=['last_rank', 'last_rank_week'])
+        return []
+    stamp = timezone.now().strftime('%Y%m%d%H%M%S')
+    events = []
+    if old is None or old == 0:
+        first_title = (f"Kamu masuk leaderboard minggu ini: #{pos}" if old == 0
+                       else f"Kamu masuk peringkat minggu ini: #{pos}")
+        events.append(dict(
+            key=f"rank-first-{week.isoformat()}", kind='peringkat', ico='trophy', tone='teal',
+            title=first_title,
+            body=f"Dari {total} pengguna. Pertahankan pilihan rendah karbonmu!", link='#/laporan'))
+    elif pos < old:
+        events.append(dict(
+            key=f"rank-{stamp}-{old}-{pos}", kind='peringkat', ico='trophy', tone='green',
+            title=f"Kamu naik ke peringkat #{pos}!",
+            body=f"Sebelumnya #{old}, dari {total} pengguna minggu ini.", link='#/laporan'))
+    elif pos > old:
+        events.append(dict(
+            key=f"rank-{stamp}-{old}-{pos}", kind='peringkat', ico='alert', tone='amber',
+            title=f"Peringkatmu turun ke #{pos}",
+            body=f"Sebelumnya #{old}, dari {total} pengguna. Yuk kejar lagi dengan menu rendah karbon!",
+            link='#/laporan'))
+    if (prof.last_rank, prof.last_rank_week) != (pos, week):
+        prof.last_rank, prof.last_rank_week = pos, week
+        prof.save(update_fields=['last_rank', 'last_rank_week'])
+    return events
 
 
 def persist_notifications(user, candidates):
@@ -435,15 +525,6 @@ def persist_notifications(user, candidates):
     if fresh:
         Notification.objects.bulk_create(fresh, ignore_conflicts=True)
 
-    # State peringkat menggunakan key tetap per minggu, jadi update baris
-    # yang sama alih-alih membuat salinan atau menampilkannya ke pengguna.
-    for c in candidates:
-        if c['kind'] != 'rank_state':
-            continue
-        Notification.objects.filter(user=user, key=c['key'], kind='rank_state').update(
-            title=c['title'], body=c['body'], created_at=c['created_at'],
-        )
-
     Notification.objects.filter(
         user=user, read_at__lt=now - timedelta(days=NOTIF_READ_KEEP_DAYS),
     ).delete()
@@ -452,7 +533,7 @@ def persist_notifications(user, candidates):
     ).delete()
 
     rows = (
-        Notification.objects.filter(user=user, dismissed=False).exclude(kind='rank_state')
+        Notification.objects.filter(user=user, dismissed=False)
         .order_by('-created_at', '-id')[:NOTIF_MAX_SHOWN]
     )
     return [serialize_notification(n) for n in rows]
@@ -511,8 +592,11 @@ def build_challenge_data(user, claimed_today=False):
 
     game_profile = game.get_profile(user)
     prog = game.xp_progress(game_profile)
-    rank_data = build_rankings(user)
-    weekly_ranking = build_weekly_ranking_recap(user)   
+    # Pastikan katalog lencana ada dan lencana yang sudah memenuhi syarat tercatat.
+    game.check_badges(user)
+    board = compute_leaderboard(user, today)      # satu kali hitung untuk semua bagian
+    rank_data = board
+    weekly_ranking = board['recap']
 
     # Hemat dari budget: hari ini saja, berubah tiap scan
     below_budget_grams = saved_today_grams(user, today)
@@ -569,13 +653,16 @@ def build_challenge_data(user, claimed_today=False):
         "userTotalCarbon": rank_data["userTotalCarbon"],    
         "notifs": persist_notifications(
             user,
-            build_notifications(user, game_profile, scans_today, quests, weekly_ranking),
+            build_notifications(user, game_profile, scans_today, quests,
+                                extra=rank_notifications(user, board, today)),
         ),
         "stats": {
             "scans": total_scans,
             "recordStreak": game_profile.record_streak,
             "avoidedKg": kg(below_budget_grams),
             "campusRank": rank_data["campusRank"],
+            "badges": len(earned_badge_ids),
+            "badgesTotal": len(badges),
         },
         "badges": badges,
     }
