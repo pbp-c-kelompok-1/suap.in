@@ -69,9 +69,19 @@ class CompleteStoryReaderTests(TestCase):
 
 
 class EmptyStoryDatabaseTests(TestCase):
-    def test_listing_does_not_create_content_as_a_get_side_effect(self):
-        user = get_user_model().objects.create_user(username='empty_reader')
+    def test_empty_story(self):
+        # Sengaja dikosongin buat ngecek halaman tanpa cerita.
+        StoryComic.objects.all().delete()
+
+        user = get_user_model().objects.create_user(
+            username='empty_reader',
+        )
         self.client.force_login(user)
-        self.assertEqual(self.client.get(reverse('story:story_list')).status_code, 200)
+
+        response = self.client.get(
+            reverse('story:story_list'),
+        )
+
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(StoryComic.objects.count(), 0)
         self.assertEqual(StoryPage.objects.count(), 0)

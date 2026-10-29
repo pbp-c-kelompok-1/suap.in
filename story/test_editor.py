@@ -8,6 +8,8 @@ from .models import StoryComic, StoryPage
 class StoryEditorTests(TestCase):
     @classmethod
     def setUpTestData(cls):
+        StoryComic.objects.all().delete()
+        
         User = get_user_model()
         cls.editor = User.objects.create_user(username='editor', is_staff=True)
         cls.member = User.objects.create_user(username='member')
