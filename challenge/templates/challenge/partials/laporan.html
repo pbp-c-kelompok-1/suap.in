@@ -45,8 +45,13 @@
     </div>
   </div>
 
-  <div class="raise card">
+  <!-- Rekap minggu ini (diisi laporan.js) -->
+  <div class="raise card wk-card" id="weeklyRankingRecap"></div>
+
+  <div class="raise card wk-card">
     <h2 style="font-size:1.35rem">Peringkat mingguan</h2>
+    <p class="muted rank-note" id="rankNote"></p>
+
     <div class="tabs" role="tablist" aria-label="Level peringkat" id="rankTabs">
       <button class="tab" role="tab" aria-selected="false" data-r="teman">Teman</button>
       <button class="tab" role="tab" aria-selected="true" data-r="kampus">Kampus</button>
@@ -58,5 +63,12 @@
       <button class="btn" id="shareBtn"><svg class="i"><use href="#i-share"/></svg>Bagikan ke Story</button>
       <button class="btn ghost" id="challengeBtn"><svg class="i"><use href="#i-sword"/></svg>Tantang teman</button>
     </div>
+  </div>
+
+  <!-- Riwayat peringkat mingguan (diisi laporan.js) -->
+  <div class="raise card wk-card" id="rankHistoryCard" hidden>
+    <h2 style="font-size:1.35rem">Riwayat peringkat</h2>
+    <p class="muted rank-note" id="rankHistoryNote"></p>
+    <ol class="wk-history" id="rankHistory"></ol>
   </div>
 </section>
