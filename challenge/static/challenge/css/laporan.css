@@ -110,6 +110,7 @@ a.tab{text-decoration:none;display:inline-flex;align-items:center}
 .proj-verdict{margin-top:16px;padding:12px 16px;border-radius:18px;font-weight:700;line-height:1.45;display:flex;gap:10px;align-items:center}
 .proj-verdict.ok{background:var(--green-50);color:var(--green-800)}
 .proj-verdict.over{background:#FFF4DD;color:#7A4E00}
+.proj-verdict span{flex:1;min-width:0}
 .proj-verdict svg{flex:none;width:24px;height:24px;color:var(--ok)}
 :root[data-theme="dark"] .proj-verdict.ok{background:rgba(30,168,84,.18);color:var(--green-100)}
 :root[data-theme="dark"] .proj-verdict.over{background:rgba(245,166,35,.18);color:#FFD9A0}
