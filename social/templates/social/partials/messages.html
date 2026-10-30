@@ -1,0 +1,5 @@
+{% if messages %}
+{% for m in messages %}
+<p class="soc-msg {% if m.tags == 'error' %}err{% else %}ok{% endif %}" role="status">{{ m }}</p>
+{% endfor %}
+{% endif %}

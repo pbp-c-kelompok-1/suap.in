@@ -1,0 +1,36 @@
+{% if need_login %}
+  <div class="empty">
+    <h3>Masuk dulu</h3>
+    <p>Login untuk melihat peringkat teman dan teman sekampusmu.</p>
+    <a href="{% url 'authentication:login' %}" class="btn" style="text-decoration:none;margin-top:14px">Masuk</a>
+  </div>
+{% elif need_campus %}
+  <div class="empty">
+    <h3>Kamu belum memilih kampus</h3>
+    <p>Pilih kampus dulu supaya bisa bersaing dengan teman sekampus.</p>
+    <a href="{% url 'social:choose_campus' %}" class="btn" style="text-decoration:none;margin-top:14px"><svg class="i"><use href="#i-building"/></svg>Pilih kampus</a>
+  </div>
+{% elif tab == 'friends' and no_friends %}
+  <div class="empty">
+    <h3>Belum punya teman</h3>
+    <p>Tambahkan teman dulu supaya bisa bersaing dengan mereka.</p>
+    <a href="{% url 'social:friends' %}" class="btn" style="text-decoration:none;margin-top:14px"><svg class="i"><use href="#i-userplus"/></svg>Cari teman</a>
+  </div>
+{% elif not ranking %}
+  <div class="empty">
+    <h3>Belum ada yang punya XP</h3>
+    <p>Scan makananmu untuk mengumpulkan XP pertama!</p>
+    <a href="{% url 'scanner:scan' %}" class="btn ok" style="text-decoration:none;margin-top:14px"><svg class="i"><use href="#i-camera"/></svg>Scan makanan</a>
+  </div>
+{% else %}
+  <ol class="rank">
+    {% for u in ranking %}
+    <li{% if u == user %} class="me"{% endif %}>
+      <span class="pos{% if forloop.counter == 1 %} p1{% elif forloop.counter == 2 %} p2{% elif forloop.counter == 3 %} p3{% endif %}">{{ forloop.counter }}</span>
+      <span class="av" style="background:var(--teal-500)">{{ u.username|first|upper }}</span>
+      <span class="nm">{{ u.username }}<small style="display:block;color:var(--text-2);font-weight:700">{{ u.campus.university.short_name|default:"Belum pilih kampus" }}</small></span>
+      <span class="co">{{ u.xp }} <small>XP</small></span>
+    </li>
+    {% endfor %}
+  </ol>
+{% endif %}

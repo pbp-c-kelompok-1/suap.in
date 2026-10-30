@@ -1,0 +1,11 @@
+<ol class="rank">
+  {% for c in campuses %}
+  <li{% if c == my_campus %} class="me"{% endif %}>
+    <span class="pos{% if forloop.counter == 1 %} p1{% elif forloop.counter == 2 %} p2{% elif forloop.counter == 3 %} p3{% endif %}">{{ forloop.counter }}</span>
+    <span class="nm">{{ c.short_name }}<small style="display:block;color:var(--text-2);font-weight:700">{{ c.name }} · {{ c.member_count }} mahasiswa</small></span>
+    <span class="co">{{ c.avg_xp }} <small>XP</small><small style="display:block">total {{ c.total_xp }}</small></span>
+  </li>
+  {% empty %}
+  <div class="empty"><h3>Belum ada data kampus</h3></div>
+  {% endfor %}
+</ol>
