@@ -1,12 +1,28 @@
 // Maskot di hero halaman Misi
 import { $ } from './utils.js';
-import { avatarSvg } from './avatar.js';
-import { state } from './state.js';
+
+export function mountMascot(slot, pose = 'senyum') {
+    const template = document.getElementById('es-mascot-tpl');
+    if (!slot || !template) return;
+
+    // Salin template supaya gambarnya bisa dipakai di beberapa tempat.
+    const mascot = template.content.cloneNode(true);
+    const image = mascot.querySelector('img');
+
+    image.src = template.dataset[pose] || image.src;
+    slot.replaceChildren(mascot);
+}
 
 export function mountMascots() {
-  $('#mascotHero').innerHTML = avatarSvg(state.avatar, 'mascot');
+    mountMascot($('#mascotHero'), 'menyapa');
 }
+
 export function cheer() {
-  const m = $('#mascotHero .mascot'); if (!m) return;
-  m.classList.remove('cheer'); void m.offsetWidth; m.classList.add('cheer');
+    const mascot = $('#mascotHero .mascot');
+    if (!mascot) return;
+
+    // Ulangi animasinya kalau dipanggil lagi.
+    mascot.classList.remove('cheer');
+    void mascot.offsetWidth;
+    mascot.classList.add('cheer');
 }

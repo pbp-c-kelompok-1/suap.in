@@ -11,6 +11,8 @@ from .models import StoryComic, StoryPage
 class StoryProgressionTests(TestCase):
     @classmethod
     def setUpTestData(cls):
+        StoryComic.objects.all().delete()
+        
         User = get_user_model()
         cls.beginner = User.objects.create_user(username="beginner")
         cls.experienced = User.objects.create_user(username="experienced")

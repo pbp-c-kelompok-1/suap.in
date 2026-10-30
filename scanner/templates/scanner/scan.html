@@ -153,8 +153,12 @@
   form.addEventListener('submit', function (event) {
     if (!input.files.length) { event.preventDefault(); return; }
     var slot = document.getElementById('mascotLoading');
-    var tpl = document.getElementById('mascot-tpl');
-    if (slot && tpl && !slot.childNodes.length) slot.appendChild(tpl.content.cloneNode(true));
+    var tpl = document.getElementById('es-mascot-tpl');
+    if (slot && tpl && !slot.childNodes.length) {
+      var mascot = tpl.content.cloneNode(true);
+      mascot.querySelector('img').src = tpl.dataset.memindai;
+      slot.appendChild(mascot);
+    }
     overlay.hidden = false;
   });
 
