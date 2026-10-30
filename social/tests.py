@@ -517,7 +517,7 @@ class CarbonLeaderboardTests(TestCase):
 
     def test_friend_tab_uses_same_friend_source_as_report(self):
         from story.models import FriendChallenge
-        FriendChallenge.objects.create(challenger=self.iqbal, opponent=self.acan)  # pernah saling tantang
+        FriendChallenge.objects.create(challenger=self.iqbal, opponent=self.acan, status='finished')  # pernah saling tantang
         Friendship.objects.create(from_user=self.iqbal, to_user=self.nami, status=Friendship.ACCEPTED)
         for u in (self.iqbal, self.nami, self.acan):
             scan(u, 500, times=3)

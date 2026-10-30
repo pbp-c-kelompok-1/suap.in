@@ -42,7 +42,7 @@ def friend_user_ids(user):
     """SATU-SATUNYA tempat yang menentukan siapa "teman" seorang user di peringkat.
 
     Teman = pertemanan yang sudah DITERIMA di modul social (menu Teman), ditambah
-    pengguna yang pernah saling tantang lewat FriendChallenge (active / finished). Tab Teman di Laporan
+    pengguna yang pernah saling tantang lewat FriendChallenge (active atau finished). Tab Teman di Laporan
     dan di halaman Peringkat (social) sama-sama memanggil fungsi ini.
     """
     from social.friends import friend_ids
