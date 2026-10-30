@@ -227,6 +227,14 @@ class CrossAccountNotificationTests(TestCase):
             criteria_type='scan_amount', threshold=1,
         )
         UserBadge.objects.create(user=user, badge=badge)
+
+        # Tambahkan FoodLog agar syarat scan_amount terpenuhi
+        FoodLog.objects.create(
+            user=user,
+            custom_name='Food test',
+            co2_grams=100,
+        )
+
         data = build_challenge_data(user)
         self.assertTrue(any(n['id'] == f'badge-{badge.pk}' for n in data['notifs']))
         self.assertTrue(any(b['id'] == badge.pk and b['earned'] for b in data['badges']))
