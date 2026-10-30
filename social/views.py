@@ -8,10 +8,22 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .community import nearest_canteens
-from .forms import CampusForm
+from .forms import CampusForm, FriendRequestForm, FriendResponseForm, first_error
 from .friends import FriendshipError, friend_ids, relation_status, remove, respond, send_request
 from .models import Canteen, CampusMembership, Friendship
+from .ratelimit import rate_limit
 from .services import canteen_pins, canteen_posts, month_start, ranked_campuses, scope_ranking, users_with_xp
+
+
+def is_ajax(request):
+    return request.headers.get('x-requested-with') == 'fetch'
+
+
+def is_partial(request):
+    return request.GET.get('partial') == '1'
+
+
+LEADERBOARD_TABS = [('friends', 'Teman'), ('campus', 'Kampus'), ('national', 'Nasional')]
 
 
 def leaderboard_view(request):
@@ -19,13 +31,16 @@ def leaderboard_view(request):
 
     Leaderboard mingguan ada di halaman Laporan (modul challenge) dan memakai
     sumber XP yang sama lewat social.services.users_with_xp(since=...).
+    ?partial=1 hanya merender daftar peringkat (dipakai saat ganti tab lewat AJAX).
     """
     tab = request.GET.get('tab', 'national')
-    if tab not in ('friends', 'campus', 'national'):
+    if tab not in dict(LEADERBOARD_TABS):
         tab = 'national'
     users, reason = scope_ranking(users_with_xp(), request.user, tab)
-    return render(request, 'social/leaderboard.html', {
+    template = 'social/partials/leaderboard_region.html' if is_partial(request) else 'social/leaderboard.html'
+    return render(request, template, {
         'tab': tab,
+        'tabs': LEADERBOARD_TABS,
         'ranking': list(users[:50]),
         'need_login': reason == 'login',
         'need_campus': reason == 'campus',
@@ -34,25 +49,35 @@ def leaderboard_view(request):
 
 
 def campus_war_view(request):
-    campuses = ranked_campuses(month_start())
-    my_campus = None
-    if request.user.is_authenticated and hasattr(request.user, 'campus'):
-        my_campus = request.user.campus.university
-    return render(request, 'social/campus_war.html', {
-        'campuses': campuses,
-        'my_campus': my_campus,
+    membership = None
+    if request.user.is_authenticated:
+        membership = CampusMembership.objects.filter(user=request.user).select_related('university').first()
+    template = 'social/partials/campus_war_region.html' if is_partial(request) else 'social/campus_war.html'
+    return render(request, template, {
+        'campuses': ranked_campuses(month_start()),
+        'my_campus': membership.university if membership else None,
+        'form': CampusForm(instance=membership),
     })
 
 
 @login_required
+@rate_limit('campus', limit=10, fallback='social:campus_war')
 def choose_campus_view(request):
+    """Create/Update CampusMembership. AJAX dibalas JSON, form biasa di-redirect."""
     instance = CampusMembership.objects.filter(user=request.user).first()
     form = CampusForm(request.POST or None, instance=instance)
-    if request.method == 'POST' and form.is_valid():
-        membership = form.save(commit=False)
-        membership.user = request.user
-        membership.save()
-        return redirect('social:campus_war')
+    if request.method == 'POST':
+        if form.is_valid():
+            membership = form.save(commit=False)
+            membership.user = request.user
+            membership.save()
+            message = f'Kampusmu sekarang {membership.university.short_name}.'
+            if is_ajax(request):
+                return JsonResponse({'ok': True, 'message': message, 'campus': membership.university.short_name})
+            messages.success(request, message)
+            return redirect('social:campus_war')
+        if is_ajax(request):
+            return JsonResponse({'ok': False, 'message': first_error(form)}, status=400)
     return render(request, 'social/choose_campus.html', {'form': form})
 
 
@@ -84,6 +109,7 @@ def api_canteen_posts(request, pk):
 
 
 @require_POST
+@rate_limit('nearest', limit=20)
 def api_nearest(request):
     """Terima lat/lng dari browser, balas 3 kantin terdekat. Koordinat tidak disimpan."""
     try:
@@ -101,10 +127,6 @@ def api_nearest(request):
 
 
 SEARCH_LIMIT = 10
-
-
-def is_ajax(request):
-    return request.headers.get('x-requested-with') == 'fetch'
 
 
 @login_required
@@ -136,7 +158,7 @@ def friends_view(request):
         'outgoing': Friendship.objects.filter(from_user=me, status=Friendship.PENDING).select_related('to_user'),
         'friends': friend_rows,
     }
-    template = 'social/partials/friends_region.html' if request.GET.get('partial') == '1' else 'social/friends.html'
+    template = 'social/partials/friends_region.html' if is_partial(request) else 'social/friends.html'
     return render(request, template, context)
 
 
@@ -152,25 +174,37 @@ def friendship_action_response(request, func):
     return redirect('social:friends')
 
 
+def form_action_response(request, form, action):
+    """Validasi form dulu; kalau valid jalankan aksi, kalau tidak balas pesan error form."""
+    def run():
+        if not form.is_valid():
+            raise FriendshipError(first_error(form))
+        return action(form)
+    return friendship_action_response(request, run)
+
+
 @login_required
 @require_POST
+@rate_limit('friend_request', limit=10, fallback='social:friends')
 def friend_request_send(request):
     """Create: kirim permintaan pertemanan ke username tertentu."""
-    receiver = get_object_or_404(User, username=request.POST.get('username', ''))
-    return friendship_action_response(request, lambda: send_request(request.user, receiver))
+    form = FriendRequestForm(request.POST, sender=request.user)
+    return form_action_response(request, form, lambda f: send_request(request.user, f.receiver))
 
 
 @login_required
 @require_POST
+@rate_limit('friend_action', limit=30, fallback='social:friends')
 def friend_request_respond(request, pk):
     """Update: terima atau tolak permintaan yang masuk."""
     friendship = get_object_or_404(Friendship, pk=pk)
-    accept = request.POST.get('action') == 'accept'
-    return friendship_action_response(request, lambda: respond(friendship, request.user, accept))
+    form = FriendResponseForm(request.POST)
+    return form_action_response(request, form, lambda f: respond(friendship, request.user, f.accept))
 
 
 @login_required
 @require_POST
+@rate_limit('friend_action', limit=30, fallback='social:friends')
 def friendship_delete(request, pk):
     """Delete: unfriend atau batalkan permintaan yang dikirim."""
     friendship = get_object_or_404(Friendship, pk=pk)
