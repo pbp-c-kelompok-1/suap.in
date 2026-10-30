@@ -1,0 +1,17 @@
+[run]
+source = .
+omit =
+    */migrations/*
+    */tests/*
+    */test_*
+    *tests.py
+    */management/*
+    manage.py
+    suap_in/*
+    venv/*
+    .venv/*
+    env/*
+
+[report]
+show_missing = True
+skip_covered = False
