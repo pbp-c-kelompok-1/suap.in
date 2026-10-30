@@ -14,13 +14,46 @@ Challenge:
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Q
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 
-from story.challenge_services import refresh_challenge
 from story.models import FriendChallenge
 
 from .models import ChallengeProfile, Notification
+
+
+def story_lifecycle():
+    """Modul siklus tantangan milik story (terima, hitung skor, simpan hasil).
+
+    Modul ini baru ada setelah master digabung. Selama belum ada, fitur yang
+    bergantung padanya (terima, pemenang otomatis, notifikasi hasil) dimatikan
+    secara sopan, tanpa membuat Challenge error.
+    """
+    try:
+        from story import challenge_services
+    except ImportError:
+        return None
+    return challenge_services
+
+
+def has_lifecycle():
+    return story_lifecycle() is not None and hasattr(FriendChallenge, 'ends_at')
+
+
+def accept_url(pk):
+    """URL terima milik story, atau None bila story belum punya endpoint-nya."""
+    try:
+        return reverse('story:challenge_accept', args=[pk])
+    except NoReverseMatch:
+        return None
+
+
+def duel_scores(challenge):
+    """Skor kedua pihak ({'challenger': {...}, 'opponent': {...}}), atau None."""
+    services = story_lifecycle()
+    if services is None:
+        return None
+    return services.get_challenge_scores(challenge)
 
 
 def _display_name(user):
@@ -65,6 +98,10 @@ def finalize_due_duels(user, now=None):
     Aman dipanggil berulang: tantangan yang sudah selesai dilewati, dan tantangan
     orang lain tidak disentuh. Aturan pemenang tetap milik story (refresh_challenge).
     """
+    services = story_lifecycle()
+    if services is None or not hasattr(FriendChallenge, 'ends_at'):
+        return []
+
     now = now or timezone.now()
     due = (
         FriendChallenge.objects
@@ -75,7 +112,7 @@ def finalize_due_duels(user, now=None):
     finished = []
     for pk in due:
         try:
-            challenge, _ = refresh_challenge(user, pk, now=now)
+            challenge, _ = services.refresh_challenge(user, pk, now=now)
         except (ValidationError, FriendChallenge.DoesNotExist):
             continue
         if challenge.status == 'finished':

@@ -1,3 +1,4 @@
+import unittest
 from datetime import timedelta
 
 from django.contrib.auth.models import User
@@ -7,11 +8,20 @@ from django.urls import reverse
 from django.utils import timezone
 
 from scanner.models import FoodLog
-from story.challenge_services import accept_challenge
 from story.models import FriendChallenge
 
-from .duels import decline_duel, finalize_due_duels
+from .duels import decline_duel, finalize_due_duels, has_lifecycle
 from .models import ChallengeProfile, Notification
+
+
+needs_story = unittest.skipUnless(
+    has_lifecycle(), 'butuh app story dari master (terima, skor, dan hasil tantangan)'
+)
+
+
+def accept(user, pk):
+    from story.challenge_services import accept_challenge
+    return accept_challenge(user, pk)
 
 
 def make_user(name):
@@ -48,8 +58,9 @@ class DeclineDuelTests(TestCase):
         self.assertTrue(FriendChallenge.objects.filter(pk=self.ch.pk, status='pending').exists())
         self.assertFalse(Notification.objects.exists())
 
+    @needs_story
     def test_cannot_decline_after_accept(self):
-        accept_challenge(self.b, self.ch.pk)
+        accept(self.b, self.ch.pk)
         with self.assertRaises(ValidationError):
             decline_duel(self.b, self.ch.pk)
         self.ch.refresh_from_db()
@@ -71,8 +82,9 @@ class DeclineDuelTests(TestCase):
         self.assertEqual((res.status_code, res.json()), (200, {'ok': True, 'message': 'Tantangan ditolak.'}))
         self.assertEqual(self.client.post(url).status_code, 404)             # sudah dihapus
 
+    @needs_story
     def test_endpoint_conflict_when_already_accepted(self):
-        accept_challenge(self.b, self.ch.pk)
+        accept(self.b, self.ch.pk)
         self.client.force_login(self.b)
         res = self.client.post(reverse('challenge:challenge_decline', args=[self.ch.pk]))
         self.assertEqual(res.status_code, 409)
@@ -84,6 +96,7 @@ class DeclineDuelTests(TestCase):
         self.assertEqual(self.client.post(url).status_code, 404)
 
 
+@needs_story
 class FinalizeDueDuelsTests(TestCase):
     def setUp(self):
         self.a, self.b = make_user('a'), make_user('b')

@@ -1,4 +1,5 @@
 """Skenario end-to-end dengan beberapa akun uji: notifikasi, misi, lencana, laporan, leaderboard."""
+import unittest
 from datetime import timedelta
 
 from django.contrib.auth.models import User
@@ -10,9 +11,9 @@ from gamification import services as game
 from gamification.models import Badge, GameProfile, UserBadge
 from scanner.models import FoodLog
 from social.models import CampusMembership, University
-from story.challenge_services import accept_challenge
 from story.models import FriendChallenge
 
+from .duels import has_lifecycle
 from .models import DailyQuestSet, Notification
 from .reports import build_report_history
 from .services import build_challenge_data, todays_quests
@@ -62,6 +63,7 @@ class ChallengeNotificationTests(Base):
         ch.delete()
         self.assertFalse([n for n in build_challenge_data(self.b)['notifs'] if n['type'] == 'teman'])
 
+    @unittest.skipUnless(has_lifecycle(), 'butuh app story dari master (terima tantangan)')
     def test_accepted_challenge_creates_friend_for_ranking_tab(self):
         ch = FriendChallenge.objects.create(challenger=self.a, opponent=self.b)
         for u, g in ((self.a, 300), (self.b, 900)):
@@ -69,6 +71,7 @@ class ChallengeNotificationTests(Base):
                 scan(u, g)
         # Tantangan yang belum diterima belum menjadikan siapa pun teman.
         self.assertEqual(build_challenge_data(self.a)['rank']['teman']['empty'], 'no_friends')
+        from story.challenge_services import accept_challenge
         accept_challenge(self.b, ch.pk)
         teman = build_challenge_data(self.a)['rank']['teman']
         self.assertEqual([r['name'] for r in teman['items']], ['akun_a', 'akun_b'])

@@ -1,3 +1,4 @@
+import unittest
 from datetime import timedelta
 
 from django.contrib.auth.models import User
@@ -6,13 +7,22 @@ from django.urls import reverse
 from django.utils import timezone
 
 from scanner.models import FoodLog
-from story.challenge_services import accept_challenge
 from story.models import FriendChallenge
 
-from .duels import decline_duel
+from .duels import accept_url, decline_duel, has_lifecycle
 from .models import ChallengeProfile
 from .ranking import friend_user_ids
 from .services import build_challenge_data
+
+
+needs_story = unittest.skipUnless(
+    has_lifecycle(), 'butuh app story dari master (terima, skor, dan hasil tantangan)'
+)
+
+
+def accept_challenge(user, pk):
+    from story.challenge_services import accept_challenge as accept
+    return accept(user, pk)
 
 
 def make_user(name):
@@ -37,14 +47,21 @@ class PendingChallengeNotificationTests(TestCase):
         self.a, self.b = make_user('andi'), make_user('budi')
         self.ch = FriendChallenge.objects.create(challenger=self.a, opponent=self.b)
 
-    def test_opponent_gets_accept_and_decline_actions(self):
+    def test_opponent_gets_decline_action_and_accept_when_story_supports_it(self):
         n = duel_notifs(self.b)[0]
         self.assertEqual(n['id'], f'challenge-{self.ch.pk}')
         self.assertIn('andi menantangmu!', n['t'])
         self.assertIn('Adu emisi CO\u2082 terendah selama 7 hari.', n['p'])
-        self.assertEqual([a['id'] for a in n['actions']], ['accept', 'decline'])
-        self.assertEqual(n['actions'][0]['url'], reverse('story:challenge_accept', args=[self.ch.pk]))
-        self.assertEqual(n['actions'][1]['url'], reverse('challenge:challenge_decline', args=[self.ch.pk]))
+        decline = n['actions'][-1]
+        self.assertEqual(decline['id'], 'decline')
+        self.assertEqual(decline['url'], reverse('challenge:challenge_decline', args=[self.ch.pk]))
+        if accept_url(self.ch.pk):                       # story master sudah digabung
+            self.assertEqual([a['id'] for a in n['actions']], ['accept', 'decline'])
+            self.assertEqual(n['actions'][0]['url'], reverse('story:challenge_accept', args=[self.ch.pk]))
+            self.assertIn('Terima atau tolak', n['p'])
+        else:                                            # story lama: hanya Tolak, tidak error
+            self.assertEqual([a['id'] for a in n['actions']], ['decline'])
+            self.assertIn('menolaknya', n['p'])
 
     def test_challenger_gets_no_notification_while_pending(self):
         self.assertEqual(duel_notifs(self.a), [])
@@ -56,16 +73,29 @@ class PendingChallengeNotificationTests(TestCase):
     def test_ordinary_notifications_have_no_actions(self):
         self.assertTrue(all(n['actions'] == [] for n in notifs(self.b) if not n['id'].startswith('challenge-')))
 
-    def test_pending_notification_disappears_after_accept_or_decline(self):
+    def test_pending_notification_disappears_after_decline(self):
         self.assertEqual(len(duel_notifs(self.b)), 1)
+        decline_duel(self.b, self.ch.pk)
+        self.assertEqual(duel_notifs(self.b), [])
+
+    @needs_story
+    def test_pending_notification_disappears_after_accept(self):
         accept_challenge(self.b, self.ch.pk)
         self.assertEqual(duel_notifs(self.b), [])
-        other = FriendChallenge.objects.create(challenger=self.a, opponent=self.b)
-        self.assertEqual(len(duel_notifs(self.b)), 1)
-        decline_duel(self.b, other.pk)
-        self.assertEqual(duel_notifs(self.b), [])
 
 
+class DeclinedNotificationTests(TestCase):
+    def setUp(self):
+        self.a, self.b = make_user('andi'), make_user('budi')
+
+    def test_challenger_is_told_when_declined(self):
+        ch = FriendChallenge.objects.create(challenger=self.a, opponent=self.b)
+        decline_duel(self.b, ch.pk)
+        titles = [n['t'] for n in duel_notifs(self.a)]
+        self.assertEqual(titles, ['budi menolak tantanganmu'])
+
+
+@needs_story
 class ChallengeOutcomeNotificationTests(TestCase):
     def setUp(self):
         self.a, self.b = make_user('andi'), make_user('budi')
@@ -77,12 +107,6 @@ class ChallengeOutcomeNotificationTests(TestCase):
         titles = [n['t'] for n in duel_notifs(self.a)]
         self.assertEqual(titles, ['budi menerima tantanganmu!'])
         self.assertEqual(duel_notifs(self.b), [])          # penerima tidak perlu kabar ini
-
-    def test_challenger_is_told_when_declined(self):
-        ch = FriendChallenge.objects.create(challenger=self.a, opponent=self.b)
-        decline_duel(self.b, ch.pk)
-        titles = [n['t'] for n in duel_notifs(self.a)]
-        self.assertEqual(titles, ['budi menolak tantanganmu'])
 
     def _finished_duel(self, metric='lowest_co2', a_grams=300, b_grams=900):
         start = self.now - timedelta(days=8)

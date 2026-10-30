@@ -15,12 +15,11 @@ from django.db.models.functions import TruncDate
 
 from social.models import CampusMembership
 from social.services import time_ago
-from story.challenge_services import get_challenge_scores
 from story.models import FriendChallenge
 from django.urls import reverse
 
 from .models import ChallengeProfile, DailyQuestSet, Notification, QuestClaim
-from .duels import finalize_due_duels
+from .duels import accept_url, duel_scores, finalize_due_duels
 from .ranking import compute_leaderboard
 
 
@@ -457,19 +456,23 @@ def build_notifications(user, profile, scans_today, quests, extra=None):
             add(f"challenge-{c.pk}", 'teman', 'sword', 'purple',
                 f"{name} menantangmu!",
                 f"Adu {_lower_first(c.get_metric_display())} selama {c.duration_days} hari. "
-                "Terima atau tolak langsung di sini.",
+                + ("Terima atau tolak langsung di sini." if accept_url(c.pk)
+                   else "Kamu bisa menolaknya langsung di sini."),
                 link=challenge_link, ephemeral=True, created_at=c.created_at)
 
+        started_at = getattr(c, 'started_at', None)
+        finished_at = getattr(c, 'finished_at', None)
+
         if (i_challenged and c.status in ('active', 'finished')
-                and c.started_at and c.started_at >= window):
+                and started_at and started_at >= window):
             ends = timezone.localtime(c.ends_at).strftime('%d/%m %H:%M')
             add(f"challenge-accepted-{c.pk}", 'teman', 'sword', 'green',
                 f"{name} menerima tantanganmu!",
                 f"Waktu main {c.duration_days} hari sudah dimulai, batas akhir {ends}.",
-                link=challenge_link, created_at=c.started_at)
+                link=challenge_link, created_at=started_at)
 
-        if c.status == 'finished' and c.finished_at and c.finished_at >= window:
-            scores = get_challenge_scores(c)
+        scores = duel_scores(c) if (c.status == 'finished' and finished_at and finished_at >= window) else None
+        if scores is not None:
             mine, theirs = (
                 (scores['challenger'], scores['opponent']) if i_challenged
                 else (scores['opponent'], scores['challenger'])
@@ -487,7 +490,7 @@ def build_notifications(user, profile, scans_today, quests, extra=None):
                 title, body, tone, ico = (f"Tantangan melawan {name} berakhir seri",
                                           f"{detail} Saatnya babak penentuan!", 'blue', 'sword')
             add(f"challenge-result-{c.pk}", 'teman', ico, tone, title, body,
-                link=challenge_link, created_at=c.finished_at)
+                link=challenge_link, created_at=finished_at)
 
     # Kejadian lain yang dihitung di luar (mis. perubahan peringkat)
     for ev in (extra or []):
@@ -518,12 +521,13 @@ def notification_actions(n):
     if not (match and n.ephemeral and n.kind == 'teman'):
         return []
     pk = match.group(1)
-    return [
-        {'id': 'accept', 'label': 'Terima', 'tone': 'ok',
-         'url': reverse('story:challenge_accept', args=[pk])},
-        {'id': 'decline', 'label': 'Tolak', 'tone': 'ghost',
-         'url': reverse('challenge:challenge_decline', args=[pk])},
-    ]
+    actions = []
+    accept = accept_url(pk)          # belum ada sebelum master digabung
+    if accept:
+        actions.append({'id': 'accept', 'label': 'Terima', 'tone': 'ok', 'url': accept})
+    actions.append({'id': 'decline', 'label': 'Tolak', 'tone': 'ghost',
+                    'url': reverse('challenge:challenge_decline', args=[pk])})
+    return actions
 
 
 def rank_notifications(user, rank_data, today=None):
