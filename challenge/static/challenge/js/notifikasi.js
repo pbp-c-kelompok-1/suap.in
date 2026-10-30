@@ -1,6 +1,6 @@
 // Halaman Notifikasi: data & status baca/hapus disimpan di server.
 import { $, $$, esc, ico } from './utils.js';
-import { avatarSvg } from './avatar.js';
+import { mountMascot } from './mascot.js';
 import { post, state, urls } from './state.js';
 import { ACT, emptyCard } from './empty.js';
 
@@ -16,7 +16,8 @@ export function renderNotifs() {
       ? { title: 'Belum ada notifikasi', text: 'Kabar baru muncul setelah kamu scan makanan atau punya teman.',
           actions: [ACT.scan(true), ACT.friends(false)], mascotId: 'mascotEmpty' }
       : { title: 'Tidak ada notifikasi di kategori ini', text: 'Coba pilih kategori lain.', mascotId: 'mascotEmpty' });
-    $('#mascotEmpty').innerHTML = avatarSvg(state.avatar, 'mascot');
+    const mascotEl = $('#mascotEmpty');
+    if (mascotEl) mountMascot(mascotEl, 'senyum');
     return;
   }
   $('#notifs').innerHTML = list.map(n => `
