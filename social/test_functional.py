@@ -56,7 +56,11 @@ class SocialFunctionalTests(StaticLiveServerTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.browser.quit()
+        if hasattr(cls, 'browser') and cls.browser is not None:
+            try:
+                cls.browser.quit()
+            except Exception:
+                pass
         super().tearDownClass()
 
     def setUp(self):

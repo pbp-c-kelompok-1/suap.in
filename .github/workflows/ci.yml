@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      DB_HOST: ""
 
     steps:
       - name: Checkout code
@@ -29,7 +31,5 @@ jobs:
           python manage.py check
 
       - name: Run Test Suite
-        env:
-          DB_HOST: ""
         run: |
           python manage.py test

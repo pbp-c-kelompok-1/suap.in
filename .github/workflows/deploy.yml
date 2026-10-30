@@ -25,7 +25,7 @@ jobs:
         run: |
           current_branch=$(git branch --show-current)
           echo "Current branch: $current_branch"
-          push_output=$(git push $PWS_URL $current_branch:master 2>&1)
+          push_output=$(git push --force $PWS_URL $current_branch:master 2>&1)
           if [[ $? -ne 0 ]]; then
             echo "Push failed: $push_output"
             exit 1
