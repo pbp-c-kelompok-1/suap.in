@@ -394,7 +394,7 @@ def build_notifications(user, profile, scans_today, quests, extra=None):
     if quests and all(q['val'] >= q['goal'] for q in quests):
         add(f"misi-done-{today.isoformat()}", 'misi', 'check', 'teal',
             'Kamu sudah menyelesaikan semua misi hari ini!',
-            'Klaim peti bonusmu, lalu kembali besok untuk misi baru.',
+            'Klaim peti bonusmu, lalu kembali besok untuk misi baru!',
             link='#/misi')
 
     # Lencana yang baru didapat
