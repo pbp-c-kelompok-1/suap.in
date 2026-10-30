@@ -3,6 +3,7 @@ import { $, $$, esc, ico } from './utils.js';
 import { avatarSvg } from './avatar.js';
 import { post, state, urls } from './state.js';
 import { ACT, emptyCard } from './empty.js';
+import { toast } from './fx.js';
 
 export function renderNotifs() {
   $$('#filters .fchip').forEach(c => c.setAttribute('aria-pressed', c.dataset.f === state.filter));
@@ -20,7 +21,7 @@ export function renderNotifs() {
     return;
   }
   $('#notifs').innerHTML = list.map(n => `
-    <div class="n-wrap" data-id="${n.id}">
+    <div class="n-wrap ${n.actions && n.actions.length ? 'has-actions' : ''}" data-id="${n.id}">
       <button class="notif ${n.read ? 'read' : ''}" data-open="${n.id}">
         <span class="n-ico tone-${n.tone}">${ico(n.ico)}</span>
         <span class="n-txt"><h3>${esc(n.t)}</h3><p>${esc(n.p)}</p></span>
@@ -28,12 +29,48 @@ export function renderNotifs() {
         <span class="dot"></span>
       </button>
       <button class="del" data-del="${n.id}" aria-label="Hapus notifikasi">${ico('x')}</button>
+      ${n.actions && n.actions.length ? `
+      <div class="n-actions">
+        ${n.actions.map(a => `<button class="btn ${esc(a.tone)} sm" data-act="${esc(a.id)}" data-nid="${esc(n.id)}"${n.busy ? ' disabled' : ''}>${esc(a.label)}</button>`).join('')}
+      </div>` : ''}
     </div>`).join('');
 }
 /* Simpan ke server di latar belakang. Tampilan diperbarui dulu supaya terasa cepat. */
 const sync = (url, body) => post(url, body).catch(() => { /* gagal jaringan: status baca akan disamakan saat halaman dimuat ulang */ });
 
+/* Terima / tolak tantangan langsung dari notifikasi. Memakai endpoint app story. */
+const DONE_TITLE = { accept: 'Tantangan diterima', decline: 'Tantangan ditolak' };
+
+async function respondToChallenge(btn) {
+  const n = state.notifs.find(x => x.id === btn.dataset.nid);
+  const action = n && (n.actions || []).find(a => a.id === btn.dataset.act);
+  if (!n || !action || n.busy) return;
+
+  n.busy = true; renderNotifs();
+  try {
+    const res = await fetch(action.url, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': urls.csrf || '', Accept: 'application/json' },
+      credentials: 'same-origin',
+    });
+    if (res.redirected) { location.assign(res.url); return; }
+    let data = {};
+    try { data = await res.json(); } catch { /* respons bukan JSON */ }
+    if (!res.ok) throw new Error(res.status === 404 ? 'Tantangan ini sudah tidak ada.' : (data.message || 'Belum berhasil, coba lagi.'));
+    n.t = DONE_TITLE[action.id] || n.t;
+    n.p = data.message || '';
+    n.actions = []; n.read = true;
+    toast(esc(data.message || n.t), 'check');
+  } catch (err) {
+    toast(esc(err.message || 'Belum berhasil, coba lagi.'), 'alert');
+  } finally {
+    n.busy = false; renderNotifs();
+  }
+}
+
 $('#notifs').addEventListener('click', e => {
+  const act = e.target.closest('[data-act]');
+  if (act) { respondToChallenge(act); return; }
   const open = e.target.closest('[data-open]');
   const del = e.target.closest('[data-del]');
   if (open) {
