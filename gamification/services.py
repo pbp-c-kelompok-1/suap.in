@@ -142,35 +142,43 @@ def claim_streak_freeze(user, today=None):
 
 # ==== Badge/Lencana ====================================================================
 def seedBadges():
-    if Badge.objects.exists():
-        return
-
     for m in STREAK_MILESTONES:
-        badge = {
-            'code':f"{m}-streak",
-            'name': f"{m} Day Streak",
-            'description': f"Mempertahankan streak selama {m} hari",
-            'icon': 'flame',
-            'criteria_type':'streak_duration',
-            'threshold': m
-        }
-        Badge.objects.create(**badge)
+        Badge.objects.get_or_create(
+            code=f"{m}-streak",
+            defaults={
+                'name': f"{m} Day Streak",
+                'description': f"Mempertahankan streak selama {m} hari",
+                'icon': 'flame',
+                'criteria_type': 'streak_duration',
+                'threshold': m,
+            }
+        )
 
     for m in SCAN_MILESTONES:
-        badge = {
-            'code':f"{m}-scans",
-            'name': f"{m} Scans",
-            'description': f"Melakukan scan sebanyak {m}x",
-            'icon': 'camera',
-            'criteria_type':'scan_amount',
-            'threshold': m
-        }
-        Badge.objects.create(**badge)
+        Badge.objects.get_or_create(
+            code=f"{m}-scans",
+            defaults={
+                'name': f"{m} Scans",
+                'description': f"Melakukan scan sebanyak {m}x",
+                'icon': 'camera',
+                'criteria_type': 'scan_amount',
+                'threshold': m,
+            }
+        )
+
+ensure_badges = seedBadges
+
 
 def check_badges(user):
+    seedBadges()
     profile = get_profile(user)
+    logs = FoodLog.objects.filter(user=user)
+    with_raw = logs.exclude(ai_raw_response='').values('ai_raw_response').distinct().count()
+    without_raw = logs.filter(ai_raw_response='').count()
+    total_scans = with_raw + without_raw
+
     values = {
-        'scan_amount': FoodLog.objects.filter(user=user).count(),
+        'scan_amount': total_scans,
         'streak_duration': profile.record_streak,
         # Bisa tambahin kriteria badge lain
     }

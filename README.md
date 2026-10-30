@@ -85,7 +85,7 @@ Generasi daily challenge otomatis (3 challenge/hari berdasarkan kebiasaan user),
 - Weekly Report Page — recap total CO₂, perbandingan minggu lalu, proyeksi tahunan, ranking
 - Notifikasi Page — pusat notifikasi streak, challenge, dan leaderboard
 
-### 6. Social + Story (`gamification`)
+### 6. Story Progression + 1v1 Challenge (`story`)
 PIC: Nasywa Namira Suhendro
 story progression (unlock komik digital per level range), milestone rewards, friend system, 1v1 Friend Challenge, share stats ke Instagram Story.
 - Story Page — episode komik digital yang unlock per range level
@@ -212,16 +212,18 @@ story progression (unlock komik digital per level range), milestone rewards, fri
 ```
 suap-in/
 ├── suap_in/          # Django project (settings, urls, wsgi)
-├── authentication/   # Modul auth + profil + avatar (PIC: Ziad)
-├── scanner/          # Modul FoodScan AI + carbon log (PIC: Nami)
-├── gamification/     # Modul gamifikasi + XP + story (PIC: Acan)
-├── social/           # Modul social + leaderboard (PIC: Iqbal)
-├── challenge/        # Modul challenge + weekly report (PIC: Nisa)
+├── authentication/   # Modul auth + profil + avatar (PIC: Syahid Arkan)
+├── scanner/          # Modul FoodScan AI + carbon log (PIC: Syahid Arkan)
+├── gamification/     # Modul streak + level & XP + badges (PIC: Muhammad Ziad Ayyash)
+├── social/           # Modul leaderboard + campus war + friends (PIC: Muhammad Iqbal)
+├── challenge/        # Modul daily challenge + weekly report + notifikasi (PIC: Annisa Saskya Aulia)
+├── story/            # Modul komik digital + milestone rewards + 1v1 challenge (PIC: Nasywa Namira Suhendro)
 ├── templates/        # Shared HTML templates (base.html, navbar, footer)
 ├── static/           # CSS, JS, images
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml  # CI/CD auto-deploy ke PWS
+│       ├── ci.yml      # CI: Django system checks & automated test suite
+│       └── deploy.yml  # CD: Auto-deploy ke PWS
 ├── requirements.txt
 ├── manage.py
 └── README.md
@@ -234,10 +236,21 @@ suap-in/
 - AI Layer 1: TensorFlow + EfficientNet (fine-tuned)
 - AI Layer 2: Groq Llama 3.2 Vision
 - AI Layer 3: Gemini 1.5 Flash
-- Frontend: Django Templates + Tailwind CSS + Vanilla JS
+- Frontend: Django Templates + CSS + Vanilla JS
 - Deployment: PWS (Pacil Web Service)
-- Version Control: GitHub Organization (`pbp-c-kelompok-1`)
+- Version Control & CI/CD: GitHub Organization (`pbp-c-kelompok-1`) + GitHub Actions
 
 Total biaya infrastruktur: Rp 0
+
+## 🤖 Deklarasi Penggunaan AI
+
+Dalam pengembangan proyek tengah semester **Suap.in**, kelompok kami memanfaatkan alat bantu kecerdasan buatan (*Generative AI / Large Language Models*) seperti **Google Gemini**, **Claude**, dan **ChatGPT** dengan ketentuan dan rincian penggunaan sebagai berikut:
+
+1. **Perancangan & Brainstorming**: Digunakan untuk eksplorasi ide arsitektur gamifikasi makanan Indonesia, skenario alur pengguna (*user flow*), serta perancangan relasi antar-model.
+2. **Pengembangan & Debugging**: Digunakan sebagai asisten pemrograman (*pair programming*) untuk membantu penulisan kode *boilerplate*, perbaikan pesan error, penanganan *edge cases*, dan optimasi kueri Django ORM.
+3. **Pengujian (*Automated Testing*)**: Digunakan untuk membantu menyusun skenario *unit test* dan *integration test* guna memverifikasi keandalan fungsionalitas CRUD, alur notifikasi, dan integrasi antar-modul.
+4. **Dokumentasi & Konsultasi Teknis**: Digunakan untuk merapikan draf dokumentasi teknis dan referensi API publik.
+
+> **Pernyataan Integritas**: Seluruh baris kode, arsitektur, dan logika bisnis yang dihasilkan atau disarankan oleh kecerdasan buatan telah ditinjau, dipahami, dimodifikasi, disesuaikan dengan kebutuhan proyek PBP Gasal 2026/2027, serta diuji secara langsung oleh seluruh anggota tim. Kelompok kami bertanggung jawab penuh atas substansi, orisinalitas, dan fungsionalitas aplikasi yang diserahkan.
 
 PBP C — Fasilkom UI — Semester Gasal 2026/2027
