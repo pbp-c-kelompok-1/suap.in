@@ -7,9 +7,11 @@ from django.urls import reverse
 from django.utils import timezone
 
 from scanner.models import FoodLog
+from gamification.models import Badge, UserBadge
+from story.models import FriendChallenge
 
 from .models import QuestClaim
-from .services import build_challenge_data, count_scans, saved_budget_grams, saved_today_grams
+from .services import build_challenge_data, count_scans, saved_budget_grams, saved_today_grams, todays_quests
 
 
 def post_json(client, url, payload):
@@ -95,6 +97,24 @@ class WeekAndBudgetTests(TestCase):
         self.assertEqual(saved_budget_grams(self.user, today), 0)
 
 
+class DailyQuestVariationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('quest_user', password='x12345678')
+
+    def test_daily_quests_are_stable_for_same_user_and_date(self):
+        today = timezone.localdate()
+        first = todays_quests(self.user, today)[0]
+        second = todays_quests(self.user, today)[0]
+        self.assertEqual([q['id'] for q in first], [q['id'] for q in second])
+
+    def test_adjacent_days_do_not_repeat_the_exact_same_mission_set(self):
+        today = timezone.localdate()
+        yesterday = today - timedelta(days=1)
+        today_ids = {q['id'] for q in todays_quests(self.user, today)[0]}
+        yesterday_ids = {q['id'] for q in todays_quests(self.user, yesterday)[0]}
+        self.assertNotEqual(today_ids, yesterday_ids)
+
+
 class QuestClaimTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('nami', password='x12345678')
@@ -160,3 +180,54 @@ class NotificationPersistenceTests(TestCase):
         post_json(self.client, reverse('challenge:notif_dismiss'), {'id': key})
         self.assertNotIn(key, [n['id'] for n in self.notifs()])
         self.assertNotIn(key, [n['id'] for n in self.notifs()])
+
+
+class RankingNotificationTests(TestCase):
+    def test_user_is_notified_when_entering_weekly_leaderboard(self):
+        user = User.objects.create_user('ranked_user', password='x12345678')
+        # First read stores the current state (not ranked) without a movement alert.
+        build_challenge_data(user)
+        for i in range(3):
+            FoodLog.objects.create(user=user, custom_name=f'Food {i}', co2_grams=100)
+        data = build_challenge_data(user)
+        self.assertTrue(any(
+            n['type'] == 'peringkat' and 'masuk leaderboard' in n['t'].lower()
+            for n in data['notifs']
+        ))
+
+    def test_daily_mission_summary_is_persisted_once(self):
+        user = User.objects.create_user('mission_user', password='x12345678')
+        first = build_challenge_data(user)['notifs']
+        second = build_challenge_data(user)['notifs']
+        first_daily = [n for n in first if n['id'].startswith('quests-new-')]
+        second_daily = [n for n in second if n['id'].startswith('quests-new-')]
+        self.assertEqual(len(first_daily), 1)
+        self.assertEqual(len(second_daily), 1)
+        self.assertEqual(first_daily[0]['id'], second_daily[0]['id'])
+
+
+class CrossAccountNotificationTests(TestCase):
+    def test_incoming_friend_challenge_notifies_only_the_opponent(self):
+        sender = User.objects.create_user('sender', password='x12345678')
+        opponent = User.objects.create_user('opponent', password='x12345678')
+        unrelated = User.objects.create_user('unrelated', password='x12345678')
+        challenge = FriendChallenge.objects.create(challenger=sender, opponent=opponent)
+
+        opponent_notifs = build_challenge_data(opponent)['notifs']
+        unrelated_notifs = build_challenge_data(unrelated)['notifs']
+        incoming = [n for n in opponent_notifs if n['id'] == f'challenge-{challenge.pk}']
+        self.assertEqual(len(incoming), 1)
+        self.assertIn('sender', incoming[0]['t'])
+        self.assertFalse(any(n['id'] == f'challenge-{challenge.pk}' for n in unrelated_notifs))
+
+    def test_earned_badge_notifies_and_is_reflected_in_profile_data(self):
+        user = User.objects.create_user('badge_user', password='x12345678')
+        badge = Badge.objects.create(
+            code='test-badge', name='Pelopor Hijau', description='Lencana percobaan',
+            criteria_type='scan_amount', threshold=1,
+        )
+        UserBadge.objects.create(user=user, badge=badge)
+        data = build_challenge_data(user)
+        self.assertTrue(any(n['id'] == f'badge-{badge.pk}' for n in data['notifs']))
+        self.assertTrue(any(b['id'] == badge.pk and b['earned'] for b in data['badges']))
+

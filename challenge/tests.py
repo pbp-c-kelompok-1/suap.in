@@ -39,7 +39,8 @@ class ChallengeDataTests(TestCase):
         d = self.data()
         self.assertEqual(d['totalScans'], 0)
         self.assertFalse(d['hasWeekData'])
-        self.assertEqual(d['notifs'], [])
+        # Satu-satunya notifikasi untuk user baru: kabar 3 misi hari ini (tanpa lencana/rank palsu).
+        self.assertEqual([n['id'][:10] for n in d['notifs']], ['quests-new'])
         self.assertEqual(d['rank']['teman']['empty'], 'no_friends')
         self.assertEqual(d['rank']['kampus']['empty'], 'no_campus')
         # Belum pernah scan: tidak ikut peringkat, diarahkan untuk scan dulu.

@@ -19,6 +19,7 @@
   box-shadow:0 4px 0 var(--edge)}
 .tone-amber{--col:var(--warn);--edge:#B87400}
 .tone-red{--col:var(--danger);--edge:#A82D2D}
+.tone-purple{--col:#8B5CF6;--edge:#6D3FD0}
 .n-txt{flex:1;min-width:0}
 .n-txt h3{font-size:1.02rem;font-family:'Nunito';font-weight:800}
 .n-txt p{color:var(--text-2);font-size:.9rem}

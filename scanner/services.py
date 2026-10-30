@@ -74,7 +74,7 @@ Format response:
                 }
             ],
             temperature=0.1,
-            max_completion_tokens=1024,
+            max_completion_tokens=4096,
             response_format={"type": "json_object"},
         )
 
@@ -93,6 +93,7 @@ Format response:
         return None, raw_response
 
     except Exception as e:
+        return ("GROQ ERROR: ", repr(e))
         return None, str(e)
 
 

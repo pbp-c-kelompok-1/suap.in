@@ -39,7 +39,8 @@ function renderStats() {
     <div class="stat"><b>${s.scans}</b><span>Total scan</span></div>
     <div class="stat"><b>${s.recordStreak}</b><span>Streak terbaik (hari)</span></div>
     <div class="stat"><b>${fmt(s.avoidedKg).replace('.', ',')}</b><span>kg CO\u2082 hemat hari ini</span></div>
-    <div class="stat"><b>${s.campusRank ? '#' + s.campusRank : '\u2013'}</b><span>Peringkat kampus</span></div>`;
+    <div class="stat"><b>${s.campusRank ? '#' + s.campusRank : '\u2013'}</b><span>Peringkat kampus</span></div>
+    <div class="stat"><b>${s.badges ?? 0}/${s.badgesTotal ?? 0}</b><span>Lencana didapat</span></div>`;
   $('#badgeRow').innerHTML = state.badges.length
     ? state.badges.map(b => {
         const st = BADGE_STYLE[b.type] || BADGE_STYLE.scan_amount;
