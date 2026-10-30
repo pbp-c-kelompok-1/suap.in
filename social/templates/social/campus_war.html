@@ -1,29 +1,86 @@
 {% extends 'base.html' %}
 {% block title %}Campus War — Suap.in{% endblock %}
 
+{% block extra_head %}
+<style>
+  .cw-me { margin-bottom: 22px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .cw-me form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 0; }
+  .cw-me select { width: auto !important; min-width: 220px; }
+  .soc-msg { margin: 0 0 18px; padding: 12px 16px; border-radius: 16px; font-weight: 800; }
+  .soc-msg.ok { background: var(--teal-50); color: var(--teal-700); }
+  .soc-msg.err { background: rgba(229, 72, 77, .12); color: var(--danger); }
+  #campusRegion { transition: opacity .15s; }
+  #campusRegion[aria-busy="true"] { opacity: .45; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="topbar"><h1>Campus War</h1>{% include 'partials/auth_status.html' %}</div>
 
+{% include 'social/partials/messages.html' %}
+<p class="soc-msg" id="campusMsg" role="status" hidden></p>
+
 {% if user.is_authenticated %}
-<div class="raise card" style="margin-bottom:22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+<div class="raise card cw-me">
   <svg class="i" style="width:28px;height:28px;color:var(--teal-500)"><use href="#i-building"/></svg>
-  <span style="flex:1">Kampusmu: <b>{{ my_campus.short_name|default:"belum dipilih" }}</b></span>
-  <a href="{% url 'social:choose_campus' %}" class="btn sm ghost" style="text-decoration:none">{% if my_campus %}Ganti{% else %}Pilih{% endif %} kampus</a>
+  <span style="flex:1">Kampusmu: <b id="myCampus">{{ my_campus.short_name|default:"belum dipilih" }}</b></span>
+  <form method="post" action="{% url 'social:choose_campus' %}" id="campusForm">
+    {% csrf_token %}
+    <label for="{{ form.university.id_for_label }}" class="sr-only" style="position:absolute;left:-9999px">{{ form.university.label }}</label>
+    {{ form.university }}
+    <button type="submit" class="btn sm"><svg class="i"><use href="#i-check"/></svg>{% if my_campus %}Ganti{% else %}Pilih{% endif %} kampus</button>
+  </form>
 </div>
 {% endif %}
 
 <div class="raise card">
-  <div class="sec-head"><h2>Peringkat kampus bulan ini</h2><span>rata-rata XP per mahasiswa</span></div>
-  <ol class="rank">
-    {% for c in campuses %}
-    <li{% if c == my_campus %} class="me"{% endif %}>
-      <span class="pos{% if forloop.counter == 1 %} p1{% elif forloop.counter == 2 %} p2{% elif forloop.counter == 3 %} p3{% endif %}">{{ forloop.counter }}</span>
-      <span class="nm">{{ c.short_name }}<small style="display:block;color:var(--text-2);font-weight:700">{{ c.name }} · {{ c.member_count }} mahasiswa</small></span>
-      <span class="co">{{ c.avg_xp }} <small>XP</small><small style="display:block">total {{ c.total_xp }}</small></span>
-    </li>
-    {% empty %}
-    <div class="empty"><h3>Belum ada data kampus</h3></div>
-    {% endfor %}
-  </ol>
+  <div class="sec-head"><h2>Peringkat kampus bulan ini</h2><span>rata-rata emisi per scan</span></div>
+  <p style="margin:-4px 0 16px;color:var(--text-2);font-weight:700;font-size:.92rem">Dihitung dari semua scan anggota kampus bulan ini. Makin kecil makin baik. Kampus perlu minimal {{ min_scans }} scan untuk masuk peringkat.</p>
+  <div id="campusRegion" aria-live="polite">
+    {% include 'social/partials/campus_war_region.html' %}
+  </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Simpan pilihan kampus lewat AJAX: nama kampus langsung berganti (optimistic),
+// lalu peringkat diambil ulang. Kalau gagal, tampilan dikembalikan.
+(function () {
+  var form = document.getElementById('campusForm');
+  if (!form) return;
+  var region = document.getElementById('campusRegion');
+  var mine = document.getElementById('myCampus');
+  var msg = document.getElementById('campusMsg');
+  var select = form.querySelector('select');
+  var button = form.querySelector('button');
+
+  function show(text, ok) {
+    msg.textContent = text;
+    msg.className = 'soc-msg ' + (ok ? 'ok' : 'err');
+    msg.hidden = false;
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var before = mine.textContent;
+    var option = select.options[select.selectedIndex];
+    if (option && option.value) mine.textContent = option.text.split(' (')[0];
+    button.disabled = true;
+    region.setAttribute('aria-busy', 'true');
+    fetch(form.getAttribute('action'), { method: 'POST', body: new FormData(form), headers: { 'X-Requested-With': 'fetch' } })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        show(data.message, data.ok);
+        if (!data.ok) { mine.textContent = before; return; }
+        mine.textContent = data.campus;
+        return fetch('?partial=1', { headers: { 'X-Requested-With': 'fetch' } })
+          .then(function (res) { return res.text(); })
+          .then(function (html) { region.innerHTML = html; });
+      })
+      .catch(function () { mine.textContent = before; show('Terjadi kesalahan. Coba lagi.', false); })
+      .finally(function () { button.disabled = false; region.removeAttribute('aria-busy'); });
+  });
+})();
+</script>
 {% endblock %}

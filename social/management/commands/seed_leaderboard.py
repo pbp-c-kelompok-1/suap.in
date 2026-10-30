@@ -3,15 +3,16 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from gamification.models import GameProfile
-from social.models import CampusMembership, Canteen, Friendship, University, XPActivity
+from scanner.models import FoodLog
+from social.models import CampusMembership, Canteen, Friendship, University
 from social.seed import ensure_canteens, load_leaderboard_entries, seed_leaderboard
 
 DEMO_FRIENDS = ['zahra.aulia', 'rizky.ramadhan', 'nabila.khairunnisa', 'dimas.prasetyo', 'sekar.ayuningtyas']
 
 
 class Command(BaseCommand):
-    help = ('Isi leaderboard dengan akun contoh (XP & kampus). '
-            'Jalankan lagi sebelum demo untuk menyegarkan XP mingguan.')
+    help = ('Isi leaderboard dengan akun contoh (kampus, XP, dan riwayat scan makanan). '
+            'Jalankan lagi sebelum demo supaya peringkat mingguan & Campus War tetap ramai.')
 
     def add_arguments(self, parser):
         parser.add_argument('--friends-of', metavar='USERNAME',
@@ -19,7 +20,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         ensure_canteens(University, Canteen, log=self.stdout.write)
-        seed_leaderboard(User, University, CampusMembership, GameProfile, XPActivity, timezone.localtime(),
+        seed_leaderboard(User, University, CampusMembership, GameProfile, FoodLog, timezone.localtime(),
                          log=self.stdout.write)
 
         username = options.get('friends_of')

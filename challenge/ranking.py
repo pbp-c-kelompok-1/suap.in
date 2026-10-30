@@ -39,20 +39,19 @@ def week_start(day):
 
 
 def friend_user_ids(user):
-    """SATU-SATUNYA tempat yang menentukan siapa "teman" seorang user.
+    """SATU-SATUNYA tempat yang menentukan siapa "teman" seorang user di peringkat.
 
-    Sistem pertemanan terpisah belum tersedia. Untuk saat ini, dua pengguna
-    dianggap terhubung bila salah satu menantang yang lain DAN tantangannya
-    diterima (sedang berlangsung atau sudah selesai). Tantangan yang masih
-    menunggu atau ditolak TIDAK menjadikan siapa pun teman, jadi orang asing
-    tidak bisa memasukkan dirinya ke tab Teman hanya dengan mengirim tantangan.
+    Teman = pertemanan yang sudah DITERIMA di modul social (menu Teman), ditambah
+    pengguna yang pernah saling tantang lewat FriendChallenge (active / finished). Tab Teman di Laporan
+    dan di halaman Peringkat (social) sama-sama memanggil fungsi ini.
     """
+    from social.friends import friend_ids
     from story.models import FriendChallenge
 
     accepted = FriendChallenge.objects.filter(status__in=('active', 'finished'))
     sent = accepted.filter(challenger=user).values_list('opponent_id', flat=True)
     received = accepted.filter(opponent=user).values_list('challenger_id', flat=True)
-    return set(sent).union(received)
+    return set(friend_ids(user)) | set(sent) | set(received)
 
 
 def _weekly_entries(first_monday, last_day):

@@ -28,6 +28,7 @@
   </form>
 </div>
 
+{% for m in messages %}<p class="fr-msg {% if m.tags == 'error' %}err{% else %}ok{% endif %}" role="status">{{ m }}</p>{% endfor %}
 <p class="fr-msg" id="friendMsg" role="status" hidden></p>
 
 <div id="friendsRegion">
@@ -68,11 +69,17 @@
     if (!form) return;
     e.preventDefault();
     if (form.dataset.confirm && !confirm(form.dataset.confirm)) return;
+    // Optimistic UI: baris langsung redup & tombol dikunci sebelum server menjawab
+    var row = form.closest('li');
+    var button = form.querySelector('button');
+    if (row) row.style.opacity = '.5';
+    if (button) button.disabled = true;
+    function restore() { if (row) row.style.opacity = ''; if (button) button.disabled = false; }
     // getAttribute: form.action tertimpa oleh input bernama "action"
     fetch(form.getAttribute('action'), { method: 'POST', body: new FormData(form), headers: { 'X-Requested-With': 'fetch' } })
       .then(function (res) { return res.json(); })
-      .then(function (data) { show(data.message, data.ok); return refresh(); })
-      .catch(function () { show('Terjadi kesalahan. Coba lagi.', false); });
+      .then(function (data) { show(data.message, data.ok); if (!data.ok) restore(); return refresh(); })
+      .catch(function () { restore(); show('Terjadi kesalahan. Coba lagi.', false); });
   });
 })();
 </script>

@@ -109,16 +109,6 @@ def challenge_list_view(request):
         savings_kg = round(abs(diff_g_per_day) / 1000 * DAYS_IN_YEAR)
         savings_trees = round(savings_kg / KG_PER_TREE_PER_YEAR)
 
-    from social.services import scope_ranking, users_with_xp
-    weekly_xp = users_with_xp(since=week_start)
-    ranking = {}
-    for key, scope in (('teman', 'friends'), ('kampus', 'campus'), ('nasional', 'national')):
-        users, reason = scope_ranking(weekly_xp, request.user, scope)
-        rows = [{'name': u.username, 'xp': u.xp, 'is_me': u.pk == request.user.pk} for u in users[:20]]
-        if reason != 'campus' and not any(r['is_me'] for r in rows):
-            rows.append({'name': request.user.username, 'xp': 0, 'is_me': True})
-        ranking[key] = rows
-
     context = {
         'week_start': week_start,
         'week_end': week_end,
@@ -137,7 +127,6 @@ def challenge_list_view(request):
             request.user,
             claimed_today=_claimed_today(request),
         ),
-        'rank_json': json.dumps(ranking),
     }
 
     return render(request, 'challenge/dashboard.html', context)

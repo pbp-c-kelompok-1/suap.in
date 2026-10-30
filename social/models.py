@@ -1,5 +1,4 @@
 from django.db import models
-from django.utils import timezone
 from django.contrib.auth.models import User
 
 
@@ -106,21 +105,3 @@ class Friendship(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['from_user', 'to_user'], name='unique_friend_request'),
         ]
-
-
-class XPActivity(models.Model):
-    """Riwayat XP yang didapat user.
-
-    Dicatat otomatis setiap total_xp di GameProfile (modul gamification) naik,
-    lihat social/signals.py. Dipakai untuk menghitung XP per periode
-    (leaderboard mingguan di Laporan dan Campus War bulanan).
-    """
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='xp_activities')
-    amount = models.PositiveIntegerField()
-    created_at = models.DateTimeField(default=timezone.now, db_index=True)
-
-    def __str__(self):
-        return f"{self.user.username} +{self.amount} XP"
-
-    class Meta:
-        ordering = ['-created_at']

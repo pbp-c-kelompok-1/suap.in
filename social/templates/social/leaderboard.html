@@ -5,50 +5,18 @@
 <div class="topbar"><h1>Peringkat</h1>{% include 'partials/auth_status.html' %}</div>
 
 <div class="raise card">
-  <div class="sec-head"><h2>Leaderboard sepanjang waktu</h2><span>total XP</span></div>
+  <div class="sec-head"><h2>Leaderboard sepanjang waktu</h2><span>rata-rata emisi per scan</span></div>
+  <p class="lb-rule">Makin kecil emisi rata-rata per scan, makin tinggi peringkatmu. Minimal {{ min_scans }} scan untuk masuk peringkat.</p>
 
-  <div class="tabs" role="tablist" aria-label="Level peringkat">
-    <a class="tab" role="tab" style="text-decoration:none" href="?tab=friends" aria-selected="{% if tab == 'friends' %}true{% else %}false{% endif %}">Teman</a>
-    <a class="tab" role="tab" style="text-decoration:none" href="?tab=campus" aria-selected="{% if tab == 'campus' %}true{% else %}false{% endif %}">Kampus</a>
-    <a class="tab" role="tab" style="text-decoration:none" href="?tab=national" aria-selected="{% if tab == 'national' %}true{% else %}false{% endif %}">Nasional</a>
+  <div class="tabs" role="tablist" aria-label="Level peringkat" id="rankTabs">
+    {% for key, label in tabs %}
+    <a class="tab" role="tab" style="text-decoration:none" href="?tab={{ key }}" data-tab="{{ key }}" aria-controls="rankRegion" aria-selected="{% if tab == key %}true{% else %}false{% endif %}">{{ label }}</a>
+    {% endfor %}
   </div>
 
-  {% if need_login %}
-    <div class="empty">
-      <h3>Masuk dulu</h3>
-      <p>Login untuk melihat peringkat teman dan teman sekampusmu.</p>
-      <a href="{% url 'authentication:login' %}" class="btn" style="text-decoration:none;margin-top:14px">Masuk</a>
-    </div>
-  {% elif need_campus %}
-    <div class="empty">
-      <h3>Kamu belum memilih kampus</h3>
-      <p>Pilih kampus dulu supaya bisa bersaing dengan teman sekampus.</p>
-      <a href="{% url 'social:choose_campus' %}" class="btn" style="text-decoration:none;margin-top:14px"><svg class="i"><use href="#i-building"/></svg>Pilih kampus</a>
-    </div>
-  {% elif tab == 'friends' and no_friends %}
-    <div class="empty">
-      <h3>Belum punya teman</h3>
-      <p>Tambahkan teman dulu supaya bisa bersaing dengan mereka.</p>
-      <a href="{% url 'social:friends' %}" class="btn" style="text-decoration:none;margin-top:14px"><svg class="i"><use href="#i-userplus"/></svg>Cari teman</a>
-    </div>
-  {% elif not ranking %}
-    <div class="empty">
-      <h3>Belum ada yang punya XP</h3>
-      <p>Scan makananmu untuk mengumpulkan XP pertama!</p>
-      <a href="{% url 'scanner:scan' %}" class="btn ok" style="text-decoration:none;margin-top:14px"><svg class="i"><use href="#i-camera"/></svg>Scan makanan</a>
-    </div>
-  {% else %}
-    <ol class="rank">
-      {% for u in ranking %}
-      <li{% if u == user %} class="me"{% endif %}>
-        <span class="pos{% if forloop.counter == 1 %} p1{% elif forloop.counter == 2 %} p2{% elif forloop.counter == 3 %} p3{% endif %}">{{ forloop.counter }}</span>
-        <span class="av" style="background:var(--teal-500)">{{ u.username|first|upper }}</span>
-        <span class="nm">{{ u.username }}<small style="display:block;color:var(--text-2);font-weight:700">{{ u.campus.university.short_name|default:"Belum pilih kampus" }}</small></span>
-        <span class="co">{{ u.xp }} <small>XP</small></span>
-      </li>
-      {% endfor %}
-    </ol>
-  {% endif %}
+  <div id="rankRegion" role="tabpanel" aria-live="polite">
+    {% include 'social/partials/leaderboard_region.html' %}
+  </div>
 
   <div class="rep-actions" style="margin-top:20px">
     <a href="{% url 'challenge:list' %}#/laporan" class="btn ghost" style="text-decoration:none"><svg class="i"><use href="#i-chart"/></svg>Peringkat minggu ini</a>
@@ -56,4 +24,52 @@
     {% if user.is_authenticated %}<a href="{% url 'social:friends' %}" class="btn ghost" style="text-decoration:none"><svg class="i"><use href="#i-userplus"/></svg>Kelola teman</a>{% endif %}
   </div>
 </div>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  #rankRegion { transition: opacity .15s; }
+  .lb-rule { margin: -4px 0 16px; color: var(--text-2); font-weight: 700; font-size: .92rem; }
+  .lb-hint { margin: 0 0 14px; padding: 12px 16px; border-radius: 16px; background: var(--teal-50); color: var(--teal-700); font-weight: 700; }
+  .rank-gap { list-style: none; text-align: center; color: var(--text-2); font-weight: 800; padding: 0 !important; box-shadow: none !important; background: none !important; }
+  #rankRegion[aria-busy="true"] { opacity: .45; }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Ganti tab tanpa reload: tab langsung terlihat aktif (optimistic), lalu daftar diambil lewat AJAX.
+(function () {
+  var tabs = document.getElementById('rankTabs');
+  var region = document.getElementById('rankRegion');
+  var pending;
+
+  function select(tab) {
+    tabs.querySelectorAll('[data-tab]').forEach(function (a) {
+      a.setAttribute('aria-selected', a.dataset.tab === tab ? 'true' : 'false');
+    });
+  }
+
+  function load(tab, push) {
+    select(tab);
+    region.setAttribute('aria-busy', 'true');
+    if (push) history.pushState({ tab: tab }, '', '?tab=' + tab);
+    var request = pending = fetch('?tab=' + tab + '&partial=1', { headers: { 'X-Requested-With': 'fetch' } })
+      .then(function (res) { if (!res.ok) throw new Error(res.status); return res.text(); })
+      .then(function (html) { if (request === pending) region.innerHTML = html; })
+      .catch(function () { location.href = '?tab=' + tab; })  // gagal: pakai cara biasa
+      .finally(function () { if (request === pending) region.removeAttribute('aria-busy'); });
+  }
+
+  tabs.addEventListener('click', function (e) {
+    var a = e.target.closest('[data-tab]');
+    if (!a || e.metaKey || e.ctrlKey) return;
+    e.preventDefault();
+    if (a.getAttribute('aria-selected') !== 'true') load(a.dataset.tab, true);
+  });
+  window.addEventListener('popstate', function () {
+    load(new URLSearchParams(location.search).get('tab') || 'national', false);
+  });
+})();
+</script>
 {% endblock %}
