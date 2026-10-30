@@ -85,7 +85,7 @@ Generasi daily challenge otomatis (3 challenge/hari berdasarkan kebiasaan user),
 - Weekly Report Page — recap total CO₂, perbandingan minggu lalu, proyeksi tahunan, ranking
 - Notifikasi Page — pusat notifikasi streak, challenge, dan leaderboard
 
-### 6. Social + Story (`gamification`)
+### 6. Story Progression + 1v1 Challenge (`story`)
 PIC: Nasywa Namira Suhendro
 story progression (unlock komik digital per level range), milestone rewards, friend system, 1v1 Friend Challenge, share stats ke Instagram Story.
 - Story Page — episode komik digital yang unlock per range level
@@ -212,16 +212,18 @@ story progression (unlock komik digital per level range), milestone rewards, fri
 ```
 suap-in/
 ├── suap_in/          # Django project (settings, urls, wsgi)
-├── authentication/   # Modul auth + profil + avatar (PIC: Ziad)
-├── scanner/          # Modul FoodScan AI + carbon log (PIC: Nami)
-├── gamification/     # Modul gamifikasi + XP + story (PIC: Acan)
-├── social/           # Modul social + leaderboard (PIC: Iqbal)
-├── challenge/        # Modul challenge + weekly report (PIC: Nisa)
+├── authentication/   # Modul auth + profil + avatar (PIC: Syahid Arkan)
+├── scanner/          # Modul FoodScan AI + carbon log (PIC: Syahid Arkan)
+├── gamification/     # Modul streak + level & XP + badges (PIC: Muhammad Ziad Ayyash)
+├── social/           # Modul leaderboard + campus war + friends (PIC: Muhammad Iqbal)
+├── challenge/        # Modul daily challenge + weekly report + notifikasi (PIC: Annisa Saskya Aulia)
+├── story/            # Modul komik digital + milestone rewards + 1v1 challenge (PIC: Nasywa Namira Suhendro)
 ├── templates/        # Shared HTML templates (base.html, navbar, footer)
 ├── static/           # CSS, JS, images
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml  # CI/CD auto-deploy ke PWS
+│       ├── ci.yml      # CI: Django system checks & automated test suite
+│       └── deploy.yml  # CD: Auto-deploy ke PWS
 ├── requirements.txt
 ├── manage.py
 └── README.md
@@ -234,10 +236,72 @@ suap-in/
 - AI Layer 1: TensorFlow + EfficientNet (fine-tuned)
 - AI Layer 2: Groq Llama 3.2 Vision
 - AI Layer 3: Gemini 1.5 Flash
-- Frontend: Django Templates + Tailwind CSS + Vanilla JS
+- Frontend: Django Templates + CSS + Vanilla JS
 - Deployment: PWS (Pacil Web Service)
-- Version Control: GitHub Organization (`pbp-c-kelompok-1`)
+- Version Control & CI/CD: GitHub Organization (`pbp-c-kelompok-1`) + GitHub Actions
 
 Total biaya infrastruktur: Rp 0
+
+## 🤖 Deklarasi Penggunaan AI
+
+Dalam pengembangan proyek tengah semester **Suap.in**, kelompok kami memanfaatkan alat bantu kecerdasan buatan (*Generative AI / Large Language Models*) seperti **Google Gemini**, **Claude**, dan **ChatGPT** dengan ketentuan dan rincian penggunaan sebagai berikut:
+
+1. **Perancangan & Brainstorming**: Digunakan untuk eksplorasi ide arsitektur gamifikasi makanan Indonesia, skenario alur pengguna (*user flow*), serta perancangan relasi antar-model.
+2. **Pengembangan & Debugging**: Digunakan sebagai asisten pemrograman (*pair programming*) untuk membantu penulisan kode *boilerplate*, perbaikan pesan error, penanganan *edge cases*, dan optimasi kueri Django ORM.
+3. **Pengujian (*Automated Testing*)**: Digunakan untuk membantu menyusun skenario *unit test* dan *integration test* guna memverifikasi keandalan fungsionalitas CRUD, alur notifikasi, dan integrasi antar-modul.
+4. **Dokumentasi & Konsultasi Teknis**: Digunakan untuk merapikan draf dokumentasi teknis dan referensi API publik.
+
+> **Pernyataan Integritas**: Seluruh baris kode, arsitektur, dan logika bisnis yang dihasilkan atau disarankan oleh kecerdasan buatan telah ditinjau, dipahami, dimodifikasi, disesuaikan dengan kebutuhan proyek PBP Gasal 2026/2027, serta diuji secara langsung oleh seluruh anggota tim. Kelompok kami bertanggung jawab penuh atas substansi, orisinalitas, dan fungsionalitas aplikasi yang diserahkan.
+
+
+### Modul Story Progression + 1v1 Challenge (`story`)
+**PIC: Nasywa Namira Suhendro**
+
+#### Alat dan cakupan penggunaan
+
+Saya menggunakan **ChatGPT** selama pengembangan modul ini untuk membantu merancang alur fitur, menghasilkan kode, memperbaiki error, menyusun pengujian, dan mempelajari implementasinya. Penggunaan AI mencakup logika backend dan frontend, bukan hanya penulisan komentar atau perapian kode.
+
+Bantuan AI digunakan pada bagian berikut:
+
+| Bagian | Bentuk bantuan AI |
+| --- | --- |
+| Story/Comic | Membantu menyusun model, URL, view, dan template untuk daftar serta pembaca komik; pencarian dan penyaringan bab; pembatasan akses berdasarkan level; serta pengelolaan bab dan halaman oleh pengguna staff. |
+| Konten cerita | Membantu menyusun judul, narasi, dialog, dan ilustrasi cerita yang mengikuti perjalanan makanan serta tema jejak karbon. |
+| Data awal komik | Membantu menyiapkan data JSON dan data migration untuk memasukkan konten awal ke database. |
+| Milestone Rewards | Membantu menyusun syarat milestone level dan streak, pencatatan reward, tampilan progres, serta proses klaim dan pemberian XP dengan pencegahan klaim berulang. |
+| Tantangan 1v1 | Membantu menyusun alur pembuatan, penerimaan, pembatalan, dan pembaruan tantangan; penentuan periode pertandingan; perhitungan skor berdasarkan catatan makanan; serta penyimpanan hasil akhir. |
+| Antarmuka dan AJAX | Membantu menulis HTML, CSS, dan JavaScript untuk tampilan modul serta pembaruan bagian halaman melalui fetch dan respons JSON. |
+| Pengujian | Membantu menyusun skenario dan kode unit test untuk akses pengguna, pembatasan level, klaim reward, perubahan status tantangan, serta perhitungan hasil pertandingan. |
+| Penyesuaian visual | Membantu memasang aset maskot pada beberapa tampilan aplikasi dan menyusun ulang halaman Story menjadi layer desain yang dapat diedit di Figma berdasarkan screenshot. |
+
+#### Strategi penggunaan prompt
+
+Prompt diberikan secara bertahap per fitur dengan menyertakan konteks proyek, potongan kode, struktur file, screenshot tampilan, atau pesan error yang sedang terjadi. Saya meminta kode yang mudah dibaca, penjelasan lokasi perubahan file, langkah implementasi yang berurutan, dan komentar yang membantu menjelaskan fungsi kode.
+
+Saya juga meminta agar pendekatan implementasi disesuaikan dengan pola yang dipelajari dalam tutorial PBP. Penjelasan tambahan diminta ketika terdapat istilah, alur, atau bagian kode yang belum saya pahami.
+
+Ketika hasil implementasi belum sesuai, saya mengirimkan kembali hasil pengujian, screenshot, atau pesan error sebagai konteks untuk memperbaiki jawaban sebelumnya. Dengan demikian, implementasi berkembang melalui beberapa iterasi.
+
+#### Keterbatasan AI dan perbaikan selama pengerjaan
+
+Saran AI tidak selalu langsung sesuai dengan kondisi repository maupun lingkungan deployment. Beberapa masalah yang ditemukan selama pengerjaan adalah:
+
+1. **Perbedaan database lokal dan deployment.** Halaman Story di server sempat tidak menampilkan bab meskipun kode dan template sudah tersedia. Dari proses pemeriksaan, pengiriman kode saja belum cukup untuk menyediakan isi database. Perbaikannya dilakukan dengan menambahkan data migration untuk konten awal komik, yang perlu dijalankan pada database deployment.
+
+2. **Ketidaksesuaian nama migration.** Salah satu instruksi menggunakan nama file migration yang tidak sesuai dengan file dalam repository. Nama file diperiksa kembali dan instruksi disesuaikan dengan struktur migration yang sebenarnya.
+
+3. **Ketidaksesuaian import JavaScript.** Setelah perubahan fungsi pemasangan maskot, halaman sempat kosong karena `notifikasi.js` masih mengimpor `avatarSvg`, sementara fungsi tersebut sudah tidak diekspor dari `mascot.js`. Pesan error diperiksa melalui browser Console, kemudian import dan pemanggilan fungsi disesuaikan menjadi `mountMascot`.
+
+4. **Pengaruh data awal terhadap pengujian.** Penambahan konten melalui migration memengaruhi pengujian yang mengasumsikan database cerita kosong. Setup pada pengujian terkait disesuaikan dengan membersihkan data cerita di database pengujian sebelum membuat data uji.
+
+Perbaikan tersebut dilakukan melalui perubahan file secara manual dengan bantuan arahan AI. Saya tidak menganggap seluruh saran awal AI sudah benar tanpa perlu dicoba atau disesuaikan.
+
+#### Validasi dan tanggung jawab
+
+Kode diterapkan secara bertahap pada branch pengembangan, kemudian diperiksa melalui pengujian lokal, pengecekan tampilan browser, dan pemeriksaan pesan error. Perubahan dikirim melalui commit dan pull request untuk digabungkan dengan pekerjaan anggota kelompok lainnya.
+
+Pengujian yang dilakukan membantu memeriksa perilaku fitur, tetapi tidak menjadi jaminan bahwa seluruh kemungkinan masalah telah tercakup. Keberhasilan tampilan di lingkungan lokal juga tidak langsung membuktikan bahwa konfigurasi dan data pada server deployment sudah sesuai.
+
+Saya menggunakan penjelasan AI sebagai pendamping untuk mempelajari alur kode dan melakukan penyesuaian implementasi. Tanggung jawab atas kode, konten, dan perubahan yang saya sertakan dalam proyek tetap berada pada saya sebagai pengembang modul.
 
 PBP C — Fasilkom UI — Semester Gasal 2026/2027
