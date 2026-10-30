@@ -253,4 +253,50 @@ Dalam pengembangan proyek tengah semester **Suap.in**, kelompok kami memanfaatka
 
 > **Pernyataan Integritas**: Seluruh baris kode, arsitektur, dan logika bisnis yang dihasilkan atau disarankan oleh kecerdasan buatan telah ditinjau, dipahami, dimodifikasi, disesuaikan dengan kebutuhan proyek PBP Gasal 2026/2027, serta diuji secara langsung oleh seluruh anggota tim. Kelompok kami bertanggung jawab penuh atas substansi, orisinalitas, dan fungsionalitas aplikasi yang diserahkan.
 
+### Modul Gamifikasi + XP + Level
+**PIC: Muhammad Ziad Ayyash**
+
+#### Alat dan cakupan penggunaan
+
+Saya menggunakan **Claude - Sonnet 5.5 (Free Plan)** selama pengembangan modul ini untuk membantu merancang alur fitur, menghasilkan kode, memperbaiki error, menyusun pengujian, dan mempelajari implementasinya. Penggunaan AI mencakup logika backend dan frontend, bukan hanya penulisan komentar atau perapian kode.
+
+Bantuan AI digunakan pada bagian berikut:
+
+| Bagian | Bentuk bantuan AI |
+| --- | --- |
+| Models | Memberikan ide untuk membuat `UserBadge` untuk merepresentasikan _ownership_ suatu pengguna terhadap suatu `Badge`, menyarankan untuk menambahkan field data yang berkaitan dengan freeze streak pada `GameProfile`, serta menambah restriksi level pada `GameProfile` dan menambah constraints pada `UserBadge` |
+| Views | Membantu menyusun _services_ yang dibutuhkan modul, serta membantu menyusun context yang dibutuhkan view streak dan level |
+| Template | Membantu memberikan desain awal untuk halaman streak, level, dan form untuk badge |
+| Form | - |
+| Interaktivitas sisi klien | Membantu mengimplementasikan fitur filter, sort, dan delete pada halaman badge |
+| Pengujian | Membantu menyusun skenario dan kode unit test untuk _service_ milik gamifikasi dan tampilan halaman |
+
+#### Strategi penggunaan prompt
+
+Prompt diberikan secara bertahap per fitur dengan menyertakan konteks proyek dan file. Untuk _bugfixing_, saya meminta AI untuk menjelaskan cara kerja bagian kode yang ia ubah, serta alasan mengapa menggunakan pendekatan tersebut.
+
+Saya juga meminta tolong AI untuk meringkas dan menjelaskan fitur yang ditambahkan oleh anggota kelompok lain supaya bisa mengintegrasikan fitur yang mereka implementasi dengan fitur - fitur gamifikasi.
+
+#### Keterbatasan AI dan perbaikan selama pengerjaan
+
+Beberapa masalah yang ditemukan selama pengerjaan adalah:
+
+1. **Desain tidak mempertimbangkan base.** Beberapa desain awal halaman memiliki berbagai macam ketidaksesuaian akibat AI menggunakan nama class yang konflik dengan CSS yang sudah disediakan base.
+
+2. **Membuat suatu file besar monolitik** Sejumlah desain html yang diberikan menyantumkan semua elemen di dalam satu file html daripada memisahkannya menjadi bagian - bagian seperti file css tersendiri dan partial html.
+
+3. **Ketidaksesuaian implementasi minggu pada halaman streak** Pada halaman streak, AI menampilkan aktivitas 7 hari kebelakang. Seharusnya menampilkan hari - hari dalam seminggu secara terurut.
+
+4. **Memasukkan data yang tidak ada ke dalam context view** Dalam membantu menulis context untuk suatu view, AI menggunakan fungsi, data, dan field yang tidak ada/belum diimplementasi.
+
+Perbaikan tersebut dilakukan melalui perubahan file baik secara manual maupun dengan bantuan arahan AI. Saya tidak menganggap seluruh saran awal AI sudah benar tanpa perlu dicoba atau disesuaikan.
+
+#### Validasi dan tanggung jawab
+
+Kode diterapkan secara bertahap pada branch pengembangan, kemudian diperiksa melalui pengujian lokal, pengecekan tampilan browser, dan pemeriksaan pesan error. Perubahan dikirim melalui commit dan pull request untuk digabungkan dengan pekerjaan anggota kelompok lainnya.
+
+Pengujian yang dilakukan membantu memeriksa perilaku fitur, tetapi tidak menjadi jaminan bahwa seluruh kemungkinan masalah telah tercakup. Keberhasilan tampilan di lingkungan lokal juga tidak langsung membuktikan bahwa konfigurasi dan data pada server deployment sudah sesuai.
+
+Saya menggunakan penjelasan AI sebagai pendamping untuk mempelajari alur kode dan melakukan penyesuaian implementasi. Tanggung jawab atas kode, konten, dan perubahan yang saya sertakan dalam proyek tetap berada pada saya sebagai pengembang modul.
+
 PBP C — Fasilkom UI — Semester Gasal 2026/2027
