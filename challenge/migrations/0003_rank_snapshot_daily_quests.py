@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('challenge', '0002_questclaim_notification'),
+        ('challenge', '0002_notification_questclaim'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
