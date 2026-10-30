@@ -1,7 +1,9 @@
 """Data awal (showcase) untuk peta Community dan Leaderboard.
 
 Community: daftar post ada di community_seed.json, fotonya di social/static/social/seed/.
-Leaderboard: daftar akun contoh + total XP ada di leaderboard_seed.json.
+Leaderboard: daftar akun contoh (nama, kampus, total XP, gaya main) ada di leaderboard_seed.json.
+Riwayat scan makanannya dibuat otomatis (nilai CO2 dari scanner/fixtures/foods.json),
+karena semua peringkat dihitung dari emisi CO2 per scan.
 Fungsi seed_* dipakai oleh data migration (otomatis saat `migrate`, termasuk di PWS)
 dan oleh perintah `python manage.py seed_community` / `seed_leaderboard`.
 """
@@ -89,9 +91,30 @@ def seed_community_posts(User, Canteen, CommunityPost, log=print, verbose=False)
 
 # ---------- Leaderboard ----------
 
-# Peluang akun contoh "scan" di satu hari, sesuai gaya mainnya.
+# Peluang akun contoh scan di satu hari, sesuai gaya mainnya.
 PACE_CHANCE = {'rajin': 0.85, 'biasa': 0.5, 'jarang': 0.25}
-HISTORY_DAYS = 35  # cukup untuk peringkat mingguan (7 hari) dan Campus War (bulan ini)
+MAX_HISTORY_DAYS = 56  # 8 minggu: cukup untuk Peringkat, Laporan mingguan + riwayatnya, dan Campus War
+SEED_SCAN_PREFIX = 'seed-scan:'  # penanda scan contoh (disimpan di ai_raw_response)
+
+# Menu contoh. Nilai CO2 per porsi sama dengan scanner/fixtures/foods.json.
+CARBS = [('Nasi Putih', 240), ('Nasi Putih', 240), ('Nasi Merah', 180), ('Nasi Uduk', 480), ('Lontong', 190)]
+PROTEIN = {
+    'nabati': [('Tempe Goreng', 285), ('Tahu Goreng', 195), ('Telur Rebus', 198), ('Tempe Bacem', 300),
+               ('Tahu Bacem', 210), ('Telur Goreng', 220)],
+    'unggas_ikan': [('Ayam Goreng', 890), ('Ayam Bakar', 810), ('Ikan Goreng', 450), ('Ikan Bakar', 400),
+                    ('Pecel Lele', 520), ('Geprek Ayam', 920)],
+    'daging': [('Rendang Sapi', 3150), ('Sate Sapi', 2100), ('Rawon', 1800), ('Soto Betawi', 1200)],
+}
+VEGGIES = [('Kangkung Tumis', 120), ('Capcay', 180), ('Sayur Asem', 150)]
+DRINKS = [('Es Teh Manis', 75), ('Es Jeruk', 90), ('Air Putih', 0.3), ('Kopi Susu', 340)]
+ONE_DISH = [('Gado-Gado', 320), ('Ketoprak', 290), ('Soto Ayam', 650), ('Mie Ayam', 620), ('Bakso', 780),
+            ('Nasi Goreng', 420)]
+# Pola makan: peluang lauk nabati / unggas-ikan / daging merah.
+DIETS = {
+    'hijau': (0.65, 0.32, 0.03),
+    'campur': (0.35, 0.53, 0.12),
+    'daging': (0.12, 0.53, 0.35),
+}
 
 
 def load_leaderboard_entries():
@@ -104,17 +127,34 @@ def _level_from_xp(total_xp):
     return level_from_xp(total_xp)
 
 
-def recent_activity(entry, now):
-    """Riwayat XP 35 hari terakhir untuk satu akun contoh: [(waktu, xp), ...], terbaru dulu.
+def _meal(rng, diet):
+    """Isi satu foto makanan: [(nama, gram CO2), ...]."""
+    if rng.random() < 0.3:
+        items = [rng.choice(ONE_DISH)]
+    else:
+        nabati, unggas, _ = DIETS[diet]
+        roll = rng.random()
+        group = 'nabati' if roll < nabati else 'unggas_ikan' if roll < nabati + unggas else 'daging'
+        items = [rng.choice(CARBS), rng.choice(PROTEIN[group])]
+        if rng.random() < 0.5:
+            items.append(rng.choice(VEGGIES))
+    if rng.random() < 0.4:
+        items.append(rng.choice(DRINKS))
+    return items
+
+
+def showcase_scans(entry, now):
+    """Riwayat scan satu akun contoh: [(waktu, [(nama, gram CO2), ...]), ...], terbaru dulu.
 
     Acak tapi tetap (seed = username), jadi hasilnya sama tiap dijalankan di hari yang sama.
-    Jumlahnya tidak pernah melebihi 90% total XP akun itu.
+    Akun dengan XP kecil dianggap pengguna baru, jadi riwayatnya lebih pendek.
     """
     rng = random.Random(entry['username'])
-    budget = int(entry['total_xp'] * 0.9)
+    diet = entry.get('diet') or rng.choice(['hijau', 'campur', 'campur', 'daging'])
+    days = max(6, min(MAX_HISTORY_DAYS, entry['total_xp'] // 45))
     today = now.date()
-    rows = []
-    for days_ago in range(HISTORY_DAYS):
+    scans = []
+    for days_ago in range(days):
         if entry['pace'] == 'libur':
             chance = 0 if days_ago < 9 else 0.6  # dulu aktif, seminggu terakhir tidak main
         else:
@@ -123,21 +163,15 @@ def recent_activity(entry, now):
             continue
         day = datetime.combine(today - timedelta(days=days_ago), time(7, 0), tzinfo=now.tzinfo)
         for _ in range(rng.choice((1, 1, 2, 2, 3))):  # 1-3 scan sehari
-            xp = 10 + rng.randint(1, 6)  # sama seperti scanner: 10 + jumlah item makanan
-            if rng.random() < 0.06:
-                xp += rng.choice((25, 50))  # sesekali dapat bonus tantangan
             when = day + timedelta(minutes=rng.randint(0, 14 * 60))
             if when > now:
                 when = now - timedelta(minutes=rng.randint(5, 90))
-            if xp > budget:
-                return rows
-            budget -= xp
-            rows.append((when, xp))
-    return rows
+            scans.append((when, _meal(rng, diet)))
+    return scans
 
 
 def _streak(dates, today):
-    """Streak = jumlah hari berturut-turut ada aktivitas, dihitung mundur dari hari ini/kemarin."""
+    """Streak = jumlah hari berturut-turut ada scan, dihitung mundur dari hari ini/kemarin."""
     day = today if today in dates else today - timedelta(days=1)
     count = 0
     while day in dates:
@@ -146,27 +180,29 @@ def _streak(dates, today):
     return count
 
 
-def seed_leaderboard(User, University, CampusMembership, GameProfile, XPActivity, now, log=print):
-    """Buat akun contoh leaderboard + XP + kampus. Aman dijalankan berkali-kali.
-
-    Total XP tiap akun selalu sama (dari JSON). Riwayat XP-nya dibuat ulang relatif ke `now`,
-    jadi jalankan lagi sebelum demo supaya peringkat mingguan tetap ramai.
-    Akun asli (yang punya password) tidak pernah disentuh.
-    Sengaja pakai bulk_create/update supaya tidak memicu signal pencatat XP.
-    """
-    campuses = {u.short_name: u for u in University.objects.all()}
-    today = now.date()
-    done = 0
+def _seed_users(User):
+    """{entry, user} untuk akun contoh. Akun asli (punya password) dengan nama sama dilewati."""
+    pairs = []
     for entry in load_leaderboard_entries():
         user, _ = User.objects.get_or_create(
             username=entry['username'],
             defaults={'password': '!', 'first_name': entry['first_name'], 'last_name': entry['last_name']},
         )
-        if user.password != '!':
-            continue  # username ini sudah dipakai akun asli
+        if user.password == '!':
+            pairs.append((entry, user))
+    return pairs
 
-        activity = recent_activity(entry, now)
-        dates = {when.date() for when, _ in activity}
+
+def seed_leaderboard_profiles(User, University, CampusMembership, GameProfile, now, log=print):
+    """Akun contoh + profil game (XP, level, streak) + kampus. Aman dijalankan berkali-kali.
+
+    Sengaja pakai bulk_create/update supaya tidak memicu logika XP modul lain.
+    """
+    campuses = {u.short_name: u for u in University.objects.all()}
+    today = now.date()
+    pairs = _seed_users(User)
+    for entry, user in pairs:
+        dates = {when.date() for when, _ in showcase_scans(entry, now)}
         profile = {
             'total_xp': entry['total_xp'],
             'level': _level_from_xp(entry['total_xp']),
@@ -176,19 +212,43 @@ def seed_leaderboard(User, University, CampusMembership, GameProfile, XPActivity
         profile['record_streak'] = max(profile['current_streak'], 3 + entry['total_xp'] // 250)
         if not GameProfile.objects.filter(user=user).update(**profile):
             GameProfile.objects.bulk_create([GameProfile(user=user, **profile)])
-
         if entry.get('campus') in campuses:
             CampusMembership.objects.update_or_create(user=user, defaults={'university': campuses[entry['campus']]})
-
-        XPActivity.objects.filter(user=user).delete()
-        XPActivity.objects.bulk_create(XPActivity(user=user, amount=xp, created_at=when) for when, xp in activity)
-        done += 1
-    log(f'  {done} akun contoh leaderboard siap.')
-    return done
+    log(f'  {len(pairs)} akun contoh leaderboard siap.')
+    return len(pairs)
 
 
-def unseed_leaderboard(User, CampusMembership, GameProfile, XPActivity):
+def seed_leaderboard_scans(User, FoodLog, now, log=print):
+    """Buat ulang riwayat scan akun contoh relatif ke `now` (scan contoh lama dihapus dulu).
+
+    Jalankan lagi sebelum demo supaya peringkat mingguan & Campus War tetap ramai.
+    """
+    pairs = _seed_users(User)
+    FoodLog.objects.filter(user__in=[u for _, u in pairs], ai_raw_response__startswith=SEED_SCAN_PREFIX).delete()
+    logs, times = [], []
+    for entry, user in pairs:
+        for n, (when, items) in enumerate(showcase_scans(entry, now)):
+            key = f"{SEED_SCAN_PREFIX}{entry['username']}:{n}"
+            for name, co2 in items:
+                logs.append(FoodLog(user=user, custom_name=name, co2_grams=co2, ai_raw_response=key))
+                times.append(when)
+    created = FoodLog.objects.bulk_create(logs, batch_size=500)
+    # scanned_at memakai auto_now_add, jadi waktunya diisi setelah dibuat
+    for log_row, when in zip(created, times):
+        log_row.scanned_at = when
+    FoodLog.objects.bulk_update(created, ['scanned_at'], batch_size=500)
+    log(f'  {len({log_row.ai_raw_response for log_row in created})} scan contoh dibuat.')
+    return len(created)
+
+
+def seed_leaderboard(User, University, CampusMembership, GameProfile, FoodLog, now, log=print):
+    seed_leaderboard_profiles(User, University, CampusMembership, GameProfile, now, log=log)
+    seed_leaderboard_scans(User, FoodLog, now, log=log)
+
+
+def unseed_leaderboard(User, CampusMembership, GameProfile, FoodLog=None):
     users = User.objects.filter(username__in=[e['username'] for e in load_leaderboard_entries()], password='!')
-    XPActivity.objects.filter(user__in=users).delete()
+    if FoodLog is not None:
+        FoodLog.objects.filter(user__in=users, ai_raw_response__startswith=SEED_SCAN_PREFIX).delete()
     CampusMembership.objects.filter(user__in=users).delete()
     GameProfile.objects.filter(user__in=users).delete()

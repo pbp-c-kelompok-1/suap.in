@@ -3,12 +3,15 @@ import sys
 from django.db import migrations
 from django.utils import timezone
 
-from social.seed import ensure_canteens, seed_leaderboard, unseed_leaderboard
+from social.seed import ensure_canteens, seed_leaderboard_profiles, unseed_leaderboard
+
+# Akun contoh + XP/level + kampus. Riwayat scan-nya (dasar peringkat CO2)
+# dibuat di 0009_seed_leaderboard_scans.
 
 
 def models(apps):
     return (apps.get_model('auth', 'User'), apps.get_model('social', 'CampusMembership'),
-            apps.get_model('gamification', 'GameProfile'), apps.get_model('social', 'XPActivity'))
+            apps.get_model('gamification', 'GameProfile'))
 
 
 def seed(apps, schema_editor):
@@ -16,8 +19,8 @@ def seed(apps, schema_editor):
         return  # database test harus kosong; data showcase hanya untuk server/laptop
     University = apps.get_model('social', 'University')
     ensure_canteens(University, apps.get_model('social', 'Canteen'))
-    User, CampusMembership, GameProfile, XPActivity = models(apps)
-    seed_leaderboard(User, University, CampusMembership, GameProfile, XPActivity, timezone.localtime())
+    User, CampusMembership, GameProfile = models(apps)
+    seed_leaderboard_profiles(User, University, CampusMembership, GameProfile, timezone.localtime())
 
 
 def unseed(apps, schema_editor):
