@@ -5,7 +5,7 @@ import shutil
 import tempfile
 from datetime import timedelta
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AnonymousUser, User
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
@@ -24,6 +24,17 @@ def tiny_photo():
 
 
 TEST_MEDIA = tempfile.mkdtemp()
+
+
+def scan(user, grams, times=1, days_ago=0, items=1):
+    """Buat `times` scan untuk user. Satu scan = satu foto berisi `items` item makanan."""
+    from scanner.models import FoodLog
+    when = timezone.now() - timedelta(days=days_ago)
+    for _ in range(times):
+        key = f'test-scan-{user.pk}-{FoodLog.objects.count()}'
+        for _ in range(items):
+            log = FoodLog.objects.create(user=user, custom_name='Makanan', co2_grams=grams / items, ai_raw_response=key)
+            FoodLog.objects.filter(pk=log.pk).update(scanned_at=when)
 
 
 @override_settings(MEDIA_ROOT=TEST_MEDIA)
@@ -408,13 +419,12 @@ class FriendshipTests(TestCase):
         self.assertRedirects(res, reverse('social:friends'))
 
     def test_leaderboard_friends_tab(self):
-        from gamification.services import award_xp
         Friendship.objects.create(from_user=self.iqbal, to_user=self.nami, status=Friendship.ACCEPTED)
         for u in (self.iqbal, self.nami, self.acan):
-            award_xp(u, 20)
+            scan(u, 500, times=3)
         self.login(self.iqbal)
         res = self.client.get(reverse('social:leaderboard'), {'tab': 'friends'})
-        self.assertEqual({u.username for u in res.context['ranking']}, {'iqbal', 'nami'})
+        self.assertEqual({row['user'].username for row in res.context['ranking']}, {'iqbal', 'nami'})
 
         self.login(self.acan)
         res = self.client.get(reverse('social:leaderboard'), {'tab': 'friends'})
@@ -429,104 +439,138 @@ class SidebarFriendsLinkTests(TestCase):
         self.assertContains(res, f'href="{reverse("social:friends")}" aria-current="page"')
 
 
-class XPLeaderboardTests(TestCase):
-    """Dua leaderboard, satu sumber XP: sepanjang waktu (social) dan mingguan (challenge)."""
+class CarbonLeaderboardTests(TestCase):
+    """Semua peringkat berbasis CO2: rata-rata gram per scan, makin kecil makin atas, minimal 3 scan.
+
+    Peringkat (social) = sepanjang waktu, Laporan (challenge) = minggu ini, Campus War = bulan ini.
+    """
 
     def setUp(self):
-        from gamification.services import award_xp
-        self.award = award_xp
         self.ui = University.objects.create(name='Universitas Indonesia', short_name='UI', city='Depok')
         self.itb = University.objects.create(name='Institut Teknologi Bandung', short_name='ITB', city='Bandung')
+        University.objects.create(name='Universitas Gadjah Mada', short_name='UGM', city='Yogyakarta')
         self.iqbal = User.objects.create_user('iqbal', password='pass12345x')
         self.nami = User.objects.create_user('nami', password='pass12345x')
         self.acan = User.objects.create_user('acan', password='pass12345x')
-        from .models import CampusMembership
         CampusMembership.objects.create(user=self.iqbal, university=self.ui)
         CampusMembership.objects.create(user=self.nami, university=self.ui)
         CampusMembership.objects.create(user=self.acan, university=self.itb)
 
-    def age(self, user, days):
-        """Geser semua XP user ke `days` hari yang lalu."""
-        from .models import XPActivity
-        XPActivity.objects.filter(user=user).update(created_at=timezone.now() - timedelta(days=days))
+    def ranking(self, **params):
+        res = self.client.get(reverse('social:leaderboard'), params)
+        return [(row['user'].username, row['avg']) for row in res.context['ranking']], res
 
-    def test_xp_gain_is_logged_from_gamification(self):
-        from .models import XPActivity
-        from gamification.services import get_profile
-        get_profile(self.iqbal)  # profil baru, 0 XP: tidak dicatat
-        self.award(self.iqbal, 15)
-        self.award(self.iqbal, 11)
-        self.assertEqual(list(XPActivity.objects.filter(user=self.iqbal).values_list('amount', flat=True).order_by('id')), [15, 11])
+    def test_all_time_ranks_lowest_average_first(self):
+        scan(self.nami, 300, times=3, days_ago=60)  # scan lama tetap dihitung
+        scan(self.iqbal, 900, times=3)
+        scan(self.acan, 100, times=2)  # baru 2 scan: belum masuk peringkat
+        rows, res = self.ranking()
+        self.assertEqual(rows, [('nami', 300), ('iqbal', 900)])
+        self.assertContains(res, 'g CO₂/scan')
 
-    def test_all_time_leaderboard_uses_total_xp(self):
-        self.award(self.nami, 300)
-        self.age(self.nami, 60)  # XP lama tetap dihitung di sepanjang waktu
-        self.award(self.iqbal, 100)
-        res = self.client.get(reverse('social:leaderboard'))
-        self.assertEqual([(u.username, u.xp) for u in res.context['ranking']], [('nami', 300), ('iqbal', 100)])
+    def test_one_photo_with_many_items_is_one_scan(self):
+        scan(self.iqbal, 1200, times=3, items=3)
+        rows, res = self.ranking()
+        self.assertEqual(rows, [('iqbal', 1200)])
+        self.assertEqual(res.context['ranking'][0]['scans'], 3)
+
+    def test_tie_goes_to_more_scans(self):
+        scan(self.iqbal, 500, times=3)
+        scan(self.nami, 500, times=4)
+        self.assertEqual([name for name, _ in self.ranking()[0]], ['nami', 'iqbal'])
+
+    def test_viewer_sees_how_many_scans_are_missing(self):
+        scan(self.iqbal, 400)
+        scan(self.nami, 400, times=3)
+        self.client.force_login(self.iqbal)
+        rows, res = self.ranking()
+        self.assertEqual(rows, [('nami', 400)])
+        self.assertEqual(res.context['scans_needed'], 2)
+        self.assertContains(res, 'Butuh <b>2 scan lagi</b>')
+
+    def test_viewer_row_is_appended_below_the_top(self):
+        from .services import carbon_leaderboard, leaderboard_rows
+        scan(self.nami, 100, times=3)
+        scan(self.acan, 200, times=3)
+        scan(self.iqbal, 900, times=3)
+        ranked, mine, _ = carbon_leaderboard(self.iqbal, 'national')
+        rows = leaderboard_rows(ranked, self.iqbal, limit=1)
+        self.assertEqual([(r['pos'], r['user'].username, r['is_me'], r['gap']) for r in rows],
+                         [(1, 'nami', False, False), (3, 'iqbal', True, True)])
+        self.assertEqual(mine['scans'], 3)
 
     def test_campus_tab_and_campus_war(self):
-        self.award(self.iqbal, 100)
-        self.award(self.nami, 50)
-        self.award(self.acan, 120)
+        scan(self.iqbal, 300, times=3)
+        scan(self.nami, 600, times=3)
+        scan(self.acan, 200, times=3)
+        scan(self.acan, 5000, times=3, days_ago=40)  # bulan lalu: tidak dihitung di Campus War
         self.client.force_login(self.iqbal)
-        res = self.client.get(reverse('social:leaderboard'), {'tab': 'campus'})
-        self.assertEqual([u.username for u in res.context['ranking']], ['iqbal', 'nami'])
-        war = {c.short_name: c.avg_xp for c in self.client.get(reverse('social:campus_war')).context['campuses']}
-        self.assertEqual((war['ITB'], war['UI']), (120, 75))
+        rows, _ = self.ranking(tab='campus')
+        self.assertEqual(rows, [('iqbal', 300), ('nami', 600)])
 
-    def test_weekly_report_ranks_by_weekly_xp(self):
-        import json
-        self.award(self.nami, 500)
-        self.age(self.nami, 10)  # di luar 7 hari: tidak masuk peringkat mingguan
-        self.award(self.nami, 40)
-        self.award(self.iqbal, 60)
-        self.award(self.acan, 90)
+        war = self.client.get(reverse('social:campus_war')).context['campuses']
+        self.assertEqual([(c.short_name, c.pos, c.avg_co2) for c in war],
+                         [('ITB', 1, 200), ('UI', 2, 450), ('UGM', None, None)])
+        self.assertEqual((war[1].scans, war[1].active_members, war[1].member_count), (6, 2, 2))
+        partial = self.client.get(reverse('social:campus_war'), {'partial': '1'})
+        self.assertContains(partial, 'butuh 3 scan')
+
+    def test_friend_tab_uses_same_friend_source_as_report(self):
+        from story.models import FriendChallenge
+        FriendChallenge.objects.create(challenger=self.iqbal, opponent=self.acan)  # pernah saling tantang
         Friendship.objects.create(from_user=self.iqbal, to_user=self.nami, status=Friendship.ACCEPTED)
+        for u in (self.iqbal, self.nami, self.acan):
+            scan(u, 500, times=3)
         self.client.force_login(self.iqbal)
-        rank = json.loads(self.client.get(reverse('challenge:list')).context['rank_json'])
-        self.assertEqual([(r['name'], r['xp']) for r in rank['nasional']], [('acan', 90), ('iqbal', 60), ('nami', 40)])
-        self.assertEqual([r['name'] for r in rank['kampus']], ['iqbal', 'nami'])
-        self.assertEqual([r['name'] for r in rank['teman']], ['iqbal', 'nami'])
-        self.assertTrue(rank['nasional'][1]['is_me'])
+        self.assertEqual({name for name, _ in self.ranking(tab='friends')[0]}, {'iqbal', 'nami', 'acan'})
+
+    def test_weekly_report_and_all_time_use_same_rules_different_period(self):
+        from challenge.ranking import leaderboard_for
+        scan(self.nami, 100, times=6, days_ago=20)  # dulu hemat sekali
+        scan(self.nami, 900, times=3)               # minggu ini boros
+        scan(self.iqbal, 500, times=3)
+        all_time = [name for name, _ in self.ranking()[0]]
+        weekly = [item['name'] for item in leaderboard_for(self.iqbal, 'nasional')[0]]
+        self.assertEqual(all_time, ['nami', 'iqbal'])   # (600 + 2700) / 9 = 367 g/scan
+        self.assertEqual(weekly, ['iqbal', 'nami'])     # minggu ini: 500 vs 900 g/scan
 
 
 class LeaderboardSeedTests(TestCase):
-    """Akun contoh leaderboard: XP total tetap, riwayat mingguan ada, akun asli tidak disentuh."""
+    """Akun contoh leaderboard: punya riwayat scan, aman diulang, akun asli tidak disentuh."""
 
     def run_seed(self):
         from gamification.models import GameProfile
+        from scanner.models import FoodLog
         from social import seed
-        from social.models import CampusMembership, XPActivity
         seed.ensure_canteens(University, Canteen, log=lambda *a: None)
-        return seed.seed_leaderboard(User, University, CampusMembership, GameProfile, XPActivity,
+        return seed.seed_leaderboard(User, University, CampusMembership, GameProfile, FoodLog,
                                      timezone.localtime(), log=lambda *a: None)
 
     def test_seed_is_idempotent_and_natural(self):
         from gamification.models import GameProfile
+        from scanner.models import FoodLog
         from social import seed
-        from social.models import XPActivity
-        from social.services import users_with_xp
+        from social.services import carbon_entries, carbon_leaderboard
         User.objects.create_user('zahra.aulia', password='rahasia123')  # akun asli dengan nama sama
         entries = seed.load_leaderboard_entries()
         self.run_seed()
+        first_count = FoodLog.objects.count()
         self.run_seed()
 
+        self.assertEqual(FoodLog.objects.count(), first_count)  # scan lama diganti, bukan ditumpuk
+        self.assertFalse(FoodLog.objects.filter(user__username='zahra.aulia').exists())
         self.assertFalse(GameProfile.objects.filter(user__username='zahra.aulia').exists())
-        seeded = len(entries) - 1
-        self.assertEqual(GameProfile.objects.count(), seeded)
-        totals = {e['username']: e['total_xp'] for e in entries}
-        for p in GameProfile.objects.select_related('user'):
-            self.assertEqual(p.total_xp, totals[p.user.username])  # signal tidak menambah XP
-            logged = sum(XPActivity.objects.filter(user=p.user).values_list('amount', flat=True))
-            self.assertLessEqual(logged, p.total_xp)
+        self.assertEqual(GameProfile.objects.count(), len(entries) - 1)
+        self.assertFalse(FoodLog.objects.exclude(ai_raw_response__startswith=seed.SEED_SCAN_PREFIX).exists())
 
-        weekly = list(users_with_xp(since=timezone.localdate() - timedelta(days=6)))
+        ranked, _, _ = carbon_leaderboard(AnonymousUser(), 'national')
+        self.assertGreater(len(ranked), 30)
+        self.assertTrue(all(300 < e['avg'] < 2500 for e in ranked))  # rata-rata per scan masuk akal
+
+        weekly = [e['username'] for e in carbon_entries(since=timezone.localdate() - timedelta(days=6))]
         self.assertGreater(len(weekly), 10)
-        self.assertNotIn('fajar.nugroho', [u.username for u in weekly])  # akun "libur" minggu ini
-        self.assertEqual(users_with_xp().first().username, 'fajar.nugroho')
+        self.assertNotIn('fajar.nugroho', weekly)  # akun "libur" minggu ini
         self.assertEqual(User.objects.get(username='bima.aditya').campus.university.short_name, 'UI')
-
 
 
 class FriendFormTests(TestCase):
@@ -638,9 +682,8 @@ class CampusChoiceTests(TestCase):
 
 class LeaderboardTabTests(TestCase):
     def setUp(self):
-        from gamification.services import award_xp
         self.user = User.objects.create_user('iqbal', password='pass12345x')
-        award_xp(self.user, 30)
+        scan(self.user, 450, times=3)
 
     def test_partial_and_invalid_tab(self):
         res = self.client.get(reverse('social:leaderboard'), {'tab': 'galaksi'})
@@ -749,7 +792,7 @@ class AdminAndModelTests(TestCase):
         self.assertFalse(post.is_hidden)
 
     def test_str_methods(self):
-        from .models import PostReport, XPActivity
+        from .models import PostReport
         u = User.objects.create_user('iqbal', password='pass12345x')
         n = User.objects.create_user('nami', password='pass12345x')
         ui = University.objects.create(name='Universitas Indonesia', short_name='UI', city='Depok')
@@ -762,7 +805,6 @@ class AdminAndModelTests(TestCase):
         self.assertEqual(str(post), 'iqbal - Tanpa nama')
         self.assertIn('iqbal', str(PostReport.objects.create(user=u, post=post, reason='spam')))
         self.assertEqual(str(Friendship(from_user=u, to_user=n)), 'iqbal -> nami (pending)')
-        self.assertEqual(str(XPActivity(user=u, amount=5)), 'iqbal +5 XP')
 
     def test_time_ago_just_now_and_week_start(self):
         from .services import time_ago, week_start
@@ -779,6 +821,7 @@ class ManagementCommandTests(TestCase):
         out = io.StringIO()
         call_command('seed_leaderboard', friends_of='iqbal', stdout=out)
         self.assertIn('akun contoh leaderboard siap', out.getvalue())
+        self.assertIn('scan contoh dibuat', out.getvalue())
         self.assertTrue(GameProfile.objects.filter(user__username='zahra.aulia').exists())
         self.assertEqual(len(friends_of(me)), 5)
         call_command('seed_leaderboard', friends_of='iqbal', stdout=io.StringIO())  # aman diulang
@@ -797,14 +840,14 @@ class ManagementCommandTests(TestCase):
 
     def test_unseed_leaderboard(self):
         from gamification.models import GameProfile
-        from .models import XPActivity
+        from scanner.models import FoodLog
         from .seed import seed_leaderboard, unseed_leaderboard, ensure_canteens
         ensure_canteens(University, Canteen, log=lambda *a: None)
-        seed_leaderboard(User, University, CampusMembership, GameProfile, XPActivity, timezone.localtime(),
+        seed_leaderboard(User, University, CampusMembership, GameProfile, FoodLog, timezone.localtime(),
                          log=lambda *a: None)
-        unseed_leaderboard(User, CampusMembership, GameProfile, XPActivity)
+        unseed_leaderboard(User, CampusMembership, GameProfile, FoodLog)
         self.assertFalse(GameProfile.objects.exists())
-        self.assertFalse(XPActivity.objects.exists())
+        self.assertFalse(FoodLog.objects.exists())
 
     @override_settings(MEDIA_ROOT=TEST_MEDIA)
     def test_seed_community_command(self):

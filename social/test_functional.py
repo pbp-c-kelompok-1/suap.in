@@ -125,8 +125,8 @@ class SocialFunctionalTests(StaticLiveServerTestCase):
         self.assertEqual(Friendship.objects.count(), 1)
 
     def test_leaderboard_tabs_switch_without_reload(self):
-        from gamification.services import award_xp
-        award_xp(self.iqbal, 40)
+        from .tests import scan
+        scan(self.iqbal, 450, times=3)
         self.login_as(self.iqbal)
         self.open('social:leaderboard')
         self.wait_text('#rankRegion', 'iqbal')
