@@ -72,3 +72,27 @@ def award_badges(user):
 def sync_badges(user):
     ensure_badges()
     return award_badges(user)
+
+def valid_user_badges(user):
+    """Lencana yang syaratnya benar-benar terpenuhi menurut aturan Challenge.
+
+    Baris UserBadge lama dari proses Gamification tetap disimpan, tetapi lencana
+    scan yang terhitung per item tidak ditampilkan sebagai didapat sebelum jumlah
+    foto pengguna mencapai threshold.
+    """
+    from .services import count_scans
+
+    values = {
+        'scan_amount': count_scans(FoodLog.objects.filter(user=user)),
+        'streak_duration': game.get_profile(user).record_streak,
+    }
+    valid = []
+    for user_badge in (
+        UserBadge.objects.filter(user=user).select_related('badge')
+        .order_by('-earned_at')
+    ):
+        required = values.get(user_badge.badge.criteria_type)
+        if required is not None and required >= user_badge.badge.threshold:
+            valid.append(user_badge)
+    return valid
+

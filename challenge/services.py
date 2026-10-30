@@ -18,7 +18,7 @@ from social.services import time_ago
 from story.models import FriendChallenge
 from django.urls import reverse
 
-from .badges import sync_badges
+from .badges import sync_badges, valid_user_badges
 from .models import BadgeRelease, ChallengeProfile, DailyQuestSet, Notification, QuestClaim
 from .duels import accept_url, duel_scores, finalize_due_duels
 from .ranking import compute_leaderboard
@@ -400,17 +400,12 @@ def build_notifications(user, profile, scans_today, quests, extra=None):
     # Lencana yang baru didapat
     since = now - timedelta(days=NOTIF_BADGE_WINDOW_DAYS)
     earned_ids = set()
-    for ub in (
-        UserBadge.objects
-        .filter(user=user)
-        .select_related("badge")
-        .order_by("-earned_at")
-    ):
+    for ub in valid_user_badges(user):
         earned_ids.add(ub.badge_id)
         if ub.earned_at >= since and len([c for c in cands if c['kind'] == 'lencana']) < 10:
             add(f"badge-{ub.badge_id}", 'lencana', 'trophy', 'blue',
-                f"Lencana baru: {ub.badge.name}",
-                ub.badge.description or "Kamu membuka lencana baru.",
+                f"Kamu mendapatkan lencana {ub.badge.name}!",
+                f"Selamat! {ub.badge.description or 'Kamu berhasil memenuhi syarat lencana ini.'}",
                 link='#/profil', created_at=ub.earned_at)
 
     # Lencana baru dirilis (belum dimiliki, dirilis setelah user bergabung).
@@ -683,9 +678,7 @@ def build_challenge_data(user, claimed_today=False):
 
     # Hemat dari budget: hari ini saja, berubah tiap scan
     below_budget_grams = saved_today_grams(user, today)
-    earned_badge_ids = set(
-        UserBadge.objects.filter(user=user).values_list('badge_id', flat=True)
-    )
+    earned_badge_ids = {ub.badge_id for ub in valid_user_badges(user)}
     badges = [
         {
             'id': badge.id,

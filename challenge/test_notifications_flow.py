@@ -231,7 +231,40 @@ class BadgeTests(Base):
         self.assertIn('5 Scans', earned)
         self.assertEqual(d['stats']['badges'], 1)
         self.assertEqual(d['stats']['badgesTotal'], Badge.objects.count())
-        self.assertIn('Lencana baru: 5 Scans', [n['t'] for n in d['notifs']])
+        self.assertIn('Kamu mendapatkan lencana 5 Scans!', [n['t'] for n in d['notifs']])
+
+    def test_stale_ten_scan_badge_is_not_shown_or_notified_at_five_photos(self):
+        ensure_badges()
+        for i in range(5):
+            # Dua baris item per foto: 10 FoodLog, tetapi hanya 5 scan.
+            for item in range(2):
+                FoodLog.objects.create(
+                    user=self.a, custom_name=f'item-{i}-{item}', co2_grams=100,
+                    ai_raw_response=f'foto-{i}',
+                )
+        ten = Badge.objects.get(code='10-scans')
+        UserBadge.objects.create(user=self.a, badge=ten)
+
+        d = build_challenge_data(self.a)
+        earned = [b['name'] for b in d['badges'] if b['earned']]
+        self.assertIn('5 Scans', earned)
+        self.assertNotIn('10 Scans', earned)
+        self.assertEqual(d['stats']['scans'], 5)
+        self.assertEqual(d['stats']['badges'], 1)
+        titles_now = [n['t'] for n in d['notifs']]
+        self.assertNotIn('Kamu mendapatkan lencana 10 Scans!', titles_now)
+        self.assertIn('Kamu mendapatkan lencana 5 Scans!', titles_now)
+
+    def test_earned_badge_and_release_notifications_have_distinct_wording(self):
+        ensure_badges()
+        released = Badge.objects.create(
+            code='1000-scans', name='1000 Scans', description='Scan 1000 foto',
+            icon='camera', criteria_type='scan_amount', threshold=1000,
+        )
+        # Rilis diinformasikan sebagai kabar, bukan klaim bahwa user mendapatkannya.
+        build_challenge_data(self.a)
+        self.assertIn('Lencana baru dirilis: 1000 Scans', titles(self.a))
+        self.assertNotIn('Kamu mendapatkan lencana 1000 Scans!', titles(self.a))
 
     def test_item_rows_do_not_inflate_scan_badge(self):
         # Satu foto berisi 6 item = 1 scan, bukan 6.
