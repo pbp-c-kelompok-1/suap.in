@@ -23,10 +23,13 @@ jobs:
         env:
           PWS_URL: ${{ secrets.PWS_URL }}
         run: |
-          current_branch=$(git branch --show-current)
-          echo "Current branch: $current_branch"
-          push_output=$(git push --force $PWS_URL $current_branch:master 2>&1)
-          if [[ $? -ne 0 ]]; then
+          if [ -z "$PWS_URL" ]; then
+            echo "::warning::PWS_URL secret is not configured in repository secrets. Skipping automated deployment."
+            exit 0
+          fi
+          echo "Current branch: ${GITHUB_REF_NAME:-master}"
+          push_output=$(git push --force "$PWS_URL" "HEAD:master" 2>&1)
+          if [ $? -ne 0 ]; then
             echo "Push failed: $push_output"
             exit 1
           fi
