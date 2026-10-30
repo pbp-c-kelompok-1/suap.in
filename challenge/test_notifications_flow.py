@@ -1,4 +1,5 @@
 """Skenario end-to-end dengan beberapa akun uji: notifikasi, misi, lencana, laporan, leaderboard."""
+import unittest
 from datetime import timedelta
 
 from django.contrib.auth.models import User
@@ -12,7 +13,9 @@ from scanner.models import FoodLog
 from social.models import CampusMembership, University
 from story.models import FriendChallenge
 
-from .models import DailyQuestSet, Notification
+from .duels import has_lifecycle
+from .badges import ensure_badges
+from .models import BadgeRelease, DailyQuestSet, Notification
 from .reports import build_report_history
 from .services import build_challenge_data, todays_quests
 
@@ -61,11 +64,16 @@ class ChallengeNotificationTests(Base):
         ch.delete()
         self.assertFalse([n for n in build_challenge_data(self.b)['notifs'] if n['type'] == 'teman'])
 
-    def test_challenge_creates_friend_for_ranking_tab(self):
-        FriendChallenge.objects.create(challenger=self.a, opponent=self.b)
+    @unittest.skipUnless(has_lifecycle(), 'butuh app story dari master (terima tantangan)')
+    def test_accepted_challenge_creates_friend_for_ranking_tab(self):
+        ch = FriendChallenge.objects.create(challenger=self.a, opponent=self.b)
         for u, g in ((self.a, 300), (self.b, 900)):
             for _ in range(3):
                 scan(u, g)
+        # Tantangan yang belum diterima belum menjadikan siapa pun teman.
+        self.assertEqual(build_challenge_data(self.a)['rank']['teman']['empty'], 'no_friends')
+        from story.challenge_services import accept_challenge
+        accept_challenge(self.b, ch.pk)
         teman = build_challenge_data(self.a)['rank']['teman']
         self.assertEqual([r['name'] for r in teman['items']], ['akun_a', 'akun_b'])
         self.assertEqual(build_challenge_data(self.c)['rank']['teman']['empty'], 'no_friends')
@@ -223,7 +231,40 @@ class BadgeTests(Base):
         self.assertIn('5 Scans', earned)
         self.assertEqual(d['stats']['badges'], 1)
         self.assertEqual(d['stats']['badgesTotal'], Badge.objects.count())
-        self.assertIn('Lencana baru: 5 Scans', [n['t'] for n in d['notifs']])
+        self.assertIn('Kamu mendapatkan lencana 5 Scans!', [n['t'] for n in d['notifs']])
+
+    def test_stale_ten_scan_badge_is_not_shown_or_notified_at_five_photos(self):
+        ensure_badges()
+        for i in range(5):
+            # Dua baris item per foto: 10 FoodLog, tetapi hanya 5 scan.
+            for item in range(2):
+                FoodLog.objects.create(
+                    user=self.a, custom_name=f'item-{i}-{item}', co2_grams=100,
+                    ai_raw_response=f'foto-{i}',
+                )
+        ten = Badge.objects.get(code='10-scans')
+        UserBadge.objects.create(user=self.a, badge=ten)
+
+        d = build_challenge_data(self.a)
+        earned = [b['name'] for b in d['badges'] if b['earned']]
+        self.assertIn('5 Scans', earned)
+        self.assertNotIn('10 Scans', earned)
+        self.assertEqual(d['stats']['scans'], 5)
+        self.assertEqual(d['stats']['badges'], 1)
+        titles_now = [n['t'] for n in d['notifs']]
+        self.assertNotIn('Kamu mendapatkan lencana 10 Scans!', titles_now)
+        self.assertIn('Kamu mendapatkan lencana 5 Scans!', titles_now)
+
+    def test_earned_badge_and_release_notifications_have_distinct_wording(self):
+        ensure_badges()
+        released = Badge.objects.create(
+            code='1000-scans', name='1000 Scans', description='Scan 1000 foto',
+            icon='camera', criteria_type='scan_amount', threshold=1000,
+        )
+        # Rilis diinformasikan sebagai kabar, bukan klaim bahwa user mendapatkannya.
+        build_challenge_data(self.a)
+        self.assertIn('Lencana baru dirilis: 1000 Scans', titles(self.a))
+        self.assertNotIn('Kamu mendapatkan lencana 1000 Scans!', titles(self.a))
 
     def test_item_rows_do_not_inflate_scan_badge(self):
         # Satu foto berisi 6 item = 1 scan, bukan 6.
@@ -234,8 +275,6 @@ class BadgeTests(Base):
         self.assertNotIn('5 Scans', [b['name'] for b in d['badges'] if b['earned']])
 
     def test_new_badge_release_notifies_existing_users_only(self):
-        if not any(field.name == 'created_at' for field in Badge._meta.get_fields()):
-            self.skipTest('Notifikasi rilis memerlukan timestamp pada model Badge di app Gamification.')
         build_challenge_data(self.a)                        # seed awal, tanpa notifikasi rilis
         self.assertFalse([t for t in titles(self.a) if t.startswith('Lencana baru dirilis')])
         # Admin merilis lencana baru
@@ -244,13 +283,14 @@ class BadgeTests(Base):
         self.assertIn('Lencana baru dirilis: 1000 Scans', titles(self.a))
         # Akun yang daftar SETELAH rilis tidak diberi tahu soal rilis itu
         late = User.objects.create_user('akun_baru', password='x12345678')
-        Badge.objects.filter(code='1000-scans').update(created_at=timezone.now() - timedelta(days=1))
+        titles(self.a)                                      # mencatat rilis (BadgeRelease)
+        BadgeRelease.objects.filter(badge__code='1000-scans').update(released_at=timezone.now() - timedelta(days=1))
         self.assertFalse([t for t in titles(late) if t.startswith('Lencana baru dirilis')])
 
     def test_ensure_badges_adds_new_milestones_idempotently(self):
-        game.ensure_badges()
+        ensure_badges()
         n = Badge.objects.count()
-        game.ensure_badges()
+        ensure_badges()
         self.assertEqual(Badge.objects.count(), n)
 
     def test_streak_badge_and_profile_listing(self):

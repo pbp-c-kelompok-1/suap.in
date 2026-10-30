@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from scanner.models import FoodLog
 
+from .models import WeeklyReport
 from .reports import REPORT_HISTORY_WEEKS, build_report_history
 
 TODAY = date(2026, 10, 28)                  # Rabu
@@ -89,6 +90,41 @@ class ReportHistoryTests(TestCase):
         weeks = build_report_history(user, TODAY)['weeks']
         self.assertEqual(len(weeks), REPORT_HISTORY_WEEKS)
         self.assertEqual(weeks[-1]['start'], MONDAY - timedelta(weeks=REPORT_HISTORY_WEEKS))
+
+
+    def test_completed_week_is_persisted_and_read_from_weekly_report(self):
+        user = make_user(MONDAY - timedelta(weeks=1))
+        last = MONDAY - timedelta(weeks=1)
+        scan(user, last, 1200, raw='photo-a')
+        scan(user, last + timedelta(days=1), 800, raw='photo-b')
+
+        history = build_report_history(user, TODAY)
+        self.assertEqual(WeeklyReport.objects.filter(user=user).count(), 1)
+        report = WeeklyReport.objects.get(user=user, week_start=last)
+        self.assertEqual(report.week_end, last + timedelta(days=6))
+        self.assertEqual(report.total_co2_grams, 2000)
+        self.assertEqual(report.scans, 2)
+        self.assertEqual(history['weeks'][0]['total_kg'], 2.0)
+        self.assertEqual(history['weeks'][0]['days'][0]['total_kg'], 1.2)
+
+        # Pemanggilan ulang memperbarui record yang sama, bukan membuat duplikat.
+        build_report_history(user, TODAY)
+        self.assertEqual(WeeklyReport.objects.filter(user=user).count(), 1)
+
+    def test_daily_report_cells_match_template_fields_and_count_photo_scans(self):
+        user = make_user(MONDAY - timedelta(days=7))
+        day = MONDAY - timedelta(days=7)
+        scan(user, day, 700, raw='foto-sama')
+        scan(user, day, 300, raw='foto-sama')  # dua item dari satu foto
+        scan(user, day, 200, raw='foto-kedua')
+
+        cell = build_report_history(user, TODAY)['weeks'][0]['days'][0]
+        self.assertEqual(cell['date'], day)
+        self.assertTrue(cell['has_data'])
+        self.assertEqual(cell['total_kg'], 1.2)
+        self.assertEqual(cell['scans'], 2)
+        self.assertIn('budget_kg', cell)
+        self.assertIn('over_budget', cell)
 
     def test_other_users_scans_are_not_included(self):
         user = make_user(MONDAY - timedelta(weeks=1))

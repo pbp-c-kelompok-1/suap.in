@@ -36,3 +36,9 @@
 .raise.empty{border-radius:28px}
 .muted{color:var(--text-2);font-weight:700}
 #misiEmpty .empty{margin-bottom:30px}
+
+/* Tombol terima/tolak di notifikasi tantangan */
+.n-wrap.has-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;row-gap:8px}
+.n-actions{grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap;padding:0 8px 4px 76px}
+.n-actions .btn[disabled]{opacity:.6;cursor:progress}
+@media (max-width:560px){.n-actions{padding-left:8px}}

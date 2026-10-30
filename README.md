@@ -253,6 +253,8 @@ Dalam pengembangan proyek tengah semester **Suap.in**, kelompok kami memanfaatka
 
 > **Pernyataan Integritas**: Seluruh baris kode, arsitektur, dan logika bisnis yang dihasilkan atau disarankan oleh kecerdasan buatan telah ditinjau, dipahami, dimodifikasi, disesuaikan dengan kebutuhan proyek PBP Gasal 2026/2027, serta diuji secara langsung oleh seluruh anggota tim. Kelompok kami bertanggung jawab penuh atas substansi, orisinalitas, dan fungsionalitas aplikasi yang diserahkan.
 
+---
+
 ### Modul Gamifikasi + XP + Level
 **PIC: Muhammad Ziad Ayyash**
 
@@ -282,12 +284,9 @@ Saya juga meminta tolong AI untuk meringkas dan menjelaskan fitur yang ditambahk
 Beberapa masalah yang ditemukan selama pengerjaan adalah:
 
 1. **Desain tidak mempertimbangkan base.** Beberapa desain awal halaman memiliki berbagai macam ketidaksesuaian akibat AI menggunakan nama class yang konflik dengan CSS yang sudah disediakan base.
-
-2. **Membuat suatu file besar monolitik** Sejumlah desain html yang diberikan menyantumkan semua elemen di dalam satu file html daripada memisahkannya menjadi bagian - bagian seperti file css tersendiri dan partial html.
-
-3. **Ketidaksesuaian implementasi minggu pada halaman streak** Pada halaman streak, AI menampilkan aktivitas 7 hari kebelakang. Seharusnya menampilkan hari - hari dalam seminggu secara terurut.
-
-4. **Memasukkan data yang tidak ada ke dalam context view** Dalam membantu menulis context untuk suatu view, AI menggunakan fungsi, data, dan field yang tidak ada/belum diimplementasi.
+2. **Membuat suatu file besar monolitik.** Sejumlah desain html yang diberikan menyantumkan semua elemen di dalam satu file html daripada memisahkannya menjadi bagian - bagian seperti file css tersendiri dan partial html.
+3. **Ketidaksesuaian implementasi minggu pada halaman streak.** Pada halaman streak, AI menampilkan aktivitas 7 hari kebelakang. Seharusnya menampilkan hari - hari dalam seminggu secara terurut.
+4. **Memasukkan data yang tidak ada ke dalam context view.** Dalam membantu menulis context untuk suatu view, AI menggunakan fungsi, data, dan field yang tidak ada/belum diimplementasi.
 
 Perbaikan tersebut dilakukan melalui perubahan file baik secara manual maupun dengan bantuan arahan AI. Saya tidak menganggap seluruh saran awal AI sudah benar tanpa perlu dicoba atau disesuaikan.
 
@@ -299,4 +298,73 @@ Pengujian yang dilakukan membantu memeriksa perilaku fitur, tetapi tidak menjadi
 
 Saya menggunakan penjelasan AI sebagai pendamping untuk mempelajari alur kode dan melakukan penyesuaian implementasi. Tanggung jawab atas kode, konten, dan perubahan yang saya sertakan dalam proyek tetap berada pada saya sebagai pengembang modul.
 
-PBP C — Fasilkom UI — Semester Gasal 2026/2027
+---
+
+### Modul Challenge & Notifikasi (`challenge`)
+**PIC: Annisa Saskya Aulia**
+
+#### 1. Pemanfaatan AI dalam Proses Pengembangan
+
+Selama mengerjakan modul Challenge pada aplikasi Suap.in, saya memanfaatkan ChatGPT dan Claude sebagai salah satu sumber bantuan dalam memahami permasalahan teknis dan mengembangkan fungsionalitas aplikasi. Penggunaannya tidak terbatas pada pembuatan potongan kode, tetapi juga mencakup diskusi mengenai pendekatan implementasi, pemeriksaan kesalahan, dan evaluasi hasil pengembangan.
+
+Beberapa pekerjaan yang melibatkan bantuan AI antara lain:
+
+- **Pengembangan profil pengguna:** Mendiskusikan cara menggabungkan informasi identitas pengguna dengan data perkembangan Challenge, seperti avatar, bio, XP, level, statistik pemindaian, dan pencapaian badge.
+- **Sistem misi dan pencapaian:** Mengembangkan mekanisme misi harian, pencatatan aktivitas, perhitungan progres, serta pemberian penghargaan berdasarkan aktivitas yang dilakukan pengguna.
+- **Sistem peringkat:** Membantu memahami pengolahan data XP dan penyusunan leaderboard, termasuk pencatatan perubahan peringkat pengguna dalam periode tertentu.
+- **Pengelolaan notifikasi:** Mengembangkan mekanisme penyampaian informasi kepada pengguna, misalnya ketika terdapat misi baru, perubahan posisi ranking, pencapaian badge, maupun pembaruan aktivitas lainnya.
+- **Penyusunan laporan:** Mendiskusikan pengolahan data aktivitas menjadi laporan mingguan, menampilkan statistik dan grafik, serta menyusun riwayat laporan berdasarkan periode yang telah ditentukan.
+- **Pengembangan tampilan aplikasi:** Memanfaatkan AI untuk membantu menulis dan menyesuaikan komponen HTML, CSS, dan JavaScript agar interaksi pada halaman Challenge dapat berjalan sesuai rancangan.
+- **Pemeriksaan kualitas kode:** Meminta bantuan dalam menyusun pengujian, membaca traceback, memahami perilaku fungsi, dan menemukan kemungkinan masalah pada hubungan antarmodul.
+
+#### 2. Cara AI Digunakan Selama Pengerjaan
+
+Penggunaan ChatGPT dilakukan dengan pendekatan diskusi dua arah. Saya terlebih dahulu menjelaskan fitur yang ingin dibuat atau kendala yang sedang dihadapi, kemudian memberikan informasi pendukung seperti struktur folder, isi file terkait, potongan kode, maupun hasil yang muncul ketika aplikasi dijalankan.
+
+Untuk perubahan yang melibatkan beberapa file, saya meminta penjelasan mengenai hubungan antara model, view, URL, template, dan JavaScript yang terlibat. Hal ini membantu saya memahami dampak suatu perubahan sebelum menerapkannya.
+
+Saya juga menggunakan AI untuk membandingkan beberapa alternatif penyelesaian masalah. Apabila jawaban yang diberikan belum sesuai dengan struktur proyek, saya memberikan konteks tambahan dan meminta pendekatan lain yang lebih cocok dengan implementasi Suap.in.
+
+Dalam beberapa kasus, saya meminta perubahan dilakukan secara spesifik pada modul Challenge. Hal ini penting karena proyek dikembangkan secara berkelompok dan setiap anggota memiliki bagian pengerjaan masing-masing. Oleh sebab itu, saya perlu memastikan perubahan tidak mengganggu pekerjaan anggota lain.
+
+#### 3. Contoh Permasalahan yang Melibatkan Bantuan AI
+
+Selama proses pengembangan, terdapat beberapa situasi ketika solusi awal belum memberikan hasil yang diharapkan. Beberapa di antaranya adalah:
+
+**a. Halaman Challenge tidak dapat ditampilkan**
+Setelah melakukan perubahan pada JavaScript, halaman Challenge sempat hanya menampilkan halaman kosong. Pemeriksaan melalui browser Console menunjukkan adanya masalah pada proses import fungsi `markGone` dari `state.js` oleh `notifikasi.js`. Saya menggunakan bantuan ChatGPT untuk memahami penyebab error tersebut, kemudian memeriksa kembali fungsi yang tersedia dan menyesuaikan pemanggilannya.
+
+**b. Riwayat migration tidak sesuai dengan kondisi database**
+Ketika menambahkan perubahan pada model Challenge, Django sempat mengalami konflik karena terdapat tabel yang sudah tersedia di database tetapi belum tercatat sesuai dengan nama migration yang digunakan. Saya meminta bantuan untuk memahami hubungan antara file migration dan catatan migration pada database. Setelah itu, saya memeriksa hasil `showmigrations`, menyesuaikan nama file, dan memperbaiki dependency antarmigration.
+
+**c. Kesalahan dalam pembentukan notifikasi**
+Pada salah satu proses pengembangan notifikasi, aplikasi menghasilkan `NameError` karena variabel `since` belum didefinisikan ketika digunakan dalam fungsi `build_notifications`. ChatGPT membantu menelusuri bagian kode yang berkaitan dengan error tersebut. Saya kemudian menyesuaikan logika fungsi berdasarkan konteks program yang sebenarnya.
+
+**d. Hasil pengujian reward belum sesuai**
+Pengujian terhadap sistem badge menunjukkan bahwa beberapa pencapaian belum tercatat sebagaimana mestinya. Selain itu, terdapat pemanggilan fungsi `ensure_badges` yang belum sesuai dengan fungsi yang tersedia pada modul gamifikasi. Saya menggunakan AI untuk membantu menganalisis hubungan antara proses scan, pemberian XP, dan pencatatan badge. Hasil analisis tersebut kemudian menjadi dasar untuk pemeriksaan dan perbaikan kode.
+
+**e. Ketidakkonsistenan periode laporan**
+Dalam pengembangan laporan mingguan, ditemukan bahwa pembagian periode laporan perlu diselaraskan dengan periode leaderboard. Saya mendiskusikan logika perhitungan tanggal dengan ChatGPT agar laporan menggunakan rentang minggu yang tetap, bukan sekadar menghitung tujuh hari ke belakang dari tanggal pengguna membuka halaman.
+
+Permasalahan-permasalahan tersebut memperlihatkan bahwa jawaban AI tidak selalu dapat langsung diterapkan. Diperlukan pemeriksaan tambahan terhadap kode dan hasil eksekusi untuk memastikan solusi yang digunakan benar-benar menyelesaikan masalah.
+
+#### 4. Pemeriksaan Hasil dan Evaluasi
+
+Setiap perubahan yang dibantu oleh AI tetap melalui proses pemeriksaan sebelum digunakan dalam proyek. Saya menjalankan aplikasi secara lokal untuk melihat apakah fitur bekerja sebagaimana mestinya, memeriksa tampilan melalui browser, dan menggunakan perintah pengujian Django untuk mengevaluasi perilaku kode.
+
+Pengujian juga membantu menemukan masalah yang tidak terlihat hanya dari pemeriksaan kode, misalnya ketika data badge belum terbentuk, progres belum diperbarui, atau hasil laporan tidak sesuai dengan periode yang diharapkan.
+
+Apabila ditemukan kegagalan, saya tidak langsung menganggap hasil AI sebagai solusi akhir. Saya memeriksa kembali bagian yang bermasalah, memberikan hasil pengujian kepada AI sebagai konteks tambahan, lalu melakukan penyesuaian berdasarkan kondisi proyek.
+
+#### 5. Pernyataan Tanggung Jawab
+
+ChatGPT dan Claude digunakan sebagai sarana pendukung selama proses belajar dan pengembangan modul Challenge. Penggunaan AI membantu mempercepat pencarian solusi teknis sekaligus memberikan penjelasan mengenai bagian kode yang belum saya pahami.
+
+Meskipun demikian, keputusan mengenai penggunaan suatu solusi, penyesuaian kode terhadap kebutuhan aplikasi, dan pemeriksaan hasil implementasi tetap dilakukan oleh saya. Saya memahami bahwa kode yang dihasilkan AI dapat mengandung kesalahan atau tidak sesuai dengan struktur proyek yang sedang dikerjakan.
+
+Dengan demikian, saya bertanggung jawab atas perubahan dan kontribusi yang saya berikan pada modul Challenge dalam proyek Suap.in.
+
+---
+
+PBP C — Fakultas Ilmu Komputer, Universitas Indonesia — Semester Gasal 2026/2027
+

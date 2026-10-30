@@ -2,14 +2,17 @@ import json
 from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from scanner.models import FoodLog, CarbonBudget
+from story.models import FriendChallenge
 
+from .duels import decline_duel
 from .models import ChallengeProfile, Notification, QuestClaim
 from .reports import build_report_history
 from .services import (
@@ -436,3 +439,16 @@ def save_profile_view(request):
         'bio': bio,
         'avatar': avatar,
     })
+
+
+@login_required
+@require_POST
+def decline_duel_view(request, pk):
+    """Tolak tantangan dari notifikasi. Hanya penerima yang boleh (selain itu 403)."""
+    try:
+        decline_duel(request.user, pk)
+    except FriendChallenge.DoesNotExist:
+        raise Http404('Tantangan tidak ditemukan.')
+    except ValidationError as exc:
+        return JsonResponse({'ok': False, 'message': ' '.join(exc.messages)}, status=409)
+    return JsonResponse({'ok': True, 'message': 'Tantangan ditolak.'})

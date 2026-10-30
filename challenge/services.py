@@ -1,4 +1,5 @@
 
+import re
 from datetime import timedelta
 
 from django.utils import timezone
@@ -17,7 +18,9 @@ from social.services import time_ago
 from story.models import FriendChallenge
 from django.urls import reverse
 
-from .models import ChallengeProfile, DailyQuestSet, Notification, QuestClaim
+from .badges import sync_badges, valid_user_badges
+from .models import BadgeRelease, ChallengeProfile, DailyQuestSet, Notification, QuestClaim
+from .duels import accept_url, duel_scores, finalize_due_duels
 from .ranking import compute_leaderboard
 
 
@@ -44,6 +47,7 @@ NOTIF_BADGE_WINDOW_DAYS = 14   # lencana lebih lama dari ini tidak dibuatkan not
 NOTIF_READ_KEEP_DAYS = 30      # notifikasi yang sudah dibaca disimpan selama ini
 NOTIF_TOMBSTONE_DAYS = 60      # jejak notifikasi yang dihapus user
 NOTIF_MAX_SHOWN = 100
+NOTIF_CHALLENGE_WINDOW_DAYS = 14   # kabar tantangan (diterima/ditolak/hasil) lebih lama dari ini tidak dibuat lagi
 
 
 def count_scans(logs):
@@ -390,63 +394,136 @@ def build_notifications(user, profile, scans_today, quests, extra=None):
     if quests and all(q['val'] >= q['goal'] for q in quests):
         add(f"misi-done-{today.isoformat()}", 'misi', 'check', 'teal',
             'Kamu sudah menyelesaikan semua misi hari ini!',
-            'Klaim peti bonusmu, lalu kembali besok untuk misi baru.',
+            'Klaim peti bonusmu, lalu kembali besok untuk misi baru!',
             link='#/misi')
 
     # Lencana yang baru didapat
     since = now - timedelta(days=NOTIF_BADGE_WINDOW_DAYS)
     earned_ids = set()
-    for ub in (
-        UserBadge.objects
-        .filter(user=user)
-        .select_related("badge")
-        .order_by("-earned_at")
-    ):
+    for ub in valid_user_badges(user):
         earned_ids.add(ub.badge_id)
         if ub.earned_at >= since and len([c for c in cands if c['kind'] == 'lencana']) < 10:
             add(f"badge-{ub.badge_id}", 'lencana', 'trophy', 'blue',
-                f"Lencana baru: {ub.badge.name}",
-                ub.badge.description or "Kamu membuka lencana baru.",
+                f"Kamu mendapatkan lencana {ub.badge.name}!",
+                f"Selamat! {ub.badge.description or 'Kamu berhasil memenuhi syarat lencana ini.'}",
                 link='#/profil', created_at=ub.earned_at)
 
-    # Pengumuman lencana yang baru dirilis hanya bisa dihitung bila model Badge
-    # memiliki timestamp rilis. Branch Challenge tidak menambah field lintas-app;
-    # bila field belum ada, lewati bagian ini tanpa membuat dashboard error.
-    if any(field.name == 'created_at' for field in Badge._meta.get_fields()):
-        released_after = max(since, user.date_joined)
-        for badge in Badge.objects.filter(created_at__gte=released_after).order_by('-created_at'):
-            if badge.id in earned_ids:
-                continue
-            add(f"badge-new-{badge.id}", 'lencana', 'star', 'amber',
-                f"Lencana baru dirilis: {badge.name}",
-                f"{badge.description or 'Ada lencana baru.'} Yuk kejar!",
-                link='#/profil', created_at=badge.created_at)
+    # Lencana baru dirilis (belum dimiliki, dirilis setelah user bergabung).
+    # Tanggal rilis dicatat di BadgeRelease (app challenge), bukan di model Badge.
+    released_after = max(since, user.date_joined)
+    for rel in (BadgeRelease.objects.filter(released_at__gte=released_after)
+                .select_related('badge').order_by('-released_at')):
+        badge = rel.badge
+        if badge.id in earned_ids:
+            continue
+        add(f"badge-new-{badge.id}", 'lencana', 'star', 'amber',
+            f"Lencana baru dirilis: {badge.name}",
+            f"{badge.description or 'Ada lencana baru.'} Yuk kejar!",
+            link='#/profil', created_at=rel.released_at)
 
-    # Friend Challenge yang masih menunggu jawaban
-    pending = list(
+    # Tantangan teman (alurnya ada di app story)
+    # Simpan dulu pemenang tantangan yang waktunya sudah habis, supaya hasilnya
+    # langsung muncul tanpa menunggu tombol "Perbarui" ditekan.
+    finalize_due_duels(user, now)
+    window = now - timedelta(days=NOTIF_CHALLENGE_WINDOW_DAYS)
+    challenge_link = reverse('story:challenge_list')
+    duels = list(
         FriendChallenge.objects
-        .filter(opponent=user, status="pending")
-        .select_related("challenger")
-        .order_by("-created_at")[:5]
+        .filter(Q(challenger=user) | Q(opponent=user))
+        .select_related('challenger', 'opponent')
+        .order_by('-created_at')[:30]
     )
+    people = {c.challenger_id for c in duels} | {c.opponent_id for c in duels}
     names = {
         p.user_id: p.display_name
-        for p in ChallengeProfile.objects.filter(user_id__in=[c.challenger_id for c in pending])
+        for p in ChallengeProfile.objects.filter(user_id__in=people)
         if p.display_name
     }
-    for challenge in pending:
-        who = names.get(challenge.challenger_id) or challenge.challenger.username
-        add(f"challenge-{challenge.pk}", 'teman', 'sword', 'purple',
-            f"{who} menantangmu!",
-            f"Adu {challenge.get_metric_display().lower()} selama {challenge.duration_days} hari.",
-            link=reverse('story:challenge_list'),
-            ephemeral=True, created_at=challenge.created_at)
+
+    def who(u):
+        return names.get(u.pk) or u.username
+
+    for c in duels:
+        i_challenged = c.challenger_id == user.pk
+        other = c.opponent if i_challenged else c.challenger
+        name = who(other)
+
+        if c.status == 'pending' and not i_challenged:
+            add(f"challenge-{c.pk}", 'teman', 'sword', 'purple',
+                f"{name} menantangmu!",
+                f"Adu {_lower_first(c.get_metric_display())} selama {c.duration_days} hari. "
+                + ("Terima atau tolak langsung di sini." if accept_url(c.pk)
+                   else "Kamu bisa menolaknya langsung di sini."),
+                link=challenge_link, ephemeral=True, created_at=c.created_at)
+
+        started_at = getattr(c, 'started_at', None)
+        finished_at = getattr(c, 'finished_at', None)
+
+        if (i_challenged and c.status in ('active', 'finished')
+                and started_at and started_at >= window):
+            ends = timezone.localtime(c.ends_at).strftime('%d/%m %H:%M')
+            add(f"challenge-accepted-{c.pk}", 'teman', 'sword', 'green',
+                f"{name} menerima tantanganmu!",
+                f"Waktu main {c.duration_days} hari sudah dimulai, batas akhir {ends}.",
+                link=challenge_link, created_at=started_at)
+
+        scores = duel_scores(c) if (c.status == 'finished' and finished_at and finished_at >= window) else None
+        if scores is not None:
+            mine, theirs = (
+                (scores['challenger'], scores['opponent']) if i_challenged
+                else (scores['opponent'], scores['challenger'])
+            )
+            detail = (f"Kamu {_challenge_score_text(c.metric, mine)} vs "
+                      f"{name} {_challenge_score_text(c.metric, theirs)}.")
+            if c.winner_id == user.pk:
+                title, body, tone, ico = (f"Kamu menang melawan {name}!",
+                                          f"{detail} Pertahankan semangatnya!", 'green', 'trophy')
+            elif c.winner_id:
+                title, body, tone, ico = (f"{name} memenangkan tantangan",
+                                          f"{detail} Jangan menyerah, tantang lagi untuk membalas!",
+                                          'amber', 'sword')
+            else:
+                title, body, tone, ico = (f"Tantangan melawan {name} berakhir seri",
+                                          f"{detail} Saatnya babak penentuan!", 'blue', 'sword')
+            add(f"challenge-result-{c.pk}", 'teman', ico, tone, title, body,
+                link=challenge_link, created_at=finished_at)
 
     # Kejadian lain yang dihitung di luar (mis. perubahan peringkat)
     for ev in (extra or []):
         add(**ev)
 
     return cands
+
+
+def _lower_first(text):
+    """'Emisi CO\u2082 terendah' -> 'emisi CO\u2082 terendah' (tanpa merusak huruf besar 'CO\u2082')."""
+    return text[:1].lower() + text[1:]
+
+
+def _challenge_score_text(metric, score):
+    if metric == 'most_scans':
+        return f"{score['count']} scan"
+    return f"{round(score['co2']):,} g CO\u2082".replace(',', '.')
+
+
+_PENDING_CHALLENGE_KEY = re.compile(
+    r'^challenge-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$'
+)
+
+
+def notification_actions(n):
+    """Tombol aksi untuk notifikasi "menantangmu!": terima atau tolak lewat endpoint story."""
+    match = _PENDING_CHALLENGE_KEY.match(n.key)
+    if not (match and n.ephemeral and n.kind == 'teman'):
+        return []
+    pk = match.group(1)
+    actions = []
+    accept = accept_url(pk)          # belum ada sebelum master digabung
+    if accept:
+        actions.append({'id': 'accept', 'label': 'Terima', 'tone': 'ok', 'url': accept})
+    actions.append({'id': 'decline', 'label': 'Tolak', 'tone': 'ghost',
+                    'url': reverse('challenge:challenge_decline', args=[pk])})
+    return actions
 
 
 def rank_notifications(user, rank_data, today=None):
@@ -550,6 +627,7 @@ def serialize_notification(n):
         "time": time_ago(n.created_at),
         "read": n.read_at is not None,
         "link": n.link,
+        "actions": notification_actions(n),
     }
 
 
@@ -593,16 +671,14 @@ def build_challenge_data(user, claimed_today=False):
     game_profile = game.get_profile(user)
     prog = game.xp_progress(game_profile)
     # Pastikan katalog lencana ada dan lencana yang sudah memenuhi syarat tercatat.
-    game.check_badges(user)
+    sync_badges(user)
     board = compute_leaderboard(user, today)      # satu kali hitung untuk semua bagian
     rank_data = board
     weekly_ranking = board['recap']
 
     # Hemat dari budget: hari ini saja, berubah tiap scan
     below_budget_grams = saved_today_grams(user, today)
-    earned_badge_ids = set(
-        UserBadge.objects.filter(user=user).values_list('badge_id', flat=True)
-    )
+    earned_badge_ids = {ub.badge_id for ub in valid_user_badges(user)}
     badges = [
         {
             'id': badge.id,
