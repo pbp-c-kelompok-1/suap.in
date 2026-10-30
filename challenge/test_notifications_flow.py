@@ -14,7 +14,8 @@ from social.models import CampusMembership, University
 from story.models import FriendChallenge
 
 from .duels import has_lifecycle
-from .models import DailyQuestSet, Notification
+from .badges import ensure_badges
+from .models import BadgeRelease, DailyQuestSet, Notification
 from .reports import build_report_history
 from .services import build_challenge_data, todays_quests
 
@@ -241,8 +242,6 @@ class BadgeTests(Base):
         self.assertNotIn('5 Scans', [b['name'] for b in d['badges'] if b['earned']])
 
     def test_new_badge_release_notifies_existing_users_only(self):
-        if not any(field.name == 'created_at' for field in Badge._meta.get_fields()):
-            self.skipTest('Notifikasi rilis memerlukan timestamp pada model Badge di app Gamification.')
         build_challenge_data(self.a)                        # seed awal, tanpa notifikasi rilis
         self.assertFalse([t for t in titles(self.a) if t.startswith('Lencana baru dirilis')])
         # Admin merilis lencana baru
@@ -251,13 +250,14 @@ class BadgeTests(Base):
         self.assertIn('Lencana baru dirilis: 1000 Scans', titles(self.a))
         # Akun yang daftar SETELAH rilis tidak diberi tahu soal rilis itu
         late = User.objects.create_user('akun_baru', password='x12345678')
-        Badge.objects.filter(code='1000-scans').update(created_at=timezone.now() - timedelta(days=1))
+        titles(self.a)                                      # mencatat rilis (BadgeRelease)
+        BadgeRelease.objects.filter(badge__code='1000-scans').update(released_at=timezone.now() - timedelta(days=1))
         self.assertFalse([t for t in titles(late) if t.startswith('Lencana baru dirilis')])
 
     def test_ensure_badges_adds_new_milestones_idempotently(self):
-        game.ensure_badges()
+        ensure_badges()
         n = Badge.objects.count()
-        game.ensure_badges()
+        ensure_badges()
         self.assertEqual(Badge.objects.count(), n)
 
     def test_streak_badge_and_profile_listing(self):

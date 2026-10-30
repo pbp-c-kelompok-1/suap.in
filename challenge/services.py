@@ -18,7 +18,8 @@ from social.services import time_ago
 from story.models import FriendChallenge
 from django.urls import reverse
 
-from .models import ChallengeProfile, DailyQuestSet, Notification, QuestClaim
+from .badges import sync_badges
+from .models import BadgeRelease, ChallengeProfile, DailyQuestSet, Notification, QuestClaim
 from .duels import accept_url, duel_scores, finalize_due_duels
 from .ranking import compute_leaderboard
 
@@ -412,18 +413,18 @@ def build_notifications(user, profile, scans_today, quests, extra=None):
                 ub.badge.description or "Kamu membuka lencana baru.",
                 link='#/profil', created_at=ub.earned_at)
 
-    # Pengumuman lencana yang baru dirilis hanya bisa dihitung bila model Badge
-    # memiliki timestamp rilis. Branch Challenge tidak menambah field lintas-app;
-    # bila field belum ada, lewati bagian ini tanpa membuat dashboard error.
-    if any(field.name == 'created_at' for field in Badge._meta.get_fields()):
-        released_after = max(since, user.date_joined)
-        for badge in Badge.objects.filter(created_at__gte=released_after).order_by('-created_at'):
-            if badge.id in earned_ids:
-                continue
-            add(f"badge-new-{badge.id}", 'lencana', 'star', 'amber',
-                f"Lencana baru dirilis: {badge.name}",
-                f"{badge.description or 'Ada lencana baru.'} Yuk kejar!",
-                link='#/profil', created_at=badge.created_at)
+    # Lencana baru dirilis (belum dimiliki, dirilis setelah user bergabung).
+    # Tanggal rilis dicatat di BadgeRelease (app challenge), bukan di model Badge.
+    released_after = max(since, user.date_joined)
+    for rel in (BadgeRelease.objects.filter(released_at__gte=released_after)
+                .select_related('badge').order_by('-released_at')):
+        badge = rel.badge
+        if badge.id in earned_ids:
+            continue
+        add(f"badge-new-{badge.id}", 'lencana', 'star', 'amber',
+            f"Lencana baru dirilis: {badge.name}",
+            f"{badge.description or 'Ada lencana baru.'} Yuk kejar!",
+            link='#/profil', created_at=rel.released_at)
 
     # Tantangan teman (alurnya ada di app story)
     # Simpan dulu pemenang tantangan yang waktunya sudah habis, supaya hasilnya
@@ -675,7 +676,7 @@ def build_challenge_data(user, claimed_today=False):
     game_profile = game.get_profile(user)
     prog = game.xp_progress(game_profile)
     # Pastikan katalog lencana ada dan lencana yang sudah memenuhi syarat tercatat.
-    game.check_badges(user)
+    sync_badges(user)
     board = compute_leaderboard(user, today)      # satu kali hitung untuk semua bagian
     rank_data = board
     weekly_ranking = board['recap']

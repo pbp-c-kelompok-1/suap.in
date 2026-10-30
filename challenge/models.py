@@ -33,6 +33,20 @@ class QuestClaim(models.Model):
         return f'{self.user.username} - {self.quest_id} - {self.date} (+{self.xp} XP)'
 
 
+class BadgeRelease(models.Model):
+    """Kapan sebuah lencana mulai tersedia, dicatat di app challenge.
+
+    Model Badge milik app gamification tidak punya tanggal rilis dan tidak kita ubah.
+    Dipakai untuk notifikasi "lencana baru dirilis" (hanya untuk user yang sudah
+    bergabung sebelum lencana itu muncul).
+    """
+    badge = models.OneToOneField('gamification.Badge', on_delete=models.CASCADE, related_name='release')
+    released_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f'{self.badge_id} dirilis {self.released_at:%Y-%m-%d}'
+
+
 class DailyQuestSet(models.Model):
     """Misi yang dipilih untuk satu user di satu hari.
 
