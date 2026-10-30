@@ -39,17 +39,18 @@ def week_start(day):
 
 
 def friend_user_ids(user):
-    """SATU-SATUNYA tempat yang menentukan siapa "teman" seorang user.
+    """SATU-SATUNYA tempat yang menentukan siapa "teman" seorang user di peringkat.
 
-    Sistem pertemanan terpisah belum tersedia. Untuk saat ini, pengguna yang
-    pernah terhubung lewat FriendChallenge dapat saling muncul di tab Teman.
-    Logika ini dipusatkan di sini agar leaderboard memakai satu sumber aturan.
+    Teman = pertemanan yang sudah DITERIMA di modul social (menu Teman), ditambah
+    pengguna yang pernah saling tantang lewat FriendChallenge. Tab Teman di Laporan
+    dan di halaman Peringkat (social) sama-sama memanggil fungsi ini.
     """
+    from social.friends import friend_ids
     from story.models import FriendChallenge
 
     sent = FriendChallenge.objects.filter(challenger=user).values_list('opponent_id', flat=True)
     received = FriendChallenge.objects.filter(opponent=user).values_list('challenger_id', flat=True)
-    return set(sent).union(received)
+    return set(friend_ids(user)) | set(sent) | set(received)
 
 
 def _weekly_entries(first_monday, last_day):
