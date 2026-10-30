@@ -253,85 +253,42 @@ Dalam pengembangan proyek tengah semester **Suap.in**, kelompok kami memanfaatka
 
 > **Pernyataan Integritas**: Seluruh baris kode, arsitektur, dan logika bisnis yang dihasilkan atau disarankan oleh kecerdasan buatan telah ditinjau, dipahami, dimodifikasi, disesuaikan dengan kebutuhan proyek PBP Gasal 2026/2027, serta diuji secara langsung oleh seluruh anggota tim. Kelompok kami bertanggung jawab penuh atas substansi, orisinalitas, dan fungsionalitas aplikasi yang diserahkan.
 
-<<<<<<< HEAD
 ---
 
-### Modul Gamifikasi + XP + Level
+### Modul Gamifikasi + XP + Level (`gamification`)
 **PIC: Muhammad Ziad Ayyash**
 
 #### Alat dan cakupan penggunaan
 
 Saya menggunakan **Claude - Sonnet 5.5 (Free Plan)** selama pengembangan modul ini untuk membantu merancang alur fitur, menghasilkan kode, memperbaiki error, menyusun pengujian, dan mempelajari implementasinya. Penggunaan AI mencakup logika backend dan frontend, bukan hanya penulisan komentar atau perapian kode.
-=======
-
-### Modul Story Progression + 1v1 Challenge (`story`)
-**PIC: Nasywa Namira Suhendro**
-
-#### Alat dan cakupan penggunaan
-
-Saya menggunakan **ChatGPT** selama pengembangan modul ini untuk membantu merancang alur fitur, menghasilkan kode, memperbaiki error, menyusun pengujian, dan mempelajari implementasinya. Penggunaan AI mencakup logika backend dan frontend, bukan hanya penulisan komentar atau perapian kode.
->>>>>>> origin/feat/story
 
 Bantuan AI digunakan pada bagian berikut:
 
 | Bagian | Bentuk bantuan AI |
 | --- | --- |
-<<<<<<< HEAD
-| Models | Memberikan ide untuk membuat `UserBadge` untuk merepresentasikan _ownership_ suatu pengguna terhadap suatu `Badge`, menyarankan untuk menambahkan field data yang berkaitan dengan freeze streak pada `GameProfile`, serta menambah restriksi level pada `GameProfile` dan menambah constraints pada `UserBadge` |
-| Views | Membantu menyusun _services_ yang dibutuhkan modul, serta membantu menyusun context yang dibutuhkan view streak dan level |
+| Models | Memberikan ide untuk membuat `UserBadge` untuk merepresentasikan *ownership* suatu pengguna terhadap suatu `Badge`, menyarankan untuk menambahkan field data yang berkaitan dengan freeze streak pada `GameProfile`, serta menambah restriksi level pada `GameProfile` dan menambah constraints pada `UserBadge` |
+| Views | Membantu menyusun *services* yang dibutuhkan modul, serta membantu menyusun context yang dibutuhkan view streak dan level |
 | Template | Membantu memberikan desain awal untuk halaman streak, level, dan form untuk badge |
 | Form | - |
 | Interaktivitas sisi klien | Membantu mengimplementasikan fitur filter, sort, dan delete pada halaman badge |
-| Pengujian | Membantu menyusun skenario dan kode unit test untuk _service_ milik gamifikasi dan tampilan halaman |
+| Pengujian | Membantu menyusun skenario dan kode unit test untuk *service* milik gamifikasi dan tampilan halaman |
 
 #### Strategi penggunaan prompt
 
-Prompt diberikan secara bertahap per fitur dengan menyertakan konteks proyek dan file. Untuk _bugfixing_, saya meminta AI untuk menjelaskan cara kerja bagian kode yang ia ubah, serta alasan mengapa menggunakan pendekatan tersebut.
+Prompt diberikan secara bertahap per fitur dengan menyertakan konteks proyek dan file. Untuk *bugfixing*, saya meminta AI untuk menjelaskan cara kerja bagian kode yang ia ubah, serta alasan mengapa menggunakan pendekatan tersebut.
 
-Saya juga meminta tolong AI untuk meringkas dan menjelaskan fitur yang ditambahkan oleh anggota kelompok lain supaya bisa mengintegrasikan fitur yang mereka implementasi dengan fitur - fitur gamifikasi.
+Saya juga meminta tolong AI untuk meringkas dan menjelaskan fitur yang ditambahkan oleh anggota kelompok lain supaya bisa mengintegrasikan fitur yang mereka implementasi dengan fitur-fitur gamifikasi.
 
 #### Keterbatasan AI dan perbaikan selama pengerjaan
 
 Beberapa masalah yang ditemukan selama pengerjaan adalah:
 
 1. **Desain tidak mempertimbangkan base.** Beberapa desain awal halaman memiliki berbagai macam ketidaksesuaian akibat AI menggunakan nama class yang konflik dengan CSS yang sudah disediakan base.
-2. **Membuat suatu file besar monolitik.** Sejumlah desain html yang diberikan menyantumkan semua elemen di dalam satu file html daripada memisahkannya menjadi bagian - bagian seperti file css tersendiri dan partial html.
-3. **Ketidaksesuaian implementasi minggu pada halaman streak.** Pada halaman streak, AI menampilkan aktivitas 7 hari kebelakang. Seharusnya menampilkan hari - hari dalam seminggu secara terurut.
+2. **Membuat suatu file besar monolitik.** Sejumlah desain html yang diberikan menyantumkan semua elemen di dalam satu file html daripada memisahkannya menjadi bagian-bagian seperti file css tersendiri dan partial html.
+3. **Ketidaksesuaian implementasi minggu pada halaman streak.** Pada halaman streak, AI menampilkan aktivitas 7 hari kebelakang. Seharusnya menampilkan hari-hari dalam seminggu secara terurut.
 4. **Memasukkan data yang tidak ada ke dalam context view.** Dalam membantu menulis context untuk suatu view, AI menggunakan fungsi, data, dan field yang tidak ada/belum diimplementasi.
 
 Perbaikan tersebut dilakukan melalui perubahan file baik secara manual maupun dengan bantuan arahan AI. Saya tidak menganggap seluruh saran awal AI sudah benar tanpa perlu dicoba atau disesuaikan.
-=======
-| Story/Comic | Membantu menyusun model, URL, view, dan template untuk daftar serta pembaca komik; pencarian dan penyaringan bab; pembatasan akses berdasarkan level; serta pengelolaan bab dan halaman oleh pengguna staff. |
-| Konten cerita | Membantu menyusun judul, narasi, dialog, dan ilustrasi cerita yang mengikuti perjalanan makanan serta tema jejak karbon. |
-| Data awal komik | Membantu menyiapkan data JSON dan data migration untuk memasukkan konten awal ke database. |
-| Milestone Rewards | Membantu menyusun syarat milestone level dan streak, pencatatan reward, tampilan progres, serta proses klaim dan pemberian XP dengan pencegahan klaim berulang. |
-| Tantangan 1v1 | Membantu menyusun alur pembuatan, penerimaan, pembatalan, dan pembaruan tantangan; penentuan periode pertandingan; perhitungan skor berdasarkan catatan makanan; serta penyimpanan hasil akhir. |
-| Antarmuka dan AJAX | Membantu menulis HTML, CSS, dan JavaScript untuk tampilan modul serta pembaruan bagian halaman melalui fetch dan respons JSON. |
-| Pengujian | Membantu menyusun skenario dan kode unit test untuk akses pengguna, pembatasan level, klaim reward, perubahan status tantangan, serta perhitungan hasil pertandingan. |
-| Penyesuaian visual | Membantu memasang aset maskot pada beberapa tampilan aplikasi dan menyusun ulang halaman Story menjadi layer desain yang dapat diedit di Figma berdasarkan screenshot. |
-
-#### Strategi penggunaan prompt
-
-Prompt diberikan secara bertahap per fitur dengan menyertakan konteks proyek, potongan kode, struktur file, screenshot tampilan, atau pesan error yang sedang terjadi. Saya meminta kode yang mudah dibaca, penjelasan lokasi perubahan file, langkah implementasi yang berurutan, dan komentar yang membantu menjelaskan fungsi kode.
-
-Saya juga meminta agar pendekatan implementasi disesuaikan dengan pola yang dipelajari dalam tutorial PBP. Penjelasan tambahan diminta ketika terdapat istilah, alur, atau bagian kode yang belum saya pahami.
-
-Ketika hasil implementasi belum sesuai, saya mengirimkan kembali hasil pengujian, screenshot, atau pesan error sebagai konteks untuk memperbaiki jawaban sebelumnya. Dengan demikian, implementasi berkembang melalui beberapa iterasi.
-
-#### Keterbatasan AI dan perbaikan selama pengerjaan
-
-Saran AI tidak selalu langsung sesuai dengan kondisi repository maupun lingkungan deployment. Beberapa masalah yang ditemukan selama pengerjaan adalah:
-
-1. **Perbedaan database lokal dan deployment.** Halaman Story di server sempat tidak menampilkan bab meskipun kode dan template sudah tersedia. Dari proses pemeriksaan, pengiriman kode saja belum cukup untuk menyediakan isi database. Perbaikannya dilakukan dengan menambahkan data migration untuk konten awal komik, yang perlu dijalankan pada database deployment.
-
-2. **Ketidaksesuaian nama migration.** Salah satu instruksi menggunakan nama file migration yang tidak sesuai dengan file dalam repository. Nama file diperiksa kembali dan instruksi disesuaikan dengan struktur migration yang sebenarnya.
-
-3. **Ketidaksesuaian import JavaScript.** Setelah perubahan fungsi pemasangan maskot, halaman sempat kosong karena `notifikasi.js` masih mengimpor `avatarSvg`, sementara fungsi tersebut sudah tidak diekspor dari `mascot.js`. Pesan error diperiksa melalui browser Console, kemudian import dan pemanggilan fungsi disesuaikan menjadi `mountMascot`.
-
-4. **Pengaruh data awal terhadap pengujian.** Penambahan konten melalui migration memengaruhi pengujian yang mengasumsikan database cerita kosong. Setup pada pengujian terkait disesuaikan dengan membersihkan data cerita di database pengujian sebelum membuat data uji.
-
-Perbaikan tersebut dilakukan melalui perubahan file secara manual dengan bantuan arahan AI. Saya tidak menganggap seluruh saran awal AI sudah benar tanpa perlu dicoba atau disesuaikan.
->>>>>>> origin/feat/story
 
 #### Validasi dan tanggung jawab
 
@@ -341,7 +298,6 @@ Pengujian yang dilakukan membantu memeriksa perilaku fitur, tetapi tidak menjadi
 
 Saya menggunakan penjelasan AI sebagai pendamping untuk mempelajari alur kode dan melakukan penyesuaian implementasi. Tanggung jawab atas kode, konten, dan perubahan yang saya sertakan dalam proyek tetap berada pada saya sebagai pengembang modul.
 
-<<<<<<< HEAD
 ---
 
 ### Modul Challenge & Notifikasi (`challenge`)
@@ -349,7 +305,7 @@ Saya menggunakan penjelasan AI sebagai pendamping untuk mempelajari alur kode da
 
 #### 1. Pemanfaatan AI dalam Proses Pengembangan
 
-Selama mengerjakan modul Challenge pada aplikasi Suap.in, saya memanfaatkan ChatGPT dan Claude sebagai salah satu sumber bantuan dalam memahami permasalahan teknis dan mengembangkan fungsionalitas aplikasi. Penggunaannya tidak terbatas pada pembuatan potongan kode, tetapi juga mencakup diskusi mengenai pendekatan implementasi, pemeriksaan kesalahan, dan evaluasi hasil pengembangan.
+Selama mengerjakan modul Challenge pada aplikasi Suap.in, saya memanfaatkan **ChatGPT** dan **Claude** sebagai salah satu sumber bantuan dalam memahami permasalahan teknis dan mengembangkan fungsionalitas aplikasi. Penggunaannya tidak terbatas pada pembuatan potongan kode, tetapi juga mencakup diskusi mengenai pendekatan implementasi, pemeriksaan kesalahan, dan evaluasi hasil pengembangan.
 
 Beberapa pekerjaan yang melibatkan bantuan AI antara lain:
 
@@ -375,19 +331,19 @@ Dalam beberapa kasus, saya meminta perubahan dilakukan secara spesifik pada modu
 
 Selama proses pengembangan, terdapat beberapa situasi ketika solusi awal belum memberikan hasil yang diharapkan. Beberapa di antaranya adalah:
 
-**a. Halaman Challenge tidak dapat ditampilkan**
+**a. Halaman Challenge tidak dapat ditampilkan**  
 Setelah melakukan perubahan pada JavaScript, halaman Challenge sempat hanya menampilkan halaman kosong. Pemeriksaan melalui browser Console menunjukkan adanya masalah pada proses import fungsi `markGone` dari `state.js` oleh `notifikasi.js`. Saya menggunakan bantuan ChatGPT untuk memahami penyebab error tersebut, kemudian memeriksa kembali fungsi yang tersedia dan menyesuaikan pemanggilannya.
 
-**b. Riwayat migration tidak sesuai dengan kondisi database**
+**b. Riwayat migration tidak sesuai dengan kondisi database**  
 Ketika menambahkan perubahan pada model Challenge, Django sempat mengalami konflik karena terdapat tabel yang sudah tersedia di database tetapi belum tercatat sesuai dengan nama migration yang digunakan. Saya meminta bantuan untuk memahami hubungan antara file migration dan catatan migration pada database. Setelah itu, saya memeriksa hasil `showmigrations`, menyesuaikan nama file, dan memperbaiki dependency antarmigration.
 
-**c. Kesalahan dalam pembentukan notifikasi**
+**c. Kesalahan dalam pembentukan notifikasi**  
 Pada salah satu proses pengembangan notifikasi, aplikasi menghasilkan `NameError` karena variabel `since` belum didefinisikan ketika digunakan dalam fungsi `build_notifications`. ChatGPT membantu menelusuri bagian kode yang berkaitan dengan error tersebut. Saya kemudian menyesuaikan logika fungsi berdasarkan konteks program yang sebenarnya.
 
-**d. Hasil pengujian reward belum sesuai**
+**d. Hasil pengujian reward belum sesuai**  
 Pengujian terhadap sistem badge menunjukkan bahwa beberapa pencapaian belum tercatat sebagaimana mestinya. Selain itu, terdapat pemanggilan fungsi `ensure_badges` yang belum sesuai dengan fungsi yang tersedia pada modul gamifikasi. Saya menggunakan AI untuk membantu menganalisis hubungan antara proses scan, pemberian XP, dan pencatatan badge. Hasil analisis tersebut kemudian menjadi dasar untuk pemeriksaan dan perbaikan kode.
 
-**e. Ketidakkonsistenan periode laporan**
+**e. Ketidakkonsistenan periode laporan**  
 Dalam pengembangan laporan mingguan, ditemukan bahwa pembagian periode laporan perlu diselaraskan dengan periode leaderboard. Saya mendiskusikan logika perhitungan tanggal dengan ChatGPT agar laporan menggunakan rentang minggu yang tetap, bukan sekadar menghitung tujuh hari ke belakang dari tanggal pengguna membuka halaman.
 
 Permasalahan-permasalahan tersebut memperlihatkan bahwa jawaban AI tidak selalu dapat langsung diterapkan. Diperlukan pemeriksaan tambahan terhadap kode dan hasil eksekusi untuk memastikan solusi yang digunakan benar-benar menyelesaikan masalah.
