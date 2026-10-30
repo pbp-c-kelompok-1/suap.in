@@ -6,6 +6,7 @@ import tempfile
 from datetime import timedelta
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -13,7 +14,7 @@ from django.utils import timezone
 from PIL import Image
 
 from .friends import friends_of
-from .models import Canteen, CommunityPost, Friendship, University
+from .models import CampusMembership, Canteen, CommunityPost, Friendship, University
 
 
 def tiny_photo():
@@ -144,6 +145,7 @@ class NearestCanteenTests(TestCase):
     """Aturan rekomendasi lokasi di PRD (radius, akurasi GPS, kantin berdekatan)."""
 
     def setUp(self):
+        cache.clear()  # kuota rate limit mulai dari nol
         ui = University.objects.create(name='Universitas Indonesia', short_name='UI', city='Depok')
         make = lambda n, f, lat, lng: Canteen.objects.create(name=n, faculty=f, university=ui, latitude=lat, longitude=lng)
         self.kancil = make('Kancil', 'Fasilkom', '-6.370254', '106.827638')
@@ -296,6 +298,7 @@ class FriendshipTests(TestCase):
     """CRUD Friendship sesuai README: kirim, lihat, terima/tolak, unfriend."""
 
     def setUp(self):
+        cache.clear()  # kuota rate limit mulai dari nol
         self.iqbal = User.objects.create_user('iqbal', password='pass12345x')
         self.nami = User.objects.create_user('nami', password='pass12345x')
         self.acan = User.objects.create_user('acan', password='pass12345x')
@@ -523,3 +526,289 @@ class LeaderboardSeedTests(TestCase):
         self.assertNotIn('fajar.nugroho', [u.username for u in weekly])  # akun "libur" minggu ini
         self.assertEqual(users_with_xp().first().username, 'fajar.nugroho')
         self.assertEqual(User.objects.get(username='bima.aditya').campus.university.short_name, 'UI')
+
+
+
+class FriendFormTests(TestCase):
+    """Validasi Create/Update Friendship lewat Django Form."""
+
+    def setUp(self):
+        cache.clear()
+        self.iqbal = User.objects.create_user('iqbal', password='pass12345x')
+        self.nami = User.objects.create_user('nami', password='pass12345x')
+
+    def test_request_form_rules(self):
+        from .forms import FriendRequestForm
+        form = FriendRequestForm({'username': '  nami '}, sender=self.iqbal)
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.receiver, self.nami)
+        self.assertFalse(FriendRequestForm({'username': ''}, sender=self.iqbal).is_valid())
+        self.assertFalse(FriendRequestForm({'username': 'x' * 151}, sender=self.iqbal).is_valid())
+        form = FriendRequestForm({'username': 'iqbal'}, sender=self.iqbal)
+        self.assertFalse(form.is_valid())
+        self.assertIn('dirimu sendiri', form.errors['username'][0])
+
+    def test_unknown_username_gets_clear_error_not_404(self):
+        self.client.force_login(self.iqbal)
+        res = self.client.post(reverse('social:friend_request_send'), {'username': 'hantu'},
+                               HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json()['message'], 'User "hantu" tidak ditemukan.')
+        self.assertFalse(Friendship.objects.exists())
+
+    def test_response_form_rejects_unknown_action(self):
+        from .forms import FriendResponseForm, first_error
+        f = Friendship.objects.create(from_user=self.iqbal, to_user=self.nami)
+        self.client.force_login(self.nami)
+        url = reverse('social:friend_request_respond', args=[f.pk])
+        for data in ({'action': 'hapus'}, {}):
+            res = self.client.post(url, data, HTTP_X_REQUESTED_WITH='fetch')
+            self.assertEqual(res.status_code, 400)
+        f.refresh_from_db()
+        self.assertEqual(f.status, Friendship.PENDING)
+        self.assertEqual(first_error(FriendResponseForm({'action': 'x'})), 'Pilihan harus terima atau tolak.')
+        unchecked = FriendResponseForm({})
+        self.assertEqual(first_error(unchecked), 'Pilih terima atau tolak.')
+
+    def test_first_error_fallback(self):
+        from .forms import FriendResponseForm, first_error
+        form = FriendResponseForm({'action': 'accept'})
+        self.assertTrue(form.is_valid())
+        self.assertTrue(form.accept)
+        self.assertEqual(first_error(form), 'Data tidak valid.')
+
+    def test_wrong_method_and_missing_friendship(self):
+        self.client.force_login(self.iqbal)
+        self.assertEqual(self.client.get(reverse('social:friend_request_send')).status_code, 405)
+        self.assertEqual(self.client.post(reverse('social:friendship_delete', args=[999])).status_code, 404)
+
+
+class CampusChoiceTests(TestCase):
+    """Create/Update kampus: AJAX (JSON) dan form biasa (redirect)."""
+
+    def setUp(self):
+        cache.clear()
+        self.ui = University.objects.create(name='Universitas Indonesia', short_name='UI', city='Depok')
+        self.itb = University.objects.create(name='Institut Teknologi Bandung', short_name='ITB', city='Bandung')
+        self.user = User.objects.create_user('iqbal', password='pass12345x')
+        self.url = reverse('social:choose_campus')
+
+    def test_requires_login(self):
+        res = self.client.post(self.url, {'university': self.ui.pk})
+        self.assertEqual(res.status_code, 302)
+        self.assertFalse(CampusMembership.objects.exists())
+
+    def test_page_and_plain_form(self):
+        self.client.force_login(self.user)
+        self.assertContains(self.client.get(self.url), 'Kampus kamu')
+        res = self.client.post(self.url, {'university': self.ui.pk}, follow=True)
+        self.assertRedirects(res, reverse('social:campus_war'))
+        self.assertContains(res, 'Kampusmu sekarang UI.')
+        self.assertEqual(self.user.campus.university, self.ui)
+        res = self.client.post(self.url, {'university': ''})
+        self.assertContains(res, 'Pilih kampus dulu.')
+
+    def test_ajax_create_then_update(self):
+        self.client.force_login(self.user)
+        res = self.client.post(self.url, {'university': self.ui.pk}, HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(res.json(), {'ok': True, 'message': 'Kampusmu sekarang UI.', 'campus': 'UI'})
+        res = self.client.post(self.url, {'university': self.itb.pk}, HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(res.json()['campus'], 'ITB')
+        self.assertEqual(CampusMembership.objects.get().university, self.itb)  # update, bukan baris baru
+
+    def test_ajax_invalid_choice(self):
+        self.client.force_login(self.user)
+        res = self.client.post(self.url, {'university': 999}, HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.json()['message'], 'Kampus tidak ditemukan.')
+        self.assertFalse(CampusMembership.objects.exists())
+
+    def test_campus_war_page_and_partial(self):
+        CampusMembership.objects.create(user=self.user, university=self.ui)
+        self.client.force_login(self.user)
+        page = self.client.get(reverse('social:campus_war'))
+        self.assertContains(page, 'id="campusForm"')
+        self.assertEqual(page.context['my_campus'], self.ui)
+        partial = self.client.get(reverse('social:campus_war'), {'partial': '1'})
+        self.assertNotContains(partial, '<html')
+        self.assertContains(partial, 'Institut Teknologi Bandung')
+        guest = self.client_class().get(reverse('social:campus_war'))
+        self.assertNotContains(guest, 'id="campusForm"')
+
+
+class LeaderboardTabTests(TestCase):
+    def setUp(self):
+        from gamification.services import award_xp
+        self.user = User.objects.create_user('iqbal', password='pass12345x')
+        award_xp(self.user, 30)
+
+    def test_partial_and_invalid_tab(self):
+        res = self.client.get(reverse('social:leaderboard'), {'tab': 'galaksi'})
+        self.assertEqual(res.context['tab'], 'national')
+        self.assertContains(res, 'data-tab="friends"')
+        partial = self.client.get(reverse('social:leaderboard'), {'tab': 'national', 'partial': '1'})
+        self.assertNotContains(partial, '<html')
+        self.assertContains(partial, 'iqbal')
+
+    def test_guest_and_no_campus_states(self):
+        self.assertTrue(self.client.get(reverse('social:leaderboard'), {'tab': 'campus'}).context['need_login'])
+        self.client.force_login(self.user)
+        self.assertTrue(self.client.get(reverse('social:leaderboard'), {'tab': 'campus'}).context['need_campus'])
+
+
+class RateLimitTests(TestCase):
+    """Endpoint sensitif dibatasi supaya tidak bisa di-spam."""
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user('iqbal', password='pass12345x')
+        for i in range(12):
+            User.objects.create_user(f'teman{i}', password='pass12345x')
+        self.client.force_login(self.user)
+
+    def send(self, username, ajax=True):
+        headers = {'HTTP_X_REQUESTED_WITH': 'fetch'} if ajax else {}
+        return self.client.post(reverse('social:friend_request_send'), {'username': username}, **headers)
+
+    def test_friend_requests_are_limited(self):
+        for i in range(10):
+            self.assertEqual(self.send(f'teman{i}').status_code, 200)
+        res = self.send('teman10')
+        self.assertEqual(res.status_code, 429)
+        self.assertEqual(res['Retry-After'], '60')
+        self.assertFalse(res.json()['ok'])
+        self.assertEqual(Friendship.objects.count(), 10)  # permintaan ke-11 tidak dibuat
+
+        res = self.send('teman11', ajax=False)  # form biasa: redirect + pesan
+        self.assertRedirects(res, reverse('social:friends'))
+        self.assertFalse(Friendship.objects.filter(to_user__username='teman11').exists())
+
+    def test_limit_is_per_user_and_ignores_get(self):
+        for i in range(10):
+            self.send(f'teman{i}')
+        self.assertEqual(self.client.get(reverse('social:friends')).status_code, 200)
+        self.client.force_login(User.objects.get(username='teman11'))
+        self.assertEqual(self.send('iqbal').status_code, 200)
+
+    def test_nearest_api_is_limited(self):
+        url = reverse('social:api_nearest')
+        for _ in range(20):
+            self.client.post(url, {'lat': 'x', 'lng': 'y'})
+        res = self.client.post(url, {'lat': '-6.37', 'lng': '106.82'})
+        self.assertEqual(res.status_code, 429)
+        self.assertIn('Terlalu banyak', res.json()['error'])
+
+    def test_counter_recovers_when_key_expires(self):
+        from unittest import mock
+        from .ratelimit import hit
+        request = self.client.request().wsgi_request
+        with mock.patch('social.ratelimit.cache.incr', side_effect=ValueError):
+            self.assertTrue(hit('test', request, limit=1, window=60))
+
+    def test_guest_is_identified_by_ip(self):
+        from .ratelimit import client_id
+        request = self.client_class().request().wsgi_request
+        self.assertTrue(client_id(request).startswith('ip:'))
+
+
+class ApiEdgeCaseTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        ui = University.objects.create(name='Universitas Indonesia', short_name='UI', city='Depok')
+        self.kancil = Canteen.objects.create(name='Kancil', faculty='Fasilkom', university=ui,
+                                             latitude='-6.370254', longitude='106.827638')
+
+    def test_bad_range_and_page_fall_back(self):
+        res = self.client.get(reverse('social:api_canteens'), {'range': 'tahun'})
+        self.assertEqual(res.json()['range'], 'today')
+        res = self.client.get(reverse('social:api_canteen_posts', args=[self.kancil.pk]), {'range': 'x', 'page': 'abc'})
+        self.assertEqual(res.status_code, 200)
+
+    def test_nearest_ignores_bad_accuracy_and_handles_no_canteen(self):
+        res = self.client.post(reverse('social:api_nearest'), {'lat': '-6.370254', 'lng': '106.827638', 'accuracy': 'abc'})
+        self.assertEqual(res.json()['recommended'], self.kancil.pk)
+        Canteen.objects.update(is_active=False)
+        res = self.client.post(reverse('social:api_nearest'), {'lat': '-6.37', 'lng': '106.82'})
+        self.assertEqual(res.json()['reason'], 'no_canteen')
+
+
+class AdminAndModelTests(TestCase):
+    def test_admin_hide_and_unhide_posts(self):
+        admin_user = User.objects.create_superuser('admin', 'a@a.id', 'pass12345x')
+        ui = University.objects.create(name='Universitas Indonesia', short_name='UI', city='Depok')
+        canteen = Canteen.objects.create(name='Kancil', faculty='Fasilkom', university=ui,
+                                         latitude='-6.370254', longitude='106.827638')
+        post = CommunityPost.objects.create(user=admin_user, canteen=canteen, food_name='Soto', is_shared=True)
+        self.client.force_login(admin_user)
+        url = reverse('admin:social_communitypost_changelist')
+        self.client.post(url, {'action': 'hide_posts', '_selected_action': [post.pk]})
+        post.refresh_from_db()
+        self.assertTrue(post.is_hidden)
+        self.client.post(url, {'action': 'unhide_posts', '_selected_action': [post.pk]})
+        post.refresh_from_db()
+        self.assertFalse(post.is_hidden)
+
+    def test_str_methods(self):
+        from .models import PostReport, XPActivity
+        u = User.objects.create_user('iqbal', password='pass12345x')
+        n = User.objects.create_user('nami', password='pass12345x')
+        ui = University.objects.create(name='Universitas Indonesia', short_name='UI', city='Depok')
+        canteen = Canteen.objects.create(name='Kancil', faculty='Fasilkom', university=ui,
+                                         latitude='-6.370254', longitude='106.827638')
+        post = CommunityPost.objects.create(user=u, canteen=canteen)
+        self.assertEqual(str(ui), 'UI')
+        self.assertEqual(str(CampusMembership.objects.create(user=u, university=ui)), 'iqbal @ UI')
+        self.assertEqual(str(canteen), 'Kancil (Fasilkom)')
+        self.assertEqual(str(post), 'iqbal - Tanpa nama')
+        self.assertIn('iqbal', str(PostReport.objects.create(user=u, post=post, reason='spam')))
+        self.assertEqual(str(Friendship(from_user=u, to_user=n)), 'iqbal -> nami (pending)')
+        self.assertEqual(str(XPActivity(user=u, amount=5)), 'iqbal +5 XP')
+
+    def test_time_ago_just_now_and_week_start(self):
+        from .services import time_ago, week_start
+        self.assertEqual(time_ago(timezone.now()), 'baru saja')
+        self.assertEqual(week_start().weekday(), 0)
+
+
+class ManagementCommandTests(TestCase):
+    def test_seed_leaderboard_command(self):
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        from gamification.models import GameProfile
+        me = User.objects.create_user('iqbal', password='pass12345x')
+        out = io.StringIO()
+        call_command('seed_leaderboard', friends_of='iqbal', stdout=out)
+        self.assertIn('akun contoh leaderboard siap', out.getvalue())
+        self.assertTrue(GameProfile.objects.filter(user__username='zahra.aulia').exists())
+        self.assertEqual(len(friends_of(me)), 5)
+        call_command('seed_leaderboard', friends_of='iqbal', stdout=io.StringIO())  # aman diulang
+        self.assertEqual(len(friends_of(me)), 5)
+        with self.assertRaises(CommandError):
+            call_command('seed_leaderboard', friends_of='hantu', stdout=io.StringIO())
+
+    def test_seed_leaderboard_accepts_pending_request_from_seed_user(self):
+        from django.core.management import call_command
+        me = User.objects.create_user('iqbal', password='pass12345x')
+        call_command('seed_leaderboard', stdout=io.StringIO())
+        zahra = User.objects.get(username='zahra.aulia')
+        Friendship.objects.create(from_user=zahra, to_user=me)
+        call_command('seed_leaderboard', friends_of='iqbal', stdout=io.StringIO())
+        self.assertEqual(Friendship.objects.get(from_user=zahra).status, Friendship.ACCEPTED)
+
+    def test_unseed_leaderboard(self):
+        from gamification.models import GameProfile
+        from .models import XPActivity
+        from .seed import seed_leaderboard, unseed_leaderboard, ensure_canteens
+        ensure_canteens(University, Canteen, log=lambda *a: None)
+        seed_leaderboard(User, University, CampusMembership, GameProfile, XPActivity, timezone.localtime(),
+                         log=lambda *a: None)
+        unseed_leaderboard(User, CampusMembership, GameProfile, XPActivity)
+        self.assertFalse(GameProfile.objects.exists())
+        self.assertFalse(XPActivity.objects.exists())
+
+    @override_settings(MEDIA_ROOT=TEST_MEDIA)
+    def test_seed_community_command(self):
+        from django.core.management import call_command
+        out = io.StringIO()
+        call_command('seed_community', stdout=out)
+        self.assertIn('post showcase dibuat', out.getvalue())
