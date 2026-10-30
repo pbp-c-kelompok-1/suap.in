@@ -3,6 +3,3 @@ from django.apps import AppConfig
 
 class SocialConfig(AppConfig):
     name = 'social'
-
-    def ready(self):
-        from . import signals  # noqa: F401  (mendaftarkan pencatat XP)

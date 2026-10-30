@@ -12,7 +12,9 @@ from .forms import CampusForm, FriendRequestForm, FriendResponseForm, first_erro
 from .friends import FriendshipError, friend_ids, relation_status, remove, respond, send_request
 from .models import Canteen, CampusMembership, Friendship
 from .ratelimit import rate_limit
-from .services import canteen_pins, canteen_posts, month_start, ranked_campuses, scope_ranking, users_with_xp
+from .services import (
+    canteen_pins, canteen_posts, carbon_leaderboard, leaderboard_rows, min_scans, month_start, ranked_campuses,
+)
 
 
 def is_ajax(request):
@@ -27,21 +29,26 @@ LEADERBOARD_TABS = [('friends', 'Teman'), ('campus', 'Kampus'), ('national', 'Na
 
 
 def leaderboard_view(request):
-    """Leaderboard sepanjang waktu (total XP dari modul gamification).
+    """Leaderboard sepanjang waktu, berbasis emisi CO2 dari semua scan (modul scanner).
 
-    Leaderboard mingguan ada di halaman Laporan (modul challenge) dan memakai
-    sumber XP yang sama lewat social.services.users_with_xp(since=...).
+    Aturannya sama dengan peringkat mingguan di Laporan (modul challenge): rata-rata
+    gram CO2 per scan, makin kecil makin atas, minimal beberapa scan. Bedanya hanya
+    periode: halaman ini menghitung semua scan, Laporan hanya minggu ini.
     ?partial=1 hanya merender daftar peringkat (dipakai saat ganti tab lewat AJAX).
     """
     tab = request.GET.get('tab', 'national')
     if tab not in dict(LEADERBOARD_TABS):
         tab = 'national'
-    users, reason = scope_ranking(users_with_xp(), request.user, tab)
+    ranked, mine, reason = carbon_leaderboard(request.user, tab)
+    need = min_scans()
     template = 'social/partials/leaderboard_region.html' if is_partial(request) else 'social/leaderboard.html'
     return render(request, template, {
         'tab': tab,
         'tabs': LEADERBOARD_TABS,
-        'ranking': list(users[:50]),
+        'ranking': leaderboard_rows(ranked, request.user),
+        'min_scans': need,
+        'my_scans': mine['scans'] if mine else 0,
+        'scans_needed': max(0, need - mine['scans']) if mine else need,
         'need_login': reason == 'login',
         'need_campus': reason == 'campus',
         'no_friends': reason == 'no_friends',
@@ -55,6 +62,7 @@ def campus_war_view(request):
     template = 'social/partials/campus_war_region.html' if is_partial(request) else 'social/campus_war.html'
     return render(request, template, {
         'campuses': ranked_campuses(month_start()),
+        'min_scans': min_scans(),
         'my_campus': membership.university if membership else None,
         'form': CampusForm(instance=membership),
     })
