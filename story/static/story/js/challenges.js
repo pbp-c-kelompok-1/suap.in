@@ -47,7 +47,6 @@
             }
 
             const data = await response.json();
-
             // HTML udah dirender Django, tinggal ganti daftar yg tampil
             content.innerHTML = data.html;
             feedback.textContent = data.message;
