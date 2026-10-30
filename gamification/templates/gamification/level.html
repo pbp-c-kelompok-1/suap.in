@@ -73,7 +73,7 @@
 
 <div class="raise card" style="margin-top:26px">
   <div class="sec-head">
-    <h2>Dapatkan XP!</h2><span>{{ total_xp }} XP total</span>
+    <h2>Dapatkan XP!</h2>
   </div>
   <div class="howxp">
     <div class="stat"><b>+10</b><span>Tiap simpan scan</span></div>
@@ -96,14 +96,13 @@
   <a href="{% url 'authentication:login' %}" class="btn ok">Masuk</a>
 </div>
 {% endif %}
-<div class="mascot-wrap" id="mascotLevel" style="margin:0 auto 12px; transform: translate(256px, -50px);"></div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
   (function () {
     var slot = document.getElementById('mascotLevel');
-    var tpl = document.getElementById('mascot-tpl');
+    var tpl = document.getElementById('es-mascot-tpl');
     if (slot && tpl) slot.appendChild(tpl.content.cloneNode(true));
   })();
 </script>
