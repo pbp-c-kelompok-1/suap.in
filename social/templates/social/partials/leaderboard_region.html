@@ -16,21 +16,27 @@
     <p>Tambahkan teman dulu supaya bisa bersaing dengan mereka.</p>
     <a href="{% url 'social:friends' %}" class="btn" style="text-decoration:none;margin-top:14px"><svg class="i"><use href="#i-userplus"/></svg>Cari teman</a>
   </div>
-{% elif not ranking %}
-  <div class="empty">
-    <h3>Belum ada yang punya XP</h3>
-    <p>Scan makananmu untuk mengumpulkan XP pertama!</p>
-    <a href="{% url 'scanner:scan' %}" class="btn ok" style="text-decoration:none;margin-top:14px"><svg class="i"><use href="#i-camera"/></svg>Scan makanan</a>
-  </div>
 {% else %}
+  {% if user.is_authenticated and scans_needed %}
+  <p class="lb-hint" role="note">Kamu baru punya {{ my_scans }} scan. Butuh <b>{{ scans_needed }} scan lagi</b> untuk masuk peringkat.</p>
+  {% endif %}
+  {% if ranking %}
   <ol class="rank">
-    {% for u in ranking %}
-    <li{% if u == user %} class="me"{% endif %}>
-      <span class="pos{% if forloop.counter == 1 %} p1{% elif forloop.counter == 2 %} p2{% elif forloop.counter == 3 %} p3{% endif %}">{{ forloop.counter }}</span>
-      <span class="av" style="background:var(--teal-500)">{{ u.username|first|upper }}</span>
-      <span class="nm">{{ u.username }}<small style="display:block;color:var(--text-2);font-weight:700">{{ u.campus.university.short_name|default:"Belum pilih kampus" }}</small></span>
-      <span class="co">{{ u.xp }} <small>XP</small></span>
+    {% for row in ranking %}
+    {% if row.gap %}<li class="rank-gap" aria-hidden="true">&#8943;</li>{% endif %}
+    <li{% if row.is_me or row.user == user %} class="me"{% endif %}>
+      <span class="pos{% if row.pos == 1 %} p1{% elif row.pos == 2 %} p2{% elif row.pos == 3 %} p3{% endif %}">{{ row.pos }}</span>
+      <span class="av" style="background:var(--teal-500)">{{ row.user.username|first|upper }}</span>
+      <span class="nm">{{ row.user.username }}<small style="display:block;color:var(--text-2);font-weight:700">{{ row.user.campus.university.short_name|default:"Belum pilih kampus" }} · {{ row.scans }} scan</small></span>
+      <span class="co">{{ row.avg }} <small>g CO₂/scan</small><small style="display:block">total {{ row.kg }} kg</small></span>
     </li>
     {% endfor %}
   </ol>
+  {% else %}
+  <div class="empty">
+    <h3>Belum ada yang masuk peringkat</h3>
+    <p>Peringkat muncul setelah ada yang punya minimal {{ min_scans }} scan. Yuk mulai scan makananmu!</p>
+    <a href="{% url 'scanner:scan' %}" class="btn ok" style="text-decoration:none;margin-top:14px"><svg class="i"><use href="#i-camera"/></svg>Scan makanan</a>
+  </div>
+  {% endif %}
 {% endif %}

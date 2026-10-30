@@ -34,7 +34,8 @@
 {% endif %}
 
 <div class="raise card">
-  <div class="sec-head"><h2>Peringkat kampus bulan ini</h2><span>rata-rata XP per mahasiswa</span></div>
+  <div class="sec-head"><h2>Peringkat kampus bulan ini</h2><span>rata-rata emisi per scan</span></div>
+  <p style="margin:-4px 0 16px;color:var(--text-2);font-weight:700;font-size:.92rem">Dihitung dari semua scan anggota kampus bulan ini. Makin kecil makin baik. Kampus perlu minimal {{ min_scans }} scan untuk masuk peringkat.</p>
   <div id="campusRegion" aria-live="polite">
     {% include 'social/partials/campus_war_region.html' %}
   </div>

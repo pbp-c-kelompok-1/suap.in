@@ -5,7 +5,8 @@
 <div class="topbar"><h1>Peringkat</h1>{% include 'partials/auth_status.html' %}</div>
 
 <div class="raise card">
-  <div class="sec-head"><h2>Leaderboard sepanjang waktu</h2><span>total XP</span></div>
+  <div class="sec-head"><h2>Leaderboard sepanjang waktu</h2><span>rata-rata emisi per scan</span></div>
+  <p class="lb-rule">Makin kecil emisi rata-rata per scan, makin tinggi peringkatmu. Minimal {{ min_scans }} scan untuk masuk peringkat.</p>
 
   <div class="tabs" role="tablist" aria-label="Level peringkat" id="rankTabs">
     {% for key, label in tabs %}
@@ -28,6 +29,9 @@
 {% block extra_head %}
 <style>
   #rankRegion { transition: opacity .15s; }
+  .lb-rule { margin: -4px 0 16px; color: var(--text-2); font-weight: 700; font-size: .92rem; }
+  .lb-hint { margin: 0 0 14px; padding: 12px 16px; border-radius: 16px; background: var(--teal-50); color: var(--teal-700); font-weight: 700; }
+  .rank-gap { list-style: none; text-align: center; color: var(--text-2); font-weight: 800; padding: 0 !important; box-shadow: none !important; background: none !important; }
   #rankRegion[aria-busy="true"] { opacity: .45; }
 </style>
 {% endblock %}

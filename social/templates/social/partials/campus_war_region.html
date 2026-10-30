@@ -1,9 +1,17 @@
 <ol class="rank">
   {% for c in campuses %}
   <li{% if c == my_campus %} class="me"{% endif %}>
-    <span class="pos{% if forloop.counter == 1 %} p1{% elif forloop.counter == 2 %} p2{% elif forloop.counter == 3 %} p3{% endif %}">{{ forloop.counter }}</span>
-    <span class="nm">{{ c.short_name }}<small style="display:block;color:var(--text-2);font-weight:700">{{ c.name }} · {{ c.member_count }} mahasiswa</small></span>
-    <span class="co">{{ c.avg_xp }} <small>XP</small><small style="display:block">total {{ c.total_xp }}</small></span>
+    {% if c.pos %}
+    <span class="pos{% if c.pos == 1 %} p1{% elif c.pos == 2 %} p2{% elif c.pos == 3 %} p3{% endif %}">{{ c.pos }}</span>
+    {% else %}
+    <span class="pos" title="Belum masuk peringkat">–</span>
+    {% endif %}
+    <span class="nm">{{ c.short_name }}<small style="display:block;color:var(--text-2);font-weight:700">{{ c.name }} · {{ c.active_members }} dari {{ c.member_count }} mahasiswa aktif · {{ c.scans }} scan</small></span>
+    {% if c.pos %}
+    <span class="co">{{ c.avg_co2 }} <small>g CO₂/scan</small><small style="display:block">total {{ c.total_kg }} kg</small></span>
+    {% else %}
+    <span class="co"><small>butuh {{ min_scans }} scan</small></span>
+    {% endif %}
   </li>
   {% empty %}
   <div class="empty"><h3>Belum ada data kampus</h3></div>
