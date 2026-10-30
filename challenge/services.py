@@ -1,4 +1,5 @@
 
+import re
 from datetime import timedelta
 
 from django.utils import timezone
@@ -14,10 +15,12 @@ from django.db.models.functions import TruncDate
 
 from social.models import CampusMembership
 from social.services import time_ago
+from story.challenge_services import get_challenge_scores
 from story.models import FriendChallenge
 from django.urls import reverse
 
 from .models import ChallengeProfile, DailyQuestSet, Notification, QuestClaim
+from .duels import finalize_due_duels
 from .ranking import compute_leaderboard
 
 
@@ -44,6 +47,7 @@ NOTIF_BADGE_WINDOW_DAYS = 14   # lencana lebih lama dari ini tidak dibuatkan not
 NOTIF_READ_KEEP_DAYS = 30      # notifikasi yang sudah dibaca disimpan selama ini
 NOTIF_TOMBSTONE_DAYS = 60      # jejak notifikasi yang dihapus user
 NOTIF_MAX_SHOWN = 100
+NOTIF_CHALLENGE_WINDOW_DAYS = 14   # kabar tantangan (diterima/ditolak/hasil) lebih lama dari ini tidak dibuat lagi
 
 
 def count_scans(logs):
@@ -422,31 +426,104 @@ def build_notifications(user, profile, scans_today, quests, extra=None):
                 f"{badge.description or 'Ada lencana baru.'} Yuk kejar!",
                 link='#/profil', created_at=badge.created_at)
 
-    # Friend Challenge yang masih menunggu jawaban
-    pending = list(
+    # Tantangan teman (alurnya ada di app story)
+    # Simpan dulu pemenang tantangan yang waktunya sudah habis, supaya hasilnya
+    # langsung muncul tanpa menunggu tombol "Perbarui" ditekan.
+    finalize_due_duels(user, now)
+    window = now - timedelta(days=NOTIF_CHALLENGE_WINDOW_DAYS)
+    challenge_link = reverse('story:challenge_list')
+    duels = list(
         FriendChallenge.objects
-        .filter(opponent=user, status="pending")
-        .select_related("challenger")
-        .order_by("-created_at")[:5]
+        .filter(Q(challenger=user) | Q(opponent=user))
+        .select_related('challenger', 'opponent')
+        .order_by('-created_at')[:30]
     )
+    people = {c.challenger_id for c in duels} | {c.opponent_id for c in duels}
     names = {
         p.user_id: p.display_name
-        for p in ChallengeProfile.objects.filter(user_id__in=[c.challenger_id for c in pending])
+        for p in ChallengeProfile.objects.filter(user_id__in=people)
         if p.display_name
     }
-    for challenge in pending:
-        who = names.get(challenge.challenger_id) or challenge.challenger.username
-        add(f"challenge-{challenge.pk}", 'teman', 'sword', 'purple',
-            f"{who} menantangmu!",
-            f"Adu {challenge.get_metric_display().lower()} selama {challenge.duration_days} hari.",
-            link=reverse('story:challenge_list'),
-            ephemeral=True, created_at=challenge.created_at)
+
+    def who(u):
+        return names.get(u.pk) or u.username
+
+    for c in duels:
+        i_challenged = c.challenger_id == user.pk
+        other = c.opponent if i_challenged else c.challenger
+        name = who(other)
+
+        if c.status == 'pending' and not i_challenged:
+            add(f"challenge-{c.pk}", 'teman', 'sword', 'purple',
+                f"{name} menantangmu!",
+                f"Adu {_lower_first(c.get_metric_display())} selama {c.duration_days} hari. "
+                "Terima atau tolak langsung di sini.",
+                link=challenge_link, ephemeral=True, created_at=c.created_at)
+
+        if (i_challenged and c.status in ('active', 'finished')
+                and c.started_at and c.started_at >= window):
+            ends = timezone.localtime(c.ends_at).strftime('%d/%m %H:%M')
+            add(f"challenge-accepted-{c.pk}", 'teman', 'sword', 'green',
+                f"{name} menerima tantanganmu!",
+                f"Waktu main {c.duration_days} hari sudah dimulai, batas akhir {ends}.",
+                link=challenge_link, created_at=c.started_at)
+
+        if c.status == 'finished' and c.finished_at and c.finished_at >= window:
+            scores = get_challenge_scores(c)
+            mine, theirs = (
+                (scores['challenger'], scores['opponent']) if i_challenged
+                else (scores['opponent'], scores['challenger'])
+            )
+            detail = (f"Kamu {_challenge_score_text(c.metric, mine)} vs "
+                      f"{name} {_challenge_score_text(c.metric, theirs)}.")
+            if c.winner_id == user.pk:
+                title, body, tone, ico = (f"Kamu menang melawan {name}!",
+                                          f"{detail} Pertahankan semangatnya!", 'green', 'trophy')
+            elif c.winner_id:
+                title, body, tone, ico = (f"{name} memenangkan tantangan",
+                                          f"{detail} Jangan menyerah, tantang lagi untuk membalas!",
+                                          'amber', 'sword')
+            else:
+                title, body, tone, ico = (f"Tantangan melawan {name} berakhir seri",
+                                          f"{detail} Saatnya babak penentuan!", 'blue', 'sword')
+            add(f"challenge-result-{c.pk}", 'teman', ico, tone, title, body,
+                link=challenge_link, created_at=c.finished_at)
 
     # Kejadian lain yang dihitung di luar (mis. perubahan peringkat)
     for ev in (extra or []):
         add(**ev)
 
     return cands
+
+
+def _lower_first(text):
+    """'Emisi CO\u2082 terendah' -> 'emisi CO\u2082 terendah' (tanpa merusak huruf besar 'CO\u2082')."""
+    return text[:1].lower() + text[1:]
+
+
+def _challenge_score_text(metric, score):
+    if metric == 'most_scans':
+        return f"{score['count']} scan"
+    return f"{round(score['co2']):,} g CO\u2082".replace(',', '.')
+
+
+_PENDING_CHALLENGE_KEY = re.compile(
+    r'^challenge-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$'
+)
+
+
+def notification_actions(n):
+    """Tombol aksi untuk notifikasi "menantangmu!": terima atau tolak lewat endpoint story."""
+    match = _PENDING_CHALLENGE_KEY.match(n.key)
+    if not (match and n.ephemeral and n.kind == 'teman'):
+        return []
+    pk = match.group(1)
+    return [
+        {'id': 'accept', 'label': 'Terima', 'tone': 'ok',
+         'url': reverse('story:challenge_accept', args=[pk])},
+        {'id': 'decline', 'label': 'Tolak', 'tone': 'ghost',
+         'url': reverse('challenge:challenge_decline', args=[pk])},
+    ]
 
 
 def rank_notifications(user, rank_data, today=None):
@@ -550,6 +627,7 @@ def serialize_notification(n):
         "time": time_ago(n.created_at),
         "read": n.read_at is not None,
         "link": n.link,
+        "actions": notification_actions(n),
     }
 
 

@@ -41,14 +41,17 @@ def week_start(day):
 def friend_user_ids(user):
     """SATU-SATUNYA tempat yang menentukan siapa "teman" seorang user.
 
-    Sistem pertemanan terpisah belum tersedia. Untuk saat ini, pengguna yang
-    pernah terhubung lewat FriendChallenge dapat saling muncul di tab Teman.
-    Logika ini dipusatkan di sini agar leaderboard memakai satu sumber aturan.
+    Sistem pertemanan terpisah belum tersedia. Untuk saat ini, dua pengguna
+    dianggap terhubung bila salah satu menantang yang lain DAN tantangannya
+    diterima (sedang berlangsung atau sudah selesai). Tantangan yang masih
+    menunggu atau ditolak TIDAK menjadikan siapa pun teman, jadi orang asing
+    tidak bisa memasukkan dirinya ke tab Teman hanya dengan mengirim tantangan.
     """
     from story.models import FriendChallenge
 
-    sent = FriendChallenge.objects.filter(challenger=user).values_list('opponent_id', flat=True)
-    received = FriendChallenge.objects.filter(opponent=user).values_list('challenger_id', flat=True)
+    accepted = FriendChallenge.objects.filter(status__in=('active', 'finished'))
+    sent = accepted.filter(challenger=user).values_list('opponent_id', flat=True)
+    received = accepted.filter(opponent=user).values_list('challenger_id', flat=True)
     return set(sent).union(received)
 
 

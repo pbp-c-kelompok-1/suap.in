@@ -14,4 +14,5 @@ urlpatterns = [
     path('api/data/', views.api_challenge_data, name='api_data'),
     path('api/stats/', views.api_stats_view, name='api_stats'),
     path('profile/save/', views.save_profile_view, name='save_profile'),
+    path('duels/<uuid:pk>/decline/', views.decline_duel_view, name='challenge_decline'),
 ]
