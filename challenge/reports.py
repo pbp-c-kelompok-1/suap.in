@@ -11,7 +11,8 @@ from django.utils import timezone
 
 from scanner.models import CarbonBudget, FoodLog
 
-from .services import DEFAULT_BUDGET_GRAMS
+from .ranking import weekly_positions
+from .services import DAY_ABBR, DEFAULT_BUDGET_GRAMS
 
 REPORT_HISTORY_WEEKS = 26  # sekitar 6 bulan
 DAYS_IN_YEAR = 365
@@ -19,6 +20,28 @@ DAYS_IN_YEAR = 365
 
 def _monday(day):
     return day - timedelta(days=day.weekday())
+
+
+def _week_budget_g(monday, budgets):
+    return sum(budgets.get(monday + timedelta(days=i), DEFAULT_BUDGET_GRAMS) for i in range(7))
+
+
+def _day_cells(monday, days, budgets):
+    """Tujuh hari (Sen-Min) untuk grafik batang kecil di detail laporan."""
+    peak = max([g for g in days.values()] + [DEFAULT_BUDGET_GRAMS]) or 1
+    cells = []
+    for i in range(7):
+        day = monday + timedelta(days=i)
+        grams = days.get(day)
+        budget = budgets.get(day, DEFAULT_BUDGET_GRAMS)
+        cells.append({
+            'label': DAY_ABBR[i],
+            'has': grams is not None,
+            'kg': round((grams or 0) / 1000, 1),
+            'over': grams is not None and grams > budget,
+            'h': max(6, round(grams / peak * 100)) if grams is not None else 0,
+        })
+    return cells
 
 
 def build_report_history(user, today=None):
@@ -62,6 +85,8 @@ def build_report_history(user, today=None):
         else:
             loose[monday] = loose.get(monday, 0) + 1
 
+    positions = weekly_positions(user, first_monday, range_end)
+
     weeks = []
     monday = first_monday
     while monday <= last_monday:
@@ -85,6 +110,9 @@ def build_report_history(user, today=None):
             'delta_percent': None,
             'delta_abs': None,
             'bar': 0,
+            'rank': positions.get(monday),
+            'days': _day_cells(monday, days, budgets),
+            'budget_kg': round(_week_budget_g(monday, budgets) / 7000, 1),
         })
         monday += timedelta(weeks=1)
 

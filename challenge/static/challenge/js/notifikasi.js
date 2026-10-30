@@ -41,7 +41,10 @@ $('#notifs').addEventListener('click', e => {
     if (!n) return;
     if (!n.read) { n.read = true; sync(urls.notifRead, { ids: [n.id] }); }
     renderNotifs();
-    if (n.link) location.hash = n.link;   /* mis. #/misi untuk klaim hadiah */
+    if (n.link) {
+      if (n.link.startsWith('/')) location.href = n.link;   /* halaman lain, mis. daftar tantangan */
+      else location.hash = n.link;                          /* mis. #/misi untuk klaim hadiah */
+    }
   }
   if (del) {
     const id = del.dataset.del; const row = del.closest('.n-wrap');

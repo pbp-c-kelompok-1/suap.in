@@ -5,7 +5,7 @@ import { mountMascots } from './mascot.js';
 import { renderChest, renderQuests } from './misi.js';
 import { renderNotifs } from './notifikasi.js';
 import { renderProfile } from './profil.js';
-import { renderRank, renderReport } from './laporan.js';
+import { renderRank, renderReport, renderWeeklyRankingRecap } from './laporan.js';
 import { route } from './router.js';
 import './theme.js';
 
@@ -16,6 +16,6 @@ initSubTabs('#page-auth', '#authTabs');
 initSubTabs('#page-scanner', '#scanTabs');
 renderPubProfile('me');
 renderCond('sehat');
-renderQuests(); renderChest(); renderReport(); renderRank(); renderNotifs(); renderProfile();
+renderQuests(); renderChest(); renderReport(); renderWeeklyRankingRecap(); renderRank(); renderNotifs(); renderProfile();
 if (!location.hash) location.hash = '#/misi';
 route();

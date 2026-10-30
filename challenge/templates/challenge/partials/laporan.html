@@ -30,17 +30,12 @@
       <section class="rh" aria-labelledby="rhTitle">
         <h3 id="rhTitle">Laporan minggu-minggu sebelumnya</h3>
         {% if history.weeks %}
-        <ol class="rh-list">
-          {% for w in history.weeks|slice:":4" %}{% include 'challenge/partials/_report_week.html' %}{% endfor %}
-        </ol>
-        {% if history.weeks|length > 4 %}
-        <details class="rh-more">
-          <summary>Lihat {{ history.weeks|length|add:"-4" }} minggu lainnya</summary>
+        <p class="rh-hint">Geser ke kanan atau kiri untuk membuka ringkasan tiap minggu.</p>
+        <div class="rh-scroll" id="rhScroller" role="region" aria-label="Riwayat laporan mingguan, geser horizontal" tabindex="0">
           <ol class="rh-list">
-            {% for w in history.weeks|slice:"4:" %}{% include 'challenge/partials/_report_week.html' %}{% endfor %}
+            {% for w in history.weeks %}{% include 'challenge/partials/_report_week.html' %}{% endfor %}
           </ol>
-        </details>
-        {% endif %}
+        </div>
         <p class="rh-note">Dicatat sejak akunmu dibuat ({{ history.joined|date:"j M Y" }}) dan disimpan sampai sekitar 6 bulan terakhir.</p>
         {% else %}
         <p class="rh-empty">Belum ada laporan sebelumnya. Rekap mingguan akan tersimpan otomatis setelah minggu ini selesai.</p>
@@ -130,6 +125,7 @@
     <div class="rep-actions">
       <button class="btn" id="shareBtn"><svg class="i"><use href="#i-share"/></svg>Bagikan ke Story</button>
       <button class="btn ghost" id="challengeBtn"><svg class="i"><use href="#i-sword"/></svg>Tantang teman</button>
+      <a class="btn ghost" href="{% url 'social:leaderboard' %}" style="text-decoration:none"><svg class="i"><use href="#i-trophy"/></svg>Leaderboard Social</a>
     </div>
   </div>
 

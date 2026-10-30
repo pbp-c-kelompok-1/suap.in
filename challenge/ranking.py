@@ -41,12 +41,15 @@ def week_start(day):
 def friend_user_ids(user):
     """SATU-SATUNYA tempat yang menentukan siapa "teman" seorang user.
 
-    Sekarang kosong karena model pertemanan belum ada. Saat sudah ada, isi fungsi
-    ini dengan id teman yang statusnya DITERIMA kedua belah pihak (accepted).
-    Tab Teman di peringkat otomatis ikut, dan menu lain (notifikasi, tantangan,
-    profil publik) sebaiknya juga memanggil fungsi ini, bukan membuat aturan sendiri.
+    Sistem pertemanan terpisah belum tersedia. Untuk saat ini, pengguna yang
+    pernah terhubung lewat FriendChallenge dapat saling muncul di tab Teman.
+    Logika ini dipusatkan di sini agar leaderboard memakai satu sumber aturan.
     """
-    return set()
+    from story.models import FriendChallenge
+
+    sent = FriendChallenge.objects.filter(challenger=user).values_list('opponent_id', flat=True)
+    received = FriendChallenge.objects.filter(opponent=user).values_list('challenger_id', flat=True)
+    return set(sent).union(received)
 
 
 def _weekly_entries(first_monday, last_day):
@@ -88,6 +91,34 @@ def rank_entries(entries, min_scans=MIN_SCANS_FOR_RANK):
     return [dict(e, pos=i) for i, e in enumerate(eligible, start=1)]
 
 
+def weekly_positions(user, first_monday, last_day):
+    """{senin: {'pos','total','campus_pos','campus_total'}} untuk minggu-minggu yang dimaksud.
+
+    Dipakai Laporan supaya peringkat tiap minggu memakai aturan yang sama persis
+    dengan leaderboard (rata-rata emisi per scan, minimal MIN_SCANS_FOR_RANK).
+    """
+    by_week = _weekly_entries(first_monday, last_day)
+    membership = CampusMembership.objects.filter(user=user).select_related('university').first()
+    campus_ids = set()
+    if membership:
+        campus_ids = set(
+            CampusMembership.objects.filter(university=membership.university)
+            .values_list('user_id', flat=True)
+        )
+    out = {}
+    for monday, entries in by_week.items():
+        nat = _find(rank_entries(entries), user.pk)
+        camp_ranked = rank_entries([e for e in entries if e['user_id'] in campus_ids]) if membership else []
+        camp = _find(camp_ranked, user.pk)
+        out[monday] = {
+            'pos': nat['pos'] if nat else None,
+            'total': len(rank_entries(entries)),
+            'campus_pos': camp['pos'] if camp else None,
+            'campus_total': len(camp_ranked),
+        }
+    return out
+
+
 def _find(ranked, user_id):
     return next((e for e in ranked if e['user_id'] == user_id), None)
 
@@ -109,7 +140,7 @@ def _item(entry, user, profiles):
         'carbon': round(entry['carbon']),
         'kg': round(entry['carbon'] / 1000, 2),
         'avg': round(entry['avg']),
-        'is_me': entry['user_id'] == user.pk,
+        'is_me': user is not None and entry['user_id'] == user.pk,
     }
 
 
@@ -295,6 +326,51 @@ def compute_leaderboard(user, today=None):
         'userTotalCarbon': total_carbon,
         'campusRank': camp_me['pos'] if camp_me else None,
     }
+
+
+def leaderboard_for(user, scope, today=None, limit=50):
+    """Daftar peringkat minggu ini untuk halaman Leaderboard sosial.
+
+    Memakai aturan dan data yang SAMA dengan peringkat di Laporan, jadi posisi
+    seseorang tidak pernah beda antara dua halaman. `user` boleh anonim (hanya
+    scope 'nasional'). Mengembalikan (items, kode_kosong).
+    """
+    today = today or timezone.localdate()
+    monday = week_start(today)
+    entries = _weekly_entries(monday, today).get(monday, [])
+    authed = bool(user and user.is_authenticated)
+
+    if scope == 'kampus':
+        if not authed:
+            return [], 'need_login'
+        membership = CampusMembership.objects.filter(user=user).first()
+        if not membership:
+            return [], 'no_campus'
+        ids = set(CampusMembership.objects.filter(university=membership.university)
+                  .values_list('user_id', flat=True))
+        entries = [e for e in entries if e['user_id'] in ids]
+    elif scope == 'teman':
+        if not authed:
+            return [], 'need_login'
+        friends = friend_user_ids(user)
+        if not friends:
+            return [], 'no_friends'
+        entries = [e for e in entries if e['user_id'] in (friends | {user.pk})]
+
+    ranked = rank_entries(entries)[:limit]
+    profiles = _profiles([e['user_id'] for e in ranked])
+    campuses = {
+        m.user_id: m.university.short_name
+        for m in CampusMembership.objects.filter(user_id__in=[e['user_id'] for e in ranked])
+        .select_related('university')
+    }
+    items = []
+    for e in ranked:
+        item = _item(e, user if authed else None, profiles)
+        item['is_me'] = authed and e['user_id'] == user.pk
+        item['campus'] = campuses.get(e['user_id'], '')
+        items.append(item)
+    return items, ''
 
 
 def build_rankings(user, today=None):
