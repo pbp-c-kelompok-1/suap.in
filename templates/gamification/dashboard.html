@@ -14,6 +14,7 @@
 .dash-link:hover { transform: translateY(-3px); }
 @media (max-width: 680px) {
   .dashboard-widget-container > div { width: 100%; flex-direction: row; justify-content: space-evenly;}
+  .dash-link { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 1; }
 }
 {% endblock %}
 

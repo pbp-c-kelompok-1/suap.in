@@ -224,6 +224,9 @@ def create_badge_ajax(request):
     if not request.user.is_authenticated:
         return JsonResponse({'error': 'Authentication required'}, status=401)
 
+    if not request.user.is_staff:
+        return JsonResponse({'error': 'Staff permission required'}, status=403)
+
     form = BadgeForm(request.POST)
     if form.is_valid():
         convert_to_slug = lambda s: s.lower().replace(" ", "-")
@@ -240,6 +243,9 @@ def create_badge_ajax(request):
 def delete_badge(request, code):
     if not request.user.is_authenticated:
         return JsonResponse({'error': 'Authentication required'}, status=401)
+
+    if not request.user.is_staff:
+        return JsonResponse({'error': 'Staff permission required'}, status=403)
     
     badge = get_object_or_404(Badge, code=code)
     badge.delete()

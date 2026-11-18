@@ -27,7 +27,6 @@ async function addBadge(event) {
         })
         .then((response) => {
             if (response.ok) {
-                submitButton.disabled = false;
                 badgeForm.reset();
                 fetchBadges();
             }
@@ -35,6 +34,9 @@ async function addBadge(event) {
         .catch((error) => {
             console.log("Gagal menambahkan lencana: ", error);
         })
+        .finally(() =>
+            { submitButton.disabled = false; }
+        )
 }
 
 badgeForm.addEventListener("submit", addBadge);
