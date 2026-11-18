@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, api_views
 
 app_name = 'scanner'
 
@@ -10,4 +10,7 @@ urlpatterns = [
     path('log/', views.daily_log_view, name='daily_log'),
     path('log/delete/<int:log_id>/', views.delete_log_view, name='delete_log'),
     path('api/status/', views.api_scan_status, name='api_status'),
+    path('api/items/', api_views.api_food_items, name='api_food_items'),
+    path('api/logs/', api_views.api_food_logs, name='api_food_logs'),
+    path('api/budget/', api_views.api_carbon_budget, name='api_carbon_budget'),
 ]
