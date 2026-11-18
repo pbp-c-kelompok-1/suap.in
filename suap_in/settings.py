@@ -15,6 +15,7 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     'testserver',
     '.pws.cs.ui.ac.id',
+    '10.0.2.2',  # alamat laptop dilihat dari emulator Android (untuk uji aplikasi Flutter)
 ]
 
 CSRF_TRUSTED_ORIGINS = ['https://*.pws.cs.ui.ac.id'] + [
@@ -39,11 +40,13 @@ INSTALLED_APPS = [
     'social',
     'challenge',
     'story',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -130,3 +133,10 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Suap.in <noreply@suap.in>')
+
+# --- Aplikasi mobile Flutter (PAS) ---
+# Flutter yang dijalankan di Chrome (flutter run -d chrome) memanggil API dari origin lain
+# (contoh http://localhost:54321 -> http://localhost:8000), jadi browser butuh izin CORS.
+# Hanya localhost yang diizinkan, dan cookie login boleh ikut (CORS_ALLOW_CREDENTIALS).
+CORS_ALLOWED_ORIGIN_REGEXES = [r'^http://(localhost|127\.0\.0\.1)(:\d+)?$']
+CORS_ALLOW_CREDENTIALS = True

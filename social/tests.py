@@ -1,3 +1,20 @@
+# =====================================================================================
+# UNIT TEST modul Social.
+#
+# Cara menjalankan:
+#     python manage.py test social                         -> semua test social
+#     python manage.py test social.tests.FriendshipTests   -> satu kelas saja
+#     coverage run --source=social manage.py test social && coverage report -m
+#
+# Pola setiap test = Arrange -> Act -> Assert:
+#     Arrange : siapkan data (buat user, kantin, scan)
+#     Act     : lakukan aksi (self.client.get/post ke URL, atau panggil fungsi langsung)
+#     Assert  : cek hasilnya (assertEqual, assertTrue, assertContains, ...)
+#
+# TestCase Django memakai DATABASE SEMENTARA yang dikosongkan setiap test,
+# jadi data asli di db.sqlite3 tidak tersentuh.
+# self.client = "browser palsu" untuk mengirim request ke view tanpa server sungguhan.
+# =====================================================================================
 import io
 import os
 from pathlib import Path
@@ -17,15 +34,25 @@ from .friends import friends_of
 from .models import CampusMembership, Canteen, CommunityPost, Friendship, University
 
 
+# Helper: buat foto JPEG 4x4 piksel di memori (tanpa file sungguhan) untuk field photo.
+# SimpleUploadedFile = meniru file yang diupload user lewat form.
 def tiny_photo():
     buf = io.BytesIO()
     Image.new('RGB', (4, 4), 'green').save(buf, format='JPEG')
     return SimpleUploadedFile('makan.jpg', buf.getvalue(), content_type='image/jpeg')
 
 
+# Folder sementara untuk menyimpan foto selama test, supaya folder media/ asli tidak kotor.
+# Dipakai lewat @override_settings(MEDIA_ROOT=TEST_MEDIA) dan dihapus di tearDownClass.
 TEST_MEDIA = tempfile.mkdtemp()
 
 
+# Helper PALING PENTING untuk test leaderboard: membuat FoodLog palsu.
+# Contoh: scan(iqbal, 500, times=3)          -> 3 scan @500 g -> rata-rata 500 g/scan
+#         scan(iqbal, 1200, times=3, items=3) -> 3 foto, tiap foto 3 makanan @400 g (tetap 3 scan)
+#         scan(nami, 300, times=3, days_ago=60) -> scan 60 hari lalu (untuk test periode)
+# Semua item satu foto diberi ai_raw_response (key) yang sama, persis seperti scanner asli.
+# scanned_at di-update terpisah karena kolom itu auto_now_add (tidak bisa diisi saat create).
 def scan(user, grams, times=1, days_ago=0, items=1):
     """Buat `times` scan untuk user. Satu scan = satu foto berisi `items` item makanan."""
     from scanner.models import FoodLog
@@ -37,13 +64,16 @@ def scan(user, grams, times=1, days_ago=0, items=1):
             FoodLog.objects.filter(pk=log.pk).update(scanned_at=when)
 
 
+# Test pin peta Community (social:api_canteens -> services.canteen_pins).
 @override_settings(MEDIA_ROOT=TEST_MEDIA)
 class CommunityMapTests(TestCase):
+    # Dijalankan sekali setelah semua test di kelas ini selesai: hapus folder foto sementara.
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(TEST_MEDIA, ignore_errors=True)
         super().tearDownClass()
 
+    # setUp dijalankan SEBELUM SETIAP test: 1 user, 1 kampus, 2 kantin (Kancil & Kantek).
     def setUp(self):
         self.user = User.objects.create_user('nami', password='pass12345x')
         ui = University.objects.create(name='Universitas Indonesia', short_name='UI', city='Depok')
@@ -52,22 +82,30 @@ class CommunityMapTests(TestCase):
         self.kantek = Canteen.objects.create(name='Kantek', faculty='Teknik', university=ui,
                                              latitude='-6.363214', longitude='106.824636')
 
+    # Helper: buat CommunityPost di kantin tertentu. **extra untuk mengubah field lain,
+    # contoh self.post(kancil, 9999, is_hidden=True).
     def post(self, canteen, co2, **extra):
         data = {'user': self.user, 'photo': tiny_photo(), 'canteen': canteen,
                 'total_co2_grams': co2, 'is_shared': True}
         data.update(extra)
         return CommunityPost.objects.create(**data)
 
+    # Helper: panggil API pin, pastikan 200, lalu ubah list menjadi dict {nama_kantin: pin}
+    # supaya mudah dicek: pins["Kancil"]["post_count"].
     def pins(self, **params):
         res = self.client.get(reverse('social:api_canteens'), params)
         self.assertEqual(res.status_code, 200)
         return {p['name']: p for p in res.json()['canteens']}
 
+    # Halaman peta bisa dibuka tamu (tanpa login) dan berisi elemen peta (id communityMap).
     def test_map_page_open_for_guest(self):
         res = self.client.get(reverse('social:community_map'))
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, 'communityMap')
 
+    # Arrange: 4 post di Kancil, tapi 1 tidak dibagikan & 1 disembunyikan admin.
+    # Assert : yang dihitung hanya 2 -> rata-rata (400+800)/2 = 600 g -> hijau (<= 600).
+    #          Kantek tanpa post -> status "none" (pin abu-abu).
     def test_counts_only_shared_and_visible_posts(self):
         self.post(self.kancil, 400)
         self.post(self.kancil, 800)
@@ -80,6 +118,7 @@ class CommunityMapTests(TestCase):
         self.assertEqual(pins['Kantek']['post_count'], 0)
         self.assertEqual(pins['Kantek']['status'], 'none')
 
+    # Post 3 hari lalu tidak masuk filter "today", tapi masuk "week" dan "all".
     def test_range_filter(self):
         old = self.post(self.kancil, 500)
         CommunityPost.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=3))
@@ -88,40 +127,49 @@ class CommunityMapTests(TestCase):
         self.assertEqual(self.pins(range='week')['Kancil']['post_count'], 2)
         self.assertEqual(self.pins(range='all')['Kancil']['post_count'], 2)
 
+    # Filter fakultas Teknik -> hanya pin Kantek yang dikirim.
     def test_faculty_filter(self):
         pins = self.pins(faculty='Teknik')
         self.assertEqual(list(pins), ['Kantek'])
 
+    # 2500 g > 1200 g -> status merah.
     def test_high_co2_is_red(self):
         self.post(self.kantek, 2500)
         self.assertEqual(self.pins()['Kantek']['status'], 'red')
 
 
+# Test panel detail kantin (social:api_canteen_posts -> services.canteen_posts).
 @override_settings(MEDIA_ROOT=TEST_MEDIA)
 class CanteenPanelTests(TestCase):
+    # Hapus folder foto sementara setelah semua test kelas ini.
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(TEST_MEDIA, ignore_errors=True)
         super().tearDownClass()
 
+    # 1 user, 1 kampus, 1 kantin Kancil.
     def setUp(self):
         self.user = User.objects.create_user('nami', password='pass12345x')
         ui = University.objects.create(name='Universitas Indonesia', short_name='UI', city='Depok')
         self.kancil = Canteen.objects.create(name='Kancil', faculty='Fasilkom', university=ui,
                                              latitude='-6.370254', longitude='106.827638')
 
+    # Helper: buat post di Kancil (default 500 g, dibagikan).
     def post(self, **extra):
         data = {'user': self.user, 'photo': tiny_photo(), 'canteen': self.kancil,
                 'total_co2_grams': 500, 'is_shared': True}
         data.update(extra)
         return CommunityPost.objects.create(**data)
 
+    # Helper: panggil API panel Kancil, pastikan 200, kembalikan JSON-nya.
     def get(self, **params):
         url = reverse('social:api_canteen_posts', args=[self.kancil.pk])
         res = self.client.get(url, params)
         self.assertEqual(res.status_code, 200)
         return res.json()
 
+    # Ringkasan hanya menghitung 2 post yang dibagikan: rata-rata CO2 (900+300)/2 = 600,
+    # rata-rata harga (15000+12000)/2 = 13500. Post terbaru (Gado-gado) muncul paling atas.
     def test_panel_summary_and_post_fields(self):
         self.post(food_name='Nasi ayam', price=15000, total_co2_grams=900)
         self.post(food_name='Gado-gado', price=12000, total_co2_grams=300)
@@ -135,6 +183,8 @@ class CanteenPanelTests(TestCase):
         self.assertEqual(newest['status'], 'green')
         self.assertTrue(newest['photo_url'])
 
+    # Trik "ambil 21 tampilkan 20": 21 post -> halaman 1 berisi 20 & has_more True,
+    # halaman 2 berisi 1 & has_more False.
     def test_pagination(self):
         for _ in range(21):
             self.post()
@@ -145,6 +195,7 @@ class CanteenPanelTests(TestCase):
         self.assertEqual(len(second['posts']), 1)
         self.assertFalse(second['has_more'])
 
+    # Kantin nonaktif -> get_object_or_404 di view membalas 404.
     def test_inactive_canteen_is_404(self):
         self.kancil.is_active = False
         self.kancil.save()
@@ -155,6 +206,8 @@ class CanteenPanelTests(TestCase):
 class NearestCanteenTests(TestCase):
     """Aturan rekomendasi lokasi di PRD (radius, akurasi GPS, kantin berdekatan)."""
 
+    # cache.clear() -> kuota rate limit dari test sebelumnya tidak terbawa.
+    # Kancil & Dallas sengaja berdekatan (untuk kasus ambiguous); Kantek agak jauh.
     def setUp(self):
         cache.clear()  # kuota rate limit mulai dari nol
         ui = University.objects.create(name='Universitas Indonesia', short_name='UI', city='Depok')
@@ -163,31 +216,37 @@ class NearestCanteenTests(TestCase):
         self.dallas = make('Dallas', 'FMIPA', '-6.369713', '106.827477')
         self.kantek = make('Kantek', 'Teknik', '-6.363214', '106.824636')
 
+    # Helper: POST lat/lng/accuracy ke API nearest, kembalikan JSON.
     def ask(self, lat, lng, accuracy=20):
         res = self.client.post(reverse('social:api_nearest'), {'lat': lat, 'lng': lng, 'accuracy': accuracy})
         self.assertEqual(res.status_code, 200)
         return res.json()
 
+    # Berdiri tepat di koordinat Kantek -> direkomendasikan Kantek & ia kandidat pertama.
     def test_recommends_canteen_when_standing_on_it(self):
         data = self.ask(-6.363214, 106.824636)
         self.assertEqual(data['recommended'], self.kantek.id)
         self.assertEqual(data['candidates'][0]['name'], 'Kantek')
 
+    # Di tengah Kancil-Dallas -> selisih jarak < 30 m -> tidak menebak (reason ambiguous).
     def test_close_pair_is_ambiguous(self):
         # titik tengah Kancil-Dallas: selisih jarak keduanya < 30 m
         data = self.ask(-6.3699835, 106.8275575)
         self.assertIsNone(data['recommended'])
         self.assertEqual(data['reason'], 'ambiguous')
 
+    # Titik jauh di luar radius semua kantin -> reason far.
     def test_far_from_any_canteen(self):
         data = self.ask(-6.40, 106.80)
         self.assertIsNone(data['recommended'])
         self.assertEqual(data['reason'], 'far')
 
+    # Akurasi GPS 500 m (> 200 m) -> reason inaccurate walau posisinya tepat di Kantek.
     def test_inaccurate_gps_gives_no_recommendation(self):
         data = self.ask(-6.363214, 106.824636, accuracy=500)
         self.assertEqual(data['reason'], 'inaccurate')
 
+    # lat bukan angka -> 400 Bad Request (bukan error 500).
     def test_bad_input(self):
         res = self.client.post(reverse('social:api_nearest'), {'lat': 'abc', 'lng': '1'})
         self.assertEqual(res.status_code, 400)
@@ -197,11 +256,15 @@ class NearestCanteenTests(TestCase):
 class ShareFromScanTests(TestCase):
     """Alur Scanner -> Community lewat halaman hasil scan."""
 
+    # Hapus folder foto sementara setelah semua test kelas ini.
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree(TEST_MEDIA, ignore_errors=True)
         super().tearDownClass()
 
+    # Meniru keadaan SETELAH user upload foto di scanner: session berisi hasil deteksi AI
+    # (scan_result) dan foto base64 (scan_photo) berukuran besar 2000x1500.
+    # session harus di-save() supaya tersimpan ke test client.
     def setUp(self):
         import base64
         self.user = User.objects.create_user('nami', password='pass12345x')
@@ -217,19 +280,24 @@ class ShareFromScanTests(TestCase):
         session['scan_photo'] = 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode()
         session.save()
 
+    # Helper: menekan tombol simpan di halaman hasil scan (view milik modul scanner).
     def save(self, **fields):
         return self.client.post(reverse('scanner:save_log'), fields)
 
+    # Halaman hasil scan menampilkan form "Bagikan ke Community" dengan nama makanan terisi otomatis.
     def test_result_page_shows_share_form(self):
         res = self.client.get(reverse('scanner:result'))
         self.assertContains(res, 'Bagikan ke Community')
         self.assertContains(res, 'value="Nasi putih, Ayam goreng"')
         self.assertContains(res, 'Kancil')
 
+    # Tanpa centang community_share -> tidak ada post yang dibuat.
     def test_not_shared_by_default(self):
         self.save()
         self.assertEqual(CommunityPost.objects.count(), 0)
 
+    # Dicentang -> post dibuat: total CO2 = 240 + 890 = 1130, terhubung ke 2 FoodLog,
+    # dan foto dikompres sehingga sisi terpanjang <= 1080 px.
     def test_share_creates_post(self):
         self.save(community_share='1', community_canteen=str(self.kancil.id),
                   community_food_name='Nasi ayam', community_price='15000')
@@ -243,6 +311,8 @@ class ShareFromScanTests(TestCase):
         with Image.open(post.photo.path) as img:
             self.assertLessEqual(max(img.size), 1080)
 
+    # Pilih "other" -> canteen None + lokasi sendiri; nama kosong -> dari hasil scan;
+    # harga "abc" -> None (parse_price).
     def test_custom_location_and_defaults(self):
         self.save(community_share='1', community_canteen='other',
                   community_custom_location='Warung dekat kos', community_food_name='', community_price='abc')
@@ -257,6 +327,8 @@ class ShareFromScanTests(TestCase):
 class SeedShowcaseTests(TestCase):
     """Data awal showcase: foto dari static, aman dijalankan berkali-kali."""
 
+    # mock.patch.object -> mengganti sementara lokasi folder foto & file JSON seed dengan
+    # versi buatan test (folder temp), supaya test tidak bergantung pada file asli.
     def setUp(self):
         import json
         from unittest import mock
@@ -281,14 +353,18 @@ class SeedShowcaseTests(TestCase):
         seed.ensure_canteens(University, Canteen, log=lambda *a: None)
         self.seed = seed
 
+    # Kembalikan patch & hapus folder sementara setelah setiap test.
     def tearDown(self):
         for p in self.patches:
             p.stop()
         shutil.rmtree(self.tmp, ignore_errors=True)
 
+    # Helper: jalankan seed_community_posts dengan log dibisukan.
     def run_seed(self):
         return self.seed.seed_community_posts(User, Canteen, CommunityPost, log=lambda *a: None)
 
+    # IDEMPOTENT = dijalankan berkali-kali hasilnya sama: run pertama membuat 2 post
+    # (foto hilang dilewati), run kedua membuat 0. Akun seed tidak bisa dipakai login.
     def test_fixtures_loaded_and_seed_is_idempotent(self):
         self.assertEqual(Canteen.objects.count(), 6)
         self.assertEqual(self.run_seed(), 2)  # foto yang sama dipakai di 2 kantin
@@ -298,6 +374,7 @@ class SeedShowcaseTests(TestCase):
         self.assertFalse(post.user.has_usable_password())
         self.assertTrue(post.is_shared)
 
+    # Post seed memakai URL static (/static/social/seed/...), bukan media/.
     def test_seed_photo_served_from_static(self):
         self.run_seed()
         kancil = Canteen.objects.get(name='Kancil')
@@ -308,26 +385,34 @@ class SeedShowcaseTests(TestCase):
 class FriendshipTests(TestCase):
     """CRUD Friendship sesuai README: kirim, lihat, terima/tolak, unfriend."""
 
+    # 3 user: iqbal, nami, acan (acan = "orang luar").
     def setUp(self):
         cache.clear()  # kuota rate limit mulai dari nol
         self.iqbal = User.objects.create_user('iqbal', password='pass12345x')
         self.nami = User.objects.create_user('nami', password='pass12345x')
         self.acan = User.objects.create_user('acan', password='pass12345x')
 
+    # Helper: login tanpa form (force_login).
     def login(self, user):
         self.client.force_login(user)
 
+    # Helper: kirim permintaan teman. ajax=True menambah header X-Requested-With: fetch
+    # (seperti JavaScript asli), sehingga view membalas JSON.
     def send(self, username, ajax=True):
         headers = {'HTTP_X_REQUESTED_WITH': 'fetch'} if ajax else {}
         return self.client.post(reverse('social:friend_request_send'), {'username': username}, **headers)
 
+    # Helper: POST AJAX ke URL aksi (respond/delete) untuk Friendship pk tertentu.
     def act(self, name, pk, **data):
         return self.client.post(reverse(f'social:{name}', args=[pk]), data, HTTP_X_REQUESTED_WITH='fetch')
 
+    # Tamu membuka halaman Teman -> 302 (dialihkan ke login oleh @login_required).
     def test_friends_page_requires_login(self):
         res = self.client.get(reverse('social:friends'))
         self.assertEqual(res.status_code, 302)
 
+    # Alur lengkap: iqbal kirim -> baris PENDING (iqbal -> nami) -> nami terima -> ACCEPTED,
+    # dan friends_of() di kedua sisi saling berisi.
     def test_send_and_accept_request(self):
         self.login(self.iqbal)
         res = self.send('nami')
@@ -343,6 +428,7 @@ class FriendshipTests(TestCase):
         self.assertEqual(set(friends_of(self.iqbal)), {self.nami})
         self.assertEqual(set(friends_of(self.nami)), {self.iqbal})
 
+    # Menambah diri sendiri -> 400. Kirim dua kali ke nami -> yang kedua 400, baris tetap 1.
     def test_cannot_add_self_or_duplicate(self):
         self.login(self.iqbal)
         self.assertEqual(self.send('iqbal').status_code, 400)
@@ -351,6 +437,7 @@ class FriendshipTests(TestCase):
         self.assertEqual(res.status_code, 400)
         self.assertEqual(Friendship.objects.count(), 1)
 
+    # AUTO-ACCEPT: iqbal kirim ke nami, lalu nami kirim balik ke iqbal -> langsung ACCEPTED.
     def test_reverse_request_auto_accepts(self):
         self.login(self.iqbal)
         self.send('nami')
@@ -358,6 +445,7 @@ class FriendshipTests(TestCase):
         self.send('iqbal')
         self.assertEqual(Friendship.objects.get().status, Friendship.ACCEPTED)
 
+    # CEK KEPEMILIKAN: pengirim (iqbal) dan orang luar (acan) tidak bisa menerima -> 400.
     def test_only_receiver_can_respond(self):
         self.login(self.iqbal)
         self.send('nami')
@@ -367,6 +455,7 @@ class FriendshipTests(TestCase):
         self.login(self.acan)
         self.assertEqual(self.act('friend_request_respond', f.pk, action='accept').status_code, 400)
 
+    # Ditolak -> REJECTED. Kirim ulang -> baris yang SAMA kembali PENDING (bukan baris baru).
     def test_reject_then_send_again(self):
         self.login(self.iqbal)
         self.send('nami')
@@ -380,6 +469,8 @@ class FriendshipTests(TestCase):
         f.refresh_from_db()
         self.assertEqual(f.status, Friendship.PENDING)
 
+    # Bagian 1: penerima tidak bisa "hapus" permintaan masuk (harus Tolak); pengirim bisa membatalkan.
+    # Bagian 2: setelah berteman, salah satu pihak bisa unfriend.
     def test_cancel_and_unfriend(self):
         self.login(self.iqbal)
         self.send('nami')
@@ -395,12 +486,16 @@ class FriendshipTests(TestCase):
         self.assertTrue(self.act('friendship_delete', f.pk).json()['ok'])
         self.assertEqual(list(friends_of(self.iqbal)), [])
 
+    # Orang luar (acan) tidak bisa menghapus pertemanan iqbal-nami -> 400, baris tetap ada.
     def test_outsider_cannot_delete(self):
         f = Friendship.objects.create(from_user=self.iqbal, to_user=self.nami, status=Friendship.ACCEPTED)
         self.login(self.acan)
         self.assertEqual(self.act('friendship_delete', f.pk).status_code, 400)
         self.assertTrue(Friendship.objects.exists())
 
+    # Halaman Teman: pencarian "a" menemukan acan (status received) & nami (friends),
+    # daftar permintaan masuk berisi acan, daftar teman berisi nami.
+    # ?partial=1 -> hanya potongan HTML (tidak ada tag <html>).
     def test_page_lists_search_requests_and_friends(self):
         Friendship.objects.create(from_user=self.acan, to_user=self.iqbal)  # masuk
         Friendship.objects.create(from_user=self.iqbal, to_user=self.nami, status=Friendship.ACCEPTED)
@@ -413,11 +508,14 @@ class FriendshipTests(TestCase):
         partial = self.client.get(reverse('social:friends'), {'partial': '1'})
         self.assertNotContains(partial, '<html')
 
+    # Tanpa header AJAX (JavaScript mati) -> dibalas redirect ke halaman Teman.
     def test_non_ajax_form_redirects_with_message(self):
         self.login(self.iqbal)
         res = self.send('nami', ajax=False)
         self.assertRedirects(res, reverse('social:friends'))
 
+    # Integrasi Teman -> Leaderboard: tab Teman iqbal hanya berisi iqbal & nami (bukan acan).
+    # acan yang tidak punya teman mendapat penanda no_friends.
     def test_leaderboard_friends_tab(self):
         Friendship.objects.create(from_user=self.iqbal, to_user=self.nami, status=Friendship.ACCEPTED)
         for u in (self.iqbal, self.nami, self.acan):
@@ -431,6 +529,7 @@ class FriendshipTests(TestCase):
         self.assertTrue(res.context['no_friends'])
 
 
+# Menu Teman di sidebar ada dan ditandai aktif saat halaman Teman dibuka.
 class SidebarFriendsLinkTests(TestCase):
     def test_sidebar_has_friends_link_marked_active(self):
         user = User.objects.create_user('iqbal', password='pass12345x')
@@ -445,6 +544,7 @@ class CarbonLeaderboardTests(TestCase):
     Peringkat (social) = sepanjang waktu, Laporan (challenge) = minggu ini, Campus War = bulan ini.
     """
 
+    # 3 kampus (UGM sengaja tanpa anggota), iqbal & nami di UI, acan di ITB.
     def setUp(self):
         self.ui = University.objects.create(name='Universitas Indonesia', short_name='UI', city='Depok')
         self.itb = University.objects.create(name='Institut Teknologi Bandung', short_name='ITB', city='Bandung')
@@ -456,10 +556,13 @@ class CarbonLeaderboardTests(TestCase):
         CampusMembership.objects.create(user=self.nami, university=self.ui)
         CampusMembership.objects.create(user=self.acan, university=self.itb)
 
+    # Helper: buka leaderboard, kembalikan [(username, avg), ...] + response-nya.
     def ranking(self, **params):
         res = self.client.get(reverse('social:leaderboard'), params)
         return [(row['user'].username, row['avg']) for row in res.context['ranking']], res
 
+    # Rata-rata terkecil di atas (nami 300 < iqbal 900). Scan 60 hari lalu tetap dihitung
+    # (sepanjang waktu). acan baru 2 scan -> belum masuk (minimal 3).
     def test_all_time_ranks_lowest_average_first(self):
         scan(self.nami, 300, times=3, days_ago=60)  # scan lama tetap dihitung
         scan(self.iqbal, 900, times=3)
@@ -468,17 +571,20 @@ class CarbonLeaderboardTests(TestCase):
         self.assertEqual(rows, [('nami', 300), ('iqbal', 900)])
         self.assertContains(res, 'g CO₂/scan')
 
+    # SCAN_COUNT: 3 foto x 3 makanan = 9 FoodLog, tapi dihitung 3 scan.
     def test_one_photo_with_many_items_is_one_scan(self):
         scan(self.iqbal, 1200, times=3, items=3)
         rows, res = self.ranking()
         self.assertEqual(rows, [('iqbal', 1200)])
         self.assertEqual(res.context['ranking'][0]['scans'], 3)
 
+    # Seri 500 vs 500 -> yang scan lebih banyak (nami, 4 scan) di atas.
     def test_tie_goes_to_more_scans(self):
         scan(self.iqbal, 500, times=3)
         scan(self.nami, 500, times=4)
         self.assertEqual([name for name, _ in self.ranking()[0]], ['nami', 'iqbal'])
 
+    # iqbal baru 1 scan -> belum masuk peringkat, dan halaman menampilkan "Butuh 2 scan lagi".
     def test_viewer_sees_how_many_scans_are_missing(self):
         scan(self.iqbal, 400)
         scan(self.nami, 400, times=3)
@@ -488,6 +594,8 @@ class CarbonLeaderboardTests(TestCase):
         self.assertEqual(res.context['scans_needed'], 2)
         self.assertContains(res, 'Butuh <b>2 scan lagi</b>')
 
+    # limit=1 -> hanya peringkat 1 (nami) yang tampil, lalu baris iqbal (peringkat 3)
+    # ditempel di bawah dengan is_me=True dan gap=True (ada lompatan 1 -> 3).
     def test_viewer_row_is_appended_below_the_top(self):
         from .services import carbon_leaderboard, leaderboard_rows
         scan(self.nami, 100, times=3)
@@ -499,6 +607,9 @@ class CarbonLeaderboardTests(TestCase):
                          [(1, 'nami', False, False), (3, 'iqbal', True, True)])
         self.assertEqual(mine['scans'], 3)
 
+    # Tab Kampus iqbal hanya berisi anggota UI.
+    # Campus War (bulan ini): ITB 200 (scan 40 hari lalu tidak dihitung) juara 1,
+    # UI (300*3 + 600*3)/6 = 450 juara 2, UGM tanpa scan -> pos None (menunggu).
     def test_campus_tab_and_campus_war(self):
         scan(self.iqbal, 300, times=3)
         scan(self.nami, 600, times=3)
@@ -515,6 +626,7 @@ class CarbonLeaderboardTests(TestCase):
         partial = self.client.get(reverse('social:campus_war'), {'partial': '1'})
         self.assertContains(partial, 'butuh 3 scan')
 
+    # Tab Teman = teman dari fitur Teman (nami) + lawan tantangan 1v1 (acan), sama dengan Laporan.
     def test_friend_tab_uses_same_friend_source_as_report(self):
         from story.models import FriendChallenge
         FriendChallenge.objects.create(challenger=self.iqbal, opponent=self.acan, status='finished')  # pernah saling tantang
@@ -524,6 +636,8 @@ class CarbonLeaderboardTests(TestCase):
         self.client.force_login(self.iqbal)
         self.assertEqual({name for name, _ in self.ranking(tab='friends')[0]}, {'iqbal', 'nami', 'acan'})
 
+    # Aturan sama, periode beda: sepanjang waktu nami unggul (rata-rata 367),
+    # tapi di Laporan minggu ini iqbal unggul (500 vs 900).
     def test_weekly_report_and_all_time_use_same_rules_different_period(self):
         from challenge.ranking import leaderboard_for
         scan(self.nami, 100, times=6, days_ago=20)  # dulu hemat sekali
@@ -538,6 +652,7 @@ class CarbonLeaderboardTests(TestCase):
 class LeaderboardSeedTests(TestCase):
     """Akun contoh leaderboard: punya riwayat scan, aman diulang, akun asli tidak disentuh."""
 
+    # Helper: jalankan seed leaderboard lengkap dengan log dibisukan.
     def run_seed(self):
         from gamification.models import GameProfile
         from scanner.models import FoodLog
@@ -546,6 +661,10 @@ class LeaderboardSeedTests(TestCase):
         return seed.seed_leaderboard(User, University, CampusMembership, GameProfile, FoodLog,
                                      timezone.localtime(), log=lambda *a: None)
 
+    # Seed 2 kali -> jumlah FoodLog sama (scan lama diganti, bukan ditumpuk).
+    # Akun ASLI bernama zahra.aulia (punya password) tidak disentuh seed.
+    # Hasilnya terlihat natural: > 30 orang di peringkat, rata-rata 300-2500 g/scan,
+    # akun "libur" tidak muncul minggu ini.
     def test_seed_is_idempotent_and_natural(self):
         from gamification.models import GameProfile
         from scanner.models import FoodLog
@@ -576,11 +695,14 @@ class LeaderboardSeedTests(TestCase):
 class FriendFormTests(TestCase):
     """Validasi Create/Update Friendship lewat Django Form."""
 
+    # Kosongkan cache rate limit, buat iqbal & nami.
     def setUp(self):
         cache.clear()
         self.iqbal = User.objects.create_user('iqbal', password='pass12345x')
         self.nami = User.objects.create_user('nami', password='pass12345x')
 
+    # Validasi FriendRequestForm: spasi dibuang ("  nami " valid), kosong tidak valid,
+    # lebih dari 150 karakter tidak valid, diri sendiri tidak valid.
     def test_request_form_rules(self):
         from .forms import FriendRequestForm
         form = FriendRequestForm({'username': '  nami '}, sender=self.iqbal)
@@ -592,6 +714,7 @@ class FriendFormTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('dirimu sendiri', form.errors['username'][0])
 
+    # Username tidak ada -> 400 dengan pesan jelas (bukan halaman 404), tidak ada baris dibuat.
     def test_unknown_username_gets_clear_error_not_404(self):
         self.client.force_login(self.iqbal)
         res = self.client.post(reverse('social:friend_request_send'), {'username': 'hantu'},
@@ -600,6 +723,7 @@ class FriendFormTests(TestCase):
         self.assertEqual(res.json()['message'], 'User "hantu" tidak ditemukan.')
         self.assertFalse(Friendship.objects.exists())
 
+    # action=hapus atau kosong -> 400 dan status tetap PENDING. Pesan error berbahasa Indonesia.
     def test_response_form_rejects_unknown_action(self):
         from .forms import FriendResponseForm, first_error
         f = Friendship.objects.create(from_user=self.iqbal, to_user=self.nami)
@@ -614,6 +738,7 @@ class FriendFormTests(TestCase):
         unchecked = FriendResponseForm({})
         self.assertEqual(first_error(unchecked), 'Pilih terima atau tolak.')
 
+    # Form valid tidak punya error -> first_error memakai pesan cadangan "Data tidak valid.".
     def test_first_error_fallback(self):
         from .forms import FriendResponseForm, first_error
         form = FriendResponseForm({'action': 'accept'})
@@ -621,6 +746,7 @@ class FriendFormTests(TestCase):
         self.assertTrue(form.accept)
         self.assertEqual(first_error(form), 'Data tidak valid.')
 
+    # GET ke endpoint POST -> 405 (@require_POST). Friendship id 999 -> 404 (get_object_or_404).
     def test_wrong_method_and_missing_friendship(self):
         self.client.force_login(self.iqbal)
         self.assertEqual(self.client.get(reverse('social:friend_request_send')).status_code, 405)
@@ -630,6 +756,7 @@ class FriendFormTests(TestCase):
 class CampusChoiceTests(TestCase):
     """Create/Update kampus: AJAX (JSON) dan form biasa (redirect)."""
 
+    # 2 kampus (UI, ITB), 1 user, simpan URL pilih kampus.
     def setUp(self):
         cache.clear()
         self.ui = University.objects.create(name='Universitas Indonesia', short_name='UI', city='Depok')
@@ -637,11 +764,14 @@ class CampusChoiceTests(TestCase):
         self.user = User.objects.create_user('iqbal', password='pass12345x')
         self.url = reverse('social:choose_campus')
 
+    # Tamu -> 302 ke login, tidak ada data tersimpan.
     def test_requires_login(self):
         res = self.client.post(self.url, {'university': self.ui.pk})
         self.assertEqual(res.status_code, 302)
         self.assertFalse(CampusMembership.objects.exists())
 
+    # Form biasa: halaman tampil, POST valid -> redirect ke Campus War + pesan sukses,
+    # POST kosong -> pesan "Pilih kampus dulu.".
     def test_page_and_plain_form(self):
         self.client.force_login(self.user)
         self.assertContains(self.client.get(self.url), 'Kampus kamu')
@@ -652,6 +782,7 @@ class CampusChoiceTests(TestCase):
         res = self.client.post(self.url, {'university': ''})
         self.assertContains(res, 'Pilih kampus dulu.')
 
+    # AJAX: pilih UI (Create) lalu ITB (Update) -> tetap 1 baris, kampusnya berubah ke ITB.
     def test_ajax_create_then_update(self):
         self.client.force_login(self.user)
         res = self.client.post(self.url, {'university': self.ui.pk}, HTTP_X_REQUESTED_WITH='fetch')
@@ -660,6 +791,7 @@ class CampusChoiceTests(TestCase):
         self.assertEqual(res.json()['campus'], 'ITB')
         self.assertEqual(CampusMembership.objects.get().university, self.itb)  # update, bukan baris baru
 
+    # Kampus id 999 tidak ada -> 400 "Kampus tidak ditemukan." (error_messages di CampusForm).
     def test_ajax_invalid_choice(self):
         self.client.force_login(self.user)
         res = self.client.post(self.url, {'university': 999}, HTTP_X_REQUESTED_WITH='fetch')
@@ -667,6 +799,8 @@ class CampusChoiceTests(TestCase):
         self.assertEqual(res.json()['message'], 'Kampus tidak ditemukan.')
         self.assertFalse(CampusMembership.objects.exists())
 
+    # Halaman Campus War menampilkan form untuk user login, partial tanpa <html>,
+    # dan tamu tidak melihat form.
     def test_campus_war_page_and_partial(self):
         CampusMembership.objects.create(user=self.user, university=self.ui)
         self.client.force_login(self.user)
@@ -681,10 +815,12 @@ class CampusChoiceTests(TestCase):
 
 
 class LeaderboardTabTests(TestCase):
+    # iqbal punya 3 scan @450 g (sudah memenuhi syarat peringkat).
     def setUp(self):
         self.user = User.objects.create_user('iqbal', password='pass12345x')
         scan(self.user, 450, times=3)
 
+    # ?tab=galaksi (tidak valid) -> kembali ke national. ?partial=1 -> potongan HTML saja.
     def test_partial_and_invalid_tab(self):
         res = self.client.get(reverse('social:leaderboard'), {'tab': 'galaksi'})
         self.assertEqual(res.context['tab'], 'national')
@@ -693,6 +829,7 @@ class LeaderboardTabTests(TestCase):
         self.assertNotContains(partial, '<html')
         self.assertContains(partial, 'iqbal')
 
+    # Tab Kampus: tamu -> need_login; login tapi belum pilih kampus -> need_campus.
     def test_guest_and_no_campus_states(self):
         self.assertTrue(self.client.get(reverse('social:leaderboard'), {'tab': 'campus'}).context['need_login'])
         self.client.force_login(self.user)
@@ -702,6 +839,7 @@ class LeaderboardTabTests(TestCase):
 class RateLimitTests(TestCase):
     """Endpoint sensitif dibatasi supaya tidak bisa di-spam."""
 
+    # iqbal login + 12 user teman0..teman11 sebagai tujuan permintaan.
     def setUp(self):
         cache.clear()
         self.user = User.objects.create_user('iqbal', password='pass12345x')
@@ -709,10 +847,14 @@ class RateLimitTests(TestCase):
             User.objects.create_user(f'teman{i}', password='pass12345x')
         self.client.force_login(self.user)
 
+    # Helper: kirim permintaan teman (AJAX atau form biasa).
     def send(self, username, ajax=True):
         headers = {'HTTP_X_REQUESTED_WITH': 'fetch'} if ajax else {}
         return self.client.post(reverse('social:friend_request_send'), {'username': username}, **headers)
 
+    # Batas 10/menit: 10 permintaan pertama 200, ke-11 -> 429 + header Retry-After 60,
+    # dan permintaan ke-11 TIDAK dibuat (view tidak dijalankan).
+    # Form biasa yang kena batas -> redirect + pesan.
     def test_friend_requests_are_limited(self):
         for i in range(10):
             self.assertEqual(self.send(f'teman{i}').status_code, 200)
@@ -726,6 +868,7 @@ class RateLimitTests(TestCase):
         self.assertRedirects(res, reverse('social:friends'))
         self.assertFalse(Friendship.objects.filter(to_user__username='teman11').exists())
 
+    # Kuota iqbal habis, tapi GET halaman tetap boleh, dan user lain punya kuota sendiri.
     def test_limit_is_per_user_and_ignores_get(self):
         for i in range(10):
             self.send(f'teman{i}')
@@ -733,6 +876,7 @@ class RateLimitTests(TestCase):
         self.client.force_login(User.objects.get(username='teman11'))
         self.assertEqual(self.send('iqbal').status_code, 200)
 
+    # API nearest: 20 request pertama dihitung (walau inputnya salah), yang ke-21 -> 429.
     def test_nearest_api_is_limited(self):
         url = reverse('social:api_nearest')
         for _ in range(20):
@@ -741,6 +885,8 @@ class RateLimitTests(TestCase):
         self.assertEqual(res.status_code, 429)
         self.assertIn('Terlalu banyak', res.json()['error'])
 
+    # mock.patch membuat cache.incr selalu ValueError (meniru key kedaluwarsa)
+    # -> hit() tetap jalan (mulai hitung dari 1) dan mengembalikan True.
     def test_counter_recovers_when_key_expires(self):
         from unittest import mock
         from .ratelimit import hit
@@ -748,6 +894,7 @@ class RateLimitTests(TestCase):
         with mock.patch('social.ratelimit.cache.incr', side_effect=ValueError):
             self.assertTrue(hit('test', request, limit=1, window=60))
 
+    # Tamu dikenali dari IP: client_id diawali "ip:".
     def test_guest_is_identified_by_ip(self):
         from .ratelimit import client_id
         request = self.client_class().request().wsgi_request
@@ -755,18 +902,21 @@ class RateLimitTests(TestCase):
 
 
 class ApiEdgeCaseTests(TestCase):
+    # 1 kantin Kancil + kosongkan cache rate limit.
     def setUp(self):
         cache.clear()
         ui = University.objects.create(name='Universitas Indonesia', short_name='UI', city='Depok')
         self.kancil = Canteen.objects.create(name='Kancil', faculty='Fasilkom', university=ui,
                                              latitude='-6.370254', longitude='106.827638')
 
+    # range=tahun -> today; page=abc -> halaman 1. Server tidak error.
     def test_bad_range_and_page_fall_back(self):
         res = self.client.get(reverse('social:api_canteens'), {'range': 'tahun'})
         self.assertEqual(res.json()['range'], 'today')
         res = self.client.get(reverse('social:api_canteen_posts', args=[self.kancil.pk]), {'range': 'x', 'page': 'abc'})
         self.assertEqual(res.status_code, 200)
 
+    # accuracy=abc diabaikan (None). Semua kantin nonaktif -> reason no_canteen.
     def test_nearest_ignores_bad_accuracy_and_handles_no_canteen(self):
         res = self.client.post(reverse('social:api_nearest'), {'lat': '-6.370254', 'lng': '106.827638', 'accuracy': 'abc'})
         self.assertEqual(res.json()['recommended'], self.kancil.pk)
@@ -776,6 +926,7 @@ class ApiEdgeCaseTests(TestCase):
 
 
 class AdminAndModelTests(TestCase):
+    # Superuser menjalankan action admin "hide_posts" lalu "unhide_posts" -> is_hidden berubah.
     def test_admin_hide_and_unhide_posts(self):
         admin_user = User.objects.create_superuser('admin', 'a@a.id', 'pass12345x')
         ui = University.objects.create(name='Universitas Indonesia', short_name='UI', city='Depok')
@@ -791,6 +942,7 @@ class AdminAndModelTests(TestCase):
         post.refresh_from_db()
         self.assertFalse(post.is_hidden)
 
+    # Cek teks __str__ setiap model.
     def test_str_methods(self):
         from .models import PostReport
         u = User.objects.create_user('iqbal', password='pass12345x')
@@ -806,6 +958,7 @@ class AdminAndModelTests(TestCase):
         self.assertIn('iqbal', str(PostReport.objects.create(user=u, post=post, reason='spam')))
         self.assertEqual(str(Friendship(from_user=u, to_user=n)), 'iqbal -> nami (pending)')
 
+    # time_ago waktu sekarang -> "baru saja"; week_start() selalu hari Senin (weekday 0).
     def test_time_ago_just_now_and_week_start(self):
         from .services import time_ago, week_start
         self.assertEqual(time_ago(timezone.now()), 'baru saja')
@@ -813,6 +966,8 @@ class AdminAndModelTests(TestCase):
 
 
 class ManagementCommandTests(TestCase):
+    # call_command = menjalankan perintah manage.py dari dalam test.
+    # --friends-of iqbal -> iqbal punya 5 teman contoh; diulang tetap 5; user tidak ada -> CommandError.
     def test_seed_leaderboard_command(self):
         from django.core.management import call_command
         from django.core.management.base import CommandError
@@ -829,6 +984,7 @@ class ManagementCommandTests(TestCase):
         with self.assertRaises(CommandError):
             call_command('seed_leaderboard', friends_of='hantu', stdout=io.StringIO())
 
+    # Kalau akun contoh sudah mengirim permintaan PENDING ke iqbal, seed mengubahnya jadi ACCEPTED.
     def test_seed_leaderboard_accepts_pending_request_from_seed_user(self):
         from django.core.management import call_command
         me = User.objects.create_user('iqbal', password='pass12345x')
@@ -838,6 +994,7 @@ class ManagementCommandTests(TestCase):
         call_command('seed_leaderboard', friends_of='iqbal', stdout=io.StringIO())
         self.assertEqual(Friendship.objects.get(from_user=zahra).status, Friendship.ACCEPTED)
 
+    # unseed menghapus profil game & scan contoh yang dibuat seed.
     def test_unseed_leaderboard(self):
         from gamification.models import GameProfile
         from scanner.models import FoodLog
@@ -849,6 +1006,7 @@ class ManagementCommandTests(TestCase):
         self.assertFalse(GameProfile.objects.exists())
         self.assertFalse(FoodLog.objects.exists())
 
+    # Perintah seed_community berjalan dan mencetak ringkasan.
     @override_settings(MEDIA_ROOT=TEST_MEDIA)
     def test_seed_community_command(self):
         from django.core.management import call_command

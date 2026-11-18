@@ -8,6 +8,12 @@ Butuh Google Chrome + paket `selenium`. Kalau tidak ada, test ini otomatis di-sk
 Jalankan: python manage.py test social.test_functional
 Opsional (kalau Chrome/driver tidak di lokasi standar): set env CHROME_BIN dan CHROMEDRIVER.
 """
+# =====================================================================================
+# FUNCTIONAL TEST (Selenium) = test dari sudut pandang pengguna: membuka Chrome sungguhan
+# (headless = tanpa jendela), mengetik, dan mengklik tombol seperti manusia.
+# StaticLiveServerTestCase menjalankan server Django sementara (self.live_server_url)
+# lengkap dengan file static (CSS/JS), supaya JavaScript AJAX ikut jalan.
+# =====================================================================================
 import os
 import unittest
 
@@ -28,9 +34,12 @@ try:
 except ImportError:  # selenium belum di-install
     webdriver = None
 
+# Waktu tunggu maksimal (detik) menunggu elemen muncul setelah AJAX.
 WAIT_SECONDS = 10
 
 
+# Buat Chrome headless. --no-sandbox & --disable-dev-shm-usage diperlukan di server/CI (Linux).
+# CHROME_BIN / CHROMEDRIVER opsional kalau Chrome tidak di lokasi standar.
 def make_browser():
     options = webdriver.ChromeOptions()
     for arg in ('--headless=new', '--no-sandbox', '--disable-dev-shm-usage', '--window-size=1280,900'):
@@ -41,9 +50,12 @@ def make_browser():
     return webdriver.Chrome(options=options, service=service)
 
 
+# @tag('functional') -> bisa dijalankan/dilewati terpisah: python manage.py test --tag=functional
 @tag('functional')
 class SocialFunctionalTests(StaticLiveServerTestCase):
 
+    # Sekali di awal: buka Chrome. Kalau selenium/Chrome tidak ada -> SkipTest (test dilewati,
+    # bukan gagal), supaya CI tetap hijau di mesin tanpa Chrome.
     @classmethod
     def setUpClass(cls):
         if webdriver is None:
@@ -54,6 +66,7 @@ class SocialFunctionalTests(StaticLiveServerTestCase):
             raise unittest.SkipTest(f'Chrome tidak bisa dijalankan: {exc}')
         super().setUpClass()
 
+    # Sekali di akhir: tutup Chrome.
     @classmethod
     def tearDownClass(cls):
         if hasattr(cls, 'browser') and cls.browser is not None:
@@ -63,6 +76,7 @@ class SocialFunctionalTests(StaticLiveServerTestCase):
                 pass
         super().tearDownClass()
 
+    # Sebelum setiap test: kosongkan rate limit, buat 2 user & 2 kampus.
     def setUp(self):
         cache.clear()
         self.iqbal = User.objects.create_user('iqbal', password='pass12345x')
@@ -72,6 +86,8 @@ class SocialFunctionalTests(StaticLiveServerTestCase):
 
     # ---------- helper ----------
 
+    # Login TANPA mengisi form: force_login membuat session, lalu cookie sessionid ditempel ke Chrome.
+    # Chrome harus membuka halaman di domain yang sama dulu sebelum boleh menambah cookie.
     def login_as(self, user):
         """Login tanpa mengisi form: pakai session dari test client, lalu tempel cookie-nya."""
         self.client.force_login(user)
@@ -79,22 +95,29 @@ class SocialFunctionalTests(StaticLiveServerTestCase):
         self.browser.delete_all_cookies()
         self.browser.add_cookie({'name': 'sessionid', 'value': self.client.cookies['sessionid'].value, 'path': '/'})
 
+    # Buka halaman lalu pasang PENANDA window.__noReload = true.
+    # Variabel window hilang kalau halaman reload -> dipakai assert_no_reload.
     def open(self, url_name, query=''):
         self.browser.get(self.live_server_url + reverse(url_name) + query)
         self.browser.execute_script('window.__noReload = true;')
 
+    # Kalau penanda masih ada -> halaman tidak reload -> update terbukti lewat AJAX.
     def assert_no_reload(self):
         self.assertTrue(self.browser.execute_script('return window.__noReload === true;'),
                         'Halaman ter-reload, padahal seharusnya lewat AJAX')
 
+    # WebDriverWait = tunggu sampai kondisi terpenuhi (maks WAIT_SECONDS).
     def wait(self):
         return WebDriverWait(self.browser, WAIT_SECONDS)
 
+    # Tunggu sampai elemen CSS tertentu berisi teks tertentu.
     def wait_text(self, css, text):
         self.wait().until(EC.text_to_be_present_in_element((By.CSS_SELECTOR, css), text))
 
     # ---------- skenario ----------
 
+    # Skenario 1: iqbal cari "nam" -> klik Tambah -> pesan muncul tanpa reload -> baris PENDING.
+    # Lalu nami login -> klik Terima -> berteman, juga tanpa reload.
     def test_send_and_accept_friend_request_without_reload(self):
         self.login_as(self.iqbal)
         self.open('social:friends')
@@ -115,6 +138,8 @@ class SocialFunctionalTests(StaticLiveServerTestCase):
         self.assert_no_reload()
         self.assertEqual(Friendship.objects.get().status, Friendship.ACCEPTED)
 
+    # Skenario 2: tombol "basi": Tambah sudah tampil, lalu (di server) mereka ternyata sudah berteman.
+    # Klik -> server membalas 400 "Kamu sudah berteman" -> pesan merah tampil tanpa reload.
     def test_stale_button_shows_error_from_server(self):
         """Tombol "Tambah" sudah tampil, tapi sebelum diklik ternyata sudah berteman (mis. dari tab lain)."""
         self.login_as(self.iqbal)
@@ -128,6 +153,7 @@ class SocialFunctionalTests(StaticLiveServerTestCase):
         self.assert_no_reload()
         self.assertEqual(Friendship.objects.count(), 1)
 
+    # Skenario 3: klik tab leaderboard -> isi peringkat berganti tanpa reload (?partial=1).
     def test_leaderboard_tabs_switch_without_reload(self):
         from .tests import scan
         scan(self.iqbal, 450, times=3)
@@ -142,6 +168,7 @@ class SocialFunctionalTests(StaticLiveServerTestCase):
         self.assertEqual(selected.get_attribute('data-tab'), 'campus')
         self.assert_no_reload()
 
+    # Skenario 4: pilih kampus di Campus War -> tersimpan dan tampilan berubah tanpa reload.
     def test_choose_campus_without_reload(self):
         self.login_as(self.iqbal)
         self.open('social:campus_war')

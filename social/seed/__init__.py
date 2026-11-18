@@ -6,25 +6,37 @@ Riwayat scan makanannya dibuat otomatis (nilai CO2 dari scanner/fixtures/foods.j
 karena semua peringkat dihitung dari emisi CO2 per scan.
 Fungsi seed_* dipakai oleh data migration (otomatis saat `migrate`, termasuk di PWS)
 dan oleh perintah `python manage.py seed_community` / `seed_leaderboard`.
+
+Catatan penting:
+    - Semua fungsi menerima MODEL sebagai parameter (User, Canteen, ...), bukan meng-import
+      langsung. Alasannya: di data migration, Django memberikan "model historis" (versi model
+      saat migration itu dibuat), jadi model harus dioper dari luar.
+    - Akun contoh memakai password '!' = password tidak valid, jadi TIDAK BISA dipakai login.
+    - Semua fungsi aman dijalankan berkali-kali (idempotent): data yang sudah ada tidak digandakan.
 """
 import json
 import random
 from datetime import datetime, time, timedelta
 from pathlib import Path
 
+# Path(__file__).resolve().parent = folder tempat file ini berada (social/seed/).
 SEED_DIR = Path(__file__).resolve().parent
-SEED_JSON = SEED_DIR / 'community_seed.json'
+SEED_JSON = SEED_DIR / 'community_seed.json'              # operator / pada Path = gabung path
 LEADERBOARD_JSON = SEED_DIR / 'leaderboard_seed.json'
-STATIC_SEED_DIR = SEED_DIR.parent / 'static' / 'social' / 'seed'
-STATIC_PREFIX = 'social/seed/'
+STATIC_SEED_DIR = SEED_DIR.parent / 'static' / 'social' / 'seed'   # folder foto showcase
+STATIC_PREFIX = 'social/seed/'                            # awalan path static yang disimpan di seed_image
 
 
-FIXTURES_DIR = SEED_DIR.parent / 'fixtures'
+FIXTURES_DIR = SEED_DIR.parent / 'fixtures'               # social/fixtures/ (data kampus & kantin)
 
 
 def ensure_canteens(University, Canteen, log=print):
-    """Pastikan data kampus & kantin dari fixtures ada (untuk server yang belum loaddata)."""
-    unis = {}
+    """Pastikan data kampus & kantin dari fixtures ada (untuk server yang belum loaddata).
+
+    get_or_create(...) -> ambil kalau sudah ada, buat kalau belum. Return (objek, dibuat_atau_tidak).
+    defaults={...} -> nilai yang dipakai HANYA saat membuat baris baru.
+    """
+    unis = {}   # {pk_di_fixture: objek University} untuk menyambungkan kantin ke kampusnya
     for row in json.loads((FIXTURES_DIR / 'universities.json').read_text(encoding='utf-8')):
         f = row['fields']
         unis[row['pk']], _ = University.objects.get_or_create(
@@ -36,12 +48,13 @@ def ensure_canteens(University, Canteen, log=print):
             name=f['name'], faculty=f['faculty'],
             defaults={'university': unis[f['university']], 'latitude': f['latitude'], 'longitude': f['longitude'],
                       'radius_m': f.get('radius_m', 150), 'is_active': f.get('is_active', True)})
-        added += was_created
+        added += was_created   # True dihitung 1, False dihitung 0
     if added:
         log(f'  {added} kantin ditambahkan dari fixtures.')
 
 
 def load_entries():
+    """Baca daftar post showcase dari community_seed.json (list of dict)."""
     with open(SEED_JSON, encoding='utf-8') as f:
         return json.load(f)
 
@@ -50,9 +63,10 @@ def seed_community_posts(User, Canteen, CommunityPost, log=print, verbose=False)
     """Buat post showcase yang belum ada. Aman dijalankan berkali-kali.
 
     Model dikirim sebagai argumen supaya bisa dipakai dari migration (model historis).
+    Post dilewati kalau fotonya tidak ada atau kantinnya tidak ditemukan.
     """
     created = skipped = 0
-    users = {}
+    users = {}   # cache {username: User} supaya tidak query berulang untuk user yang sama
     for entry in load_entries():
         photo = entry['photo']
         if not (STATIC_SEED_DIR / photo).is_file():
@@ -95,6 +109,8 @@ def seed_community_posts(User, Canteen, CommunityPost, log=print, verbose=False)
 PACE_CHANCE = {'rajin': 0.85, 'biasa': 0.5, 'jarang': 0.25}
 MAX_HISTORY_DAYS = 56  # 8 minggu: cukup untuk Peringkat, Laporan mingguan + riwayatnya, dan Campus War
 SEED_SCAN_PREFIX = 'seed-scan:'  # penanda scan contoh (disimpan di ai_raw_response)
+# Karena ai_raw_response dipakai SCAN_COUNT (1 nilai unik = 1 scan), setiap foto contoh diberi
+# key unik berawalan 'seed-scan:'. Awalan ini juga dipakai untuk menghapus scan contoh lama.
 
 # Menu contoh. Nilai CO2 per porsi sama dengan scanner/fixtures/foods.json.
 CARBS = [('Nasi Putih', 240), ('Nasi Putih', 240), ('Nasi Merah', 180), ('Nasi Uduk', 480), ('Lontong', 190)]
@@ -118,22 +134,29 @@ DIETS = {
 
 
 def load_leaderboard_entries():
+    """Baca daftar akun contoh dari leaderboard_seed.json."""
     with open(LEADERBOARD_JSON, encoding='utf-8') as f:
         return json.load(f)
 
 
 def _level_from_xp(total_xp):
+    """Hitung level dari XP memakai rumus milik modul gamification (supaya konsisten)."""
     from gamification.services import level_from_xp
     return level_from_xp(total_xp)
 
 
 def _meal(rng, diet):
-    """Isi satu foto makanan: [(nama, gram CO2), ...]."""
-    if rng.random() < 0.3:
+    """Isi satu foto makanan: [(nama, gram CO2), ...].
+
+    30% peluang makanan satu piring (contoh Bakso). Selain itu: karbo + lauk sesuai pola makan,
+    50% peluang tambah sayur. Lalu 40% peluang tambah minuman.
+    """
+    if rng.random() < 0.3:          # rng.random() = angka acak 0..1
         items = [rng.choice(ONE_DISH)]
     else:
         nabati, unggas, _ = DIETS[diet]
         roll = rng.random()
+        # Contoh diet 'hijau': roll < 0.65 -> nabati, < 0.97 -> unggas/ikan, sisanya daging.
         group = 'nabati' if roll < nabati else 'unggas_ikan' if roll < nabati + unggas else 'daging'
         items = [rng.choice(CARBS), rng.choice(PROTEIN[group])]
         if rng.random() < 0.5:
@@ -149,8 +172,10 @@ def showcase_scans(entry, now):
     Acak tapi tetap (seed = username), jadi hasilnya sama tiap dijalankan di hari yang sama.
     Akun dengan XP kecil dianggap pengguna baru, jadi riwayatnya lebih pendek.
     """
+    # random.Random(seed) -> generator acak sendiri. Seed sama = urutan angka acak sama.
     rng = random.Random(entry['username'])
     diet = entry.get('diet') or rng.choice(['hijau', 'campur', 'campur', 'daging'])
+    # Panjang riwayat: XP / 45 hari, minimal 6 hari, maksimal 56 hari.
     days = max(6, min(MAX_HISTORY_DAYS, entry['total_xp'] // 45))
     today = now.date()
     scans = []
@@ -160,11 +185,12 @@ def showcase_scans(entry, now):
         else:
             chance = PACE_CHANCE[entry['pace']]
         if rng.random() >= chance:
-            continue
+            continue    # hari ini akun ini tidak scan
         day = datetime.combine(today - timedelta(days=days_ago), time(7, 0), tzinfo=now.tzinfo)
         for _ in range(rng.choice((1, 1, 2, 2, 3))):  # 1-3 scan sehari
-            when = day + timedelta(minutes=rng.randint(0, 14 * 60))
+            when = day + timedelta(minutes=rng.randint(0, 14 * 60))   # antara jam 07.00 - 21.00
             if when > now:
+                # Jangan sampai ada scan di masa depan (untuk hari ini).
                 when = now - timedelta(minutes=rng.randint(5, 90))
             scans.append((when, _meal(rng, diet)))
     return scans
@@ -172,6 +198,7 @@ def showcase_scans(entry, now):
 
 def _streak(dates, today):
     """Streak = jumlah hari berturut-turut ada scan, dihitung mundur dari hari ini/kemarin."""
+    # Kalau hari ini belum scan, streak masih dihitung dari kemarin (belum putus).
     day = today if today in dates else today - timedelta(days=1)
     count = 0
     while day in dates:
@@ -181,7 +208,11 @@ def _streak(dates, today):
 
 
 def _seed_users(User):
-    """{entry, user} untuk akun contoh. Akun asli (punya password) dengan nama sama dilewati."""
+    """{entry, user} untuk akun contoh. Akun asli (punya password) dengan nama sama dilewati.
+
+    Return list pasangan (entry_json, objek_user). Pengecekan password == '!' memastikan
+    akun asli milik orang sungguhan tidak pernah diubah oleh seed.
+    """
     pairs = []
     for entry in load_leaderboard_entries():
         user, _ = User.objects.get_or_create(
@@ -198,10 +229,11 @@ def seed_leaderboard_profiles(User, University, CampusMembership, GameProfile, n
 
     Sengaja pakai bulk_create/update supaya tidak memicu logika XP modul lain.
     """
-    campuses = {u.short_name: u for u in University.objects.all()}
+    campuses = {u.short_name: u for u in University.objects.all()}   # {'UI': University, ...}
     today = now.date()
     pairs = _seed_users(User)
     for entry, user in pairs:
+        # Set tanggal-tanggal saat akun ini scan (untuk menghitung streak).
         dates = {when.date() for when, _ in showcase_scans(entry, now)}
         profile = {
             'total_xp': entry['total_xp'],
@@ -210,9 +242,12 @@ def seed_leaderboard_profiles(User, University, CampusMembership, GameProfile, n
             'last_activity_date': max(dates) if dates else None,
         }
         profile['record_streak'] = max(profile['current_streak'], 3 + entry['total_xp'] // 250)
+        # update() mengembalikan jumlah baris yang diubah. 0 -> profil belum ada -> buat baru.
+        # (**profile = buka dict menjadi argumen keyword: total_xp=..., level=..., ...)
         if not GameProfile.objects.filter(user=user).update(**profile):
             GameProfile.objects.bulk_create([GameProfile(user=user, **profile)])
         if entry.get('campus') in campuses:
+            # update_or_create -> ubah kalau sudah ada, buat kalau belum.
             CampusMembership.objects.update_or_create(user=user, defaults={'university': campuses[entry['campus']]})
     log(f'  {len(pairs)} akun contoh leaderboard siap.')
     return len(pairs)
@@ -224,14 +259,17 @@ def seed_leaderboard_scans(User, FoodLog, now, log=print):
     Jalankan lagi sebelum demo supaya peringkat mingguan & Campus War tetap ramai.
     """
     pairs = _seed_users(User)
+    # Hapus HANYA scan contoh (berawalan 'seed-scan:') milik akun contoh. Scan asli tidak disentuh.
     FoodLog.objects.filter(user__in=[u for _, u in pairs], ai_raw_response__startswith=SEED_SCAN_PREFIX).delete()
     logs, times = [], []
     for entry, user in pairs:
         for n, (when, items) in enumerate(showcase_scans(entry, now)):
+            # Key unik per foto -> semua makanan di foto ini dihitung 1 scan oleh SCAN_COUNT.
             key = f"{SEED_SCAN_PREFIX}{entry['username']}:{n}"
             for name, co2 in items:
                 logs.append(FoodLog(user=user, custom_name=name, co2_grams=co2, ai_raw_response=key))
                 times.append(when)
+    # bulk_create -> INSERT banyak baris sekaligus (per 500), jauh lebih cepat daripada satu-satu.
     created = FoodLog.objects.bulk_create(logs, batch_size=500)
     # scanned_at memakai auto_now_add, jadi waktunya diisi setelah dibuat
     for log_row, when in zip(created, times):
@@ -242,11 +280,16 @@ def seed_leaderboard_scans(User, FoodLog, now, log=print):
 
 
 def seed_leaderboard(User, University, CampusMembership, GameProfile, FoodLog, now, log=print):
+    """Jalankan seed leaderboard lengkap: profil & kampus dulu, lalu riwayat scan."""
     seed_leaderboard_profiles(User, University, CampusMembership, GameProfile, now, log=log)
     seed_leaderboard_scans(User, FoodLog, now, log=log)
 
 
 def unseed_leaderboard(User, CampusMembership, GameProfile, FoodLog=None):
+    """Kebalikan seed: hapus scan contoh, keanggotaan kampus, dan profil game akun contoh.
+
+    Berguna untuk membersihkan data contoh (dites di tests.py). Akunnya sendiri tidak dihapus.
+    """
     users = User.objects.filter(username__in=[e['username'] for e in load_leaderboard_entries()], password='!')
     if FoodLog is not None:
         FoodLog.objects.filter(user__in=users, ai_raw_response__startswith=SEED_SCAN_PREFIX).delete()
