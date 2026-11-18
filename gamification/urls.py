@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 
 app_name = 'gamification'
@@ -11,4 +11,8 @@ urlpatterns = [
     path('badges/api/', views.get_badge_json, name='get_badges_json'),
     path('badges/create/', views.create_badge_ajax, name='create_badge'),
     path('badges/<slug:code>/delete/', views.delete_badge, name='delete_badge')
+]
+
+urlpatterns += [
+    path("api/", include("gamification.api_urls")),
 ]
